@@ -1110,7 +1110,7 @@ async function fazerLogin() {
     if (authErr) throw authErr;
 
     const { data: usuario, error: dbErr } = await sb.from('usuarios')
-      .select('*, organizacoes(nome)')
+      .select('*')
       .eq('id', authData.user.id).single();
 
     if (dbErr || !usuario) throw new Error('Usuário não encontrado.');
@@ -1128,7 +1128,7 @@ async function fazerLogin() {
 async function carregarPerfil(user, usuario = null) {
   _user = user;
   if (!usuario) {
-    const { data } = await sb.from('usuarios').select('*, organizacoes(nome)').eq('id', user.id).single();
+    const { data } = await sb.from('usuarios').select('*').eq('id', user.id).single();
     usuario = data;
   }
   _perfil = usuario;
