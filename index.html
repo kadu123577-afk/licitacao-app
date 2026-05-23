@@ -1016,8 +1016,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 // ══════════════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════════════
-const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
+const SUPA_URL = 'https://oputbtpimowgxpsmfamn.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdXRidHBpbW93Z3hwc21mYW1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTYyMDksImV4cCI6MjA5NDkzMjIwOX0.9NtzdNnbrvVKyABlfU27RbwIg9gpbjiyG_SsWekOYoU';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 // ══════════════════════════════════════════════════════════
@@ -1140,7 +1140,7 @@ function mostrarApp() {
 
   // Preencher header
   const nome = _perfil?.nome || _user?.email || '?';
-  const setor = _perfil?.setor || _perfil?.organizacoes?.nome || '—';
+  const setor = _perfil?.setor || _perfil?.setor || '—';
   const letra = nome[0].toUpperCase();
   const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
   const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
@@ -2584,4 +2584,3 @@ function buildPDFHtml(tipo, dados, proc) {
 </script>
 </body>
 </html>
-
