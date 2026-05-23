@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Licite.ai — Gestão Licitatória</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --bg:      #06090F;
+  --s1:      #0B1018;
+  --s2:      #0F1620;
+  --s3:      #152030;
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.10);
+  --text:    #EDF2F7;
+  --text2:   #8A9BAC;
+  --muted:   #4A5568;
+  --green:   #41F36A;
+  --green-d: #28C94E;
+  --green-l: rgba(65,243,106,0.10);
+  --teal:    #14D9B5;
+  --blue:    #1AB8FF;
+  --blue-l:  rgba(26,184,255,0.10);
+  --gold:    #FFC857;
+  --gold-l:  rgba(255,200,87,0.10);
+  --red:     #FF5C6A;
+  --red-l:   rgba(255,92,106,0.10);
+  --purple:  #A87EFF;
+  --purple-l:rgba(168,126,255,0.12);
+  --orange:  #FF8C42;
+  --r:10px; --r-sm:6px; --r-lg:14px;
+  --shadow:  0 4px 20px rgba(0,0,0,0.5);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.7);
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+
+/* ── SCROLL ── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ── VIEWS ── */
+.view{display:none;width:100%;height:100%;}
+.view.active{display:flex;}
+
+/* ═══════════════════════════════════════════════════
+   LOGIN
+═══════════════════════════════════════════════════ */
+#view-login{
+  background:var(--bg);
+  align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+#view-login::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(65,243,106,0.06) 0%, transparent 70%);
+  pointer-events:none;
+}
+.login-card{
+  background:var(--s1);
+  border:1px solid var(--border2);
+  border-radius:var(--r-lg);
+  padding:44px;
+  width:100%;max-width:420px;
+  position:relative;
+  box-shadow:var(--shadow-lg);
+}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:36px;}
+.login-logo{
+  width:40px;height:40px;
+  background:linear-gradient(135deg,#41F36A 0%,#14D9B5 50%,#1AB8FF 100%);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:800;font-size:16px;color:#000;
+}
+.login-brand-text h1{
+  font-family:var(--font-display);font-size:20px;font-weight:800;
+  background:linear-gradient(90deg,#41F36A,#14D9B5,#1AB8FF);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.login-brand-text p{font-size:11px;color:var(--muted);margin-top:1px;}
+.login-card h2{font-family:var(--font-display);font-size:22px;font-weight:700;margin-bottom:6px;}
+.login-card p.sub{font-size:13px;color:var(--text2);margin-bottom:28px;}
+.field-group{margin-bottom:18px;}
+.field-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;}
+.field-group input{
+  width:100%;padding:10px 14px;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:var(--r-sm);color:var(--text);font-family:var(--font-body);font-size:14px;
+  outline:none;transition:border-color .2s;
+}
+.field-group input:focus{border-color:var(--green);}
+.field-group input::placeholder{color:var(--muted);}
+.btn-login{
+  width:100%;padding:12px;
+  background:var(--green);color:#000;border:none;
+  border-radius:var(--r-sm);font-family:var(--font-display);
+  font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;
+}
+.btn-login:hover{background:#5BFF82;}
+.btn-login:disabled{opacity:.5;cursor:default;}
+.login-erro{
+  background:var(--red-l);border:1px solid rgba(255,92,106,.2);
+  color:var(--red);padding:10px 14px;border-radius:var(--r-sm);
+  font-size:13px;margin-bottom:14px;display:none;
+}
+.login-footer{text-align:center;margin-top:20px;font-size:12px;color:var(--muted);}
+
+/* ═══════════════════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════════════════ */
+#view-app{flex-direction:column;}
+.app-header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:0 24px;height:54px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;z-index:40;
+}
+.app-brand{display:flex;align-items:center;gap:10px;cursor:pointer;}
+.app-logo{
+  width:28px;height:28px;
+  background:linear-gradient(135deg,#41F36A 0%,#14D9B5 50%,#1AB8FF 100%);
+  border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:800;font-size:11px;color:#000;
+}
+.app-brand-name{
+  font-family:var(--font-display);font-size:16px;font-weight:800;
+  background:linear-gradient(90deg,#41F36A,#1AB8FF);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.app-brand-sub{font-size:10px;color:var(--muted);margin-left:2px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.user-chip{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 12px 5px 8px;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:20px;cursor:pointer;transition:all .15s;
+}
+.user-chip:hover{background:var(--s3);}
+.user-avatar{
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;
+}
+.user-name{font-size:12px;font-weight:500;color:var(--text2);}
+.user-setor{font-size:10px;color:var(--muted);}
+
+/* ── BTN GLOBAL ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:var(--r-sm);border:none;
+  font-family:var(--font-body);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .15s;text-decoration:none;
+}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.btn-primary{background:var(--green);color:#000;}
+.btn-primary:hover{background:#5BFF82;}
+.btn-secondary{background:var(--s2);color:var(--text);border:1px solid var(--border2);}
+.btn-secondary:hover{background:var(--s3);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--s2);color:var(--text);}
+.btn-danger{background:var(--red-l);color:var(--red);border:1px solid rgba(255,92,106,.2);}
+.btn-danger:hover{background:rgba(255,92,106,.2);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-sm svg{width:13px;height:13px;}
+.btn:disabled{opacity:.5;cursor:default;}
+
+/* ── APP BODY ── */
+.app-body{
+  display:flex;flex:1;overflow:hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:220px;background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  flex-shrink:0;overflow-y:auto;
+}
+.sidebar-section{padding:16px 12px 4px;}
+.sidebar-label{
+  font-size:10px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;
+  padding:0 8px;margin-bottom:4px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:var(--r-sm);
+  cursor:pointer;color:var(--text2);
+  font-size:13px;font-weight:500;
+  transition:all .12s;margin-bottom:1px;
+}
+.nav-item:hover{background:var(--s2);color:var(--text);}
+.nav-item.active{background:var(--green-l);color:var(--green);}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;}
+.nav-badge{
+  margin-left:auto;background:var(--s3);
+  color:var(--text2);font-size:11px;
+  padding:1px 7px;border-radius:20px;font-weight:500;
+}
+.nav-item.active .nav-badge{background:rgba(65,243,106,.15);color:var(--green);}
+
+/* ── MAIN ── */
+.main-area{
+  flex:1;overflow-y:auto;
+  padding:28px 32px;
+}
+
+/* ── PÁGINAS ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── PAGE HEADER ── */
+.page-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:24px;
+}
+.page-title{
+  font-family:var(--font-display);
+  font-size:22px;font-weight:700;
+}
+.page-sub{font-size:13px;color:var(--text2);margin-top:3px;}
+.page-actions{display:flex;gap:8px;}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:18px;
+}
+.stat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.stat-label{font-size:12px;color:var(--text2);font-weight:500;}
+.stat-ico{
+  width:30px;height:30px;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;
+}
+.stat-ico svg{width:15px;height:15px;}
+.stat-ico.blue{background:var(--blue-l);color:var(--blue);}
+.stat-ico.green{background:var(--green-l);color:var(--green);}
+.stat-ico.gold{background:var(--gold-l);color:var(--gold);}
+.stat-ico.red{background:var(--red-l);color:var(--red);}
+.stat-val{font-size:28px;font-weight:800;font-family:var(--font-display);}
+.stat-val.green{color:var(--green);}
+.stat-val.blue{color:var(--blue);}
+.stat-val.gold{color:var(--gold);}
+.stat-val.red{color:var(--red);}
+.stat-change{font-size:12px;color:var(--muted);margin-top:4px;}
+
+/* ── CARD ── */
+.card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r-lg);margin-bottom:20px;overflow:hidden;
+}
+.card-head{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.card-title{font-size:14px;font-weight:600;}
+.card-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{
+  padding:9px 16px;text-align:left;
+  font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;
+  background:var(--s2);border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+tbody td{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
+.td-main{font-weight:500;}
+.td-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* ── BADGES ── */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;
+}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;}
+.badge-green{background:var(--green-l);color:var(--green);}
+.badge-red{background:var(--red-l);color:var(--red);}
+.badge-gold{background:var(--gold-l);color:var(--gold);}
+.badge-gray{background:rgba(138,155,172,.10);color:var(--text2);}
+.badge-blue{background:var(--blue-l);color:var(--blue);}
+.badge-purple{background:var(--purple-l);color:var(--purple);}
+.badge-orange{background:rgba(255,140,66,.12);color:var(--orange);}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty svg{width:36px;height:36px;margin:0 auto 12px;display:block;opacity:.35;}
+.empty h4{font-size:14px;color:var(--text2);margin-bottom:6px;}
+.empty p{font-size:13px;}
+
+/* ── PROCESS CARDS (dashboard) ── */
+.process-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.pcard{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:18px;
+  cursor:pointer;transition:all .15s;
+}
+.pcard:hover{border-color:var(--border2);background:var(--s2);transform:translateY(-1px);}
+.pcard-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.pcard-num{font-size:11px;color:var(--muted);font-weight:500;}
+.pcard-obj{font-size:14px;font-weight:600;margin:4px 0 8px;line-height:1.3;}
+.pcard-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pcard-footer{
+  margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.pcard-etapa-label{font-size:11px;color:var(--muted);}
+.etapa-progress{
+  height:3px;background:var(--border);border-radius:2px;
+  margin-top:8px;overflow:hidden;
+}
+.etapa-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:2px;transition:width .3s;}
+.action-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.action-dot.minha{background:var(--green);box-shadow:0 0 8px var(--green);}
+.action-dot.aguardando{background:var(--gold);}
+.action-dot.concluido{background:var(--text2);}
+
+/* ── MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(8px);
+  z-index:200;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.show{display:flex;}
+.modal{
+  background:var(--s1);border:1px solid var(--border2);
+  border-radius:var(--r-lg);padding:0;
+  width:100%;max-width:680px;
+  box-shadow:var(--shadow-lg);
+  animation:modalIn .2s ease;
+  max-height:90vh;overflow:hidden;display:flex;flex-direction:column;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(-12px) scale(.97);}to{opacity:1;transform:none;}}
+.modal-header{
+  padding:22px 26px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-shrink:0;
+}
+.modal-header h3{font-family:var(--font-display);font-size:18px;font-weight:700;}
+.modal-header p{font-size:13px;color:var(--text2);margin-top:3px;}
+.modal-close{
+  background:transparent;border:none;color:var(--muted);
+  cursor:pointer;padding:4px;border-radius:var(--r-sm);transition:all .15s;
+}
+.modal-close:hover{background:var(--s2);color:var(--text);}
+.modal-body{padding:24px 26px;overflow-y:auto;flex:1;}
+.modal-footer{
+  padding:16px 26px;border-top:1px solid var(--border);
+  display:flex;gap:10px;justify-content:flex-end;
+  flex-shrink:0;background:var(--s1);
+}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-grid.full{grid-template-columns:1fr;}
+.form-field{margin-bottom:16px;}
+.form-field:last-child{margin-bottom:0;}
+.form-field label{
+  display:block;font-size:12px;font-weight:500;color:var(--text2);
+  margin-bottom:6px;
+}
+.form-field label .req{color:var(--red);margin-left:2px;}
+.form-field label .ref{color:var(--muted);font-weight:400;margin-left:6px;}
+.form-field input,.form-field select,.form-field textarea{
+  width:100%;padding:9px 12px;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:var(--r-sm);color:var(--text);font-family:var(--font-body);
+  font-size:13px;outline:none;transition:border-color .2s;
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green);}
+.form-field input::placeholder,.form-field textarea::placeholder{color:var(--muted);}
+.form-field select option{background:var(--s2);}
+.form-field textarea{resize:vertical;min-height:80px;}
+.form-field .field-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.form-field .field-hint.legal{color:var(--blue);opacity:.7;}
+.form-section-title{
+  font-family:var(--font-display);font-size:13px;font-weight:700;
+  color:var(--text2);text-transform:uppercase;letter-spacing:.06em;
+  padding:14px 0 10px;border-bottom:1px solid var(--border);
+  margin-bottom:16px;
+}
+.form-alert{
+  padding:10px 14px;border-radius:var(--r-sm);font-size:13px;margin-top:12px;
+}
+.form-alert-error{background:var(--red-l);border:1px solid rgba(255,92,106,.2);color:var(--red);}
+.form-alert-success{background:var(--green-l);border:1px solid rgba(65,243,106,.2);color:var(--green);}
+
+/* ── TIPO DE CONTRATAÇÃO ── */
+.tipo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px;}
+.tipo-card{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px;cursor:pointer;
+  transition:all .15s;
+}
+.tipo-card:hover{border-color:var(--border2);background:var(--s3);}
+.tipo-card.selected{border-color:var(--green);background:var(--green-l);}
+.tipo-card .tipo-ico{font-size:20px;margin-bottom:6px;}
+.tipo-card .tipo-label{font-size:12px;font-weight:600;color:var(--text);}
+.tipo-card .tipo-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+.tipo-card.selected .tipo-label{color:var(--green);}
+
+/* ── PROCESSO (visão individual) ── */
+.proc-layout{display:grid;grid-template-columns:280px 1fr;gap:20px;height:100%;}
+.proc-sidebar{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r-lg);overflow:hidden;height:fit-content;
+  position:sticky;top:0;
+}
+.proc-info{padding:18px;}
+.proc-num{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px;}
+.proc-obj{font-size:15px;font-weight:700;font-family:var(--font-display);line-height:1.3;margin-bottom:12px;}
+.proc-meta{display:flex;flex-direction:column;gap:6px;}
+.proc-meta-item{display:flex;justify-content:space-between;font-size:12px;}
+.proc-meta-item .k{color:var(--muted);}
+.proc-meta-item .v{font-weight:500;}
+
+.etapa-list{border-top:1px solid var(--border);}
+.etapa-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 18px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:all .12s;
+}
+.etapa-item:last-child{border-bottom:none;}
+.etapa-item:hover{background:var(--s2);}
+.etapa-item.active{background:rgba(65,243,106,.06);}
+.etapa-item.concluida .etapa-num{background:var(--green);color:#000;}
+.etapa-item.ativa .etapa-num{background:var(--gold);color:#000;}
+.etapa-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--s3);color:var(--muted);
+  font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  border:1px solid var(--border);
+}
+.etapa-info{flex:1;}
+.etapa-nome{font-size:12px;font-weight:500;}
+.etapa-resp{font-size:11px;color:var(--muted);}
+.etapa-item.active .etapa-nome{color:var(--green);}
+
+.proc-main{overflow-y:auto;}
+.doc-area{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r-lg);overflow:hidden;
+}
+.doc-head{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.doc-badge{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  padding:3px 10px;border-radius:20px;
+}
+.doc-body{padding:20px;}
+
+.hist-item{
+  display:flex;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.hist-item:last-child{border-bottom:none;}
+.hist-dot{
+  width:8px;height:8px;border-radius:50%;
+  margin-top:5px;flex-shrink:0;
+}
+.hist-content{flex:1;}
+.hist-acao{font-size:13px;font-weight:500;}
+.hist-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── TOAST ── */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:var(--s3);border:1px solid var(--border2);
+  padding:11px 16px;border-radius:var(--r-sm);
+  font-size:13px;font-weight:500;box-shadow:var(--shadow);
+  animation:toastIn .18s ease;display:flex;align-items:center;gap:8px;
+  min-width:260px;
+}
+.toast svg{width:14px;height:14px;flex-shrink:0;}
+.toast.success{border-color:rgba(65,243,106,.25);color:var(--green);}
+.toast.error{border-color:rgba(255,92,106,.25);color:var(--red);}
+.toast.info{color:var(--blue);border-color:rgba(26,184,255,.25);}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:none;}}
+
+/* ── LOADING SPINNER ── */
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(65,243,106,.3);
+  border-top-color:var(--green);border-radius:50%;
+  animation:spin .7s linear infinite;display:inline-block;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+
+/* ── FIELD VALUE (read-only display) ── */
+.fv{padding:8px 12px;background:var(--s3);border-radius:var(--r-sm);font-size:13px;min-height:34px;line-height:1.4;}
+.ia-btn{margin-top:4px;}
+.risco-campo,.pp-campo{width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font-body);font-size:12px;outline:none;}
+.risco-campo:focus,.pp-campo:focus{border-color:var(--green);}
+
+/* ── MODAL IA ── */
+.ia-modal{max-width:560px;}
+.ia-result{
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:var(--r-sm);padding:14px;
+  font-size:13px;line-height:1.6;color:var(--text);
+  white-space:pre-wrap;min-height:80px;margin-top:12px;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .proc-layout{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SVG ICONS ══ -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="ic-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></symbol>
+  <symbol id="ic-ia" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 00-7.35 16.76L3 21l2.24-1.65A10 10 0 1012 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></symbol>
+  <symbol id="ic-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
+</svg>
+
+<!-- ══ VIEW: LOGIN ══ -->
+<div id="view-login" class="view active">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-logo">L</div>
+      <div class="login-brand-text">
+        <h1>Licite.ai</h1>
+        <p>Gestão Licitatória Municipal</p>
+      </div>
+    </div>
+    <h2>Entrar na plataforma</h2>
+    <p class="sub">Acesso restrito a servidores autorizados.</p>
+    <div class="login-erro" id="login-erro"></div>
+    <div class="field-group">
+      <label>E-mail institucional</label>
+      <input type="email" id="login-email" placeholder="seu@prefeitura.gov.br" autocomplete="email">
+    </div>
+    <div class="field-group">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btn-entrar" onclick="fazerLogin()">Entrar</button>
+    <p class="login-footer">Licite.ai © 2026 · Lei 14.133/2021</p>
+  </div>
+</div>
+
+<!-- ══ VIEW: APP ══ -->
+<div id="view-app" class="view">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="app-brand" onclick="navigate('dashboard')">
+      <div class="app-logo">L</div>
+      <span class="app-brand-name">Licite.ai</span>
+      <span class="app-brand-sub">/ Gestão Licitatória</span>
+    </div>
+    <div class="header-right">
+      <div class="user-chip" id="user-chip">
+        <div class="user-avatar" id="user-avatar" style="background:rgba(65,243,106,.15);color:var(--green)">?</div>
+        <div>
+          <div class="user-name" id="user-name">Carregando...</div>
+          <div class="user-setor" id="user-setor">—</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
+        <svg><use href="#ic-logout"/></svg> Sair
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div class="app-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Geral</div>
+        <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')">
+          <svg><use href="#ic-home"/></svg> Início
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Processos</div>
+        <div class="nav-item" id="nav-processos" onclick="navigate('processos')">
+          <svg><use href="#ic-list"/></svg> Todos os Processos
+          <span class="nav-badge" id="nav-count-proc">0</span>
+        </div>
+        <div class="nav-item" id="nav-novo" onclick="abrirNovoProcesso()">
+          <svg><use href="#ic-plus"/></svg> Novo Processo
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-area">
+
+      <!-- PÁGINA: DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-head">
+          <div>
+            <div class="page-title" id="dash-title">Bom dia!</div>
+            <div class="page-sub">Aqui estão os processos que precisam da sua atenção.</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary" onclick="abrirNovoProcesso()">
+              <svg><use href="#ic-plus"/></svg> Novo Processo
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-header"><span class="stat-label">Processos ativos</span><span class="stat-ico blue"><svg><use href="#ic-file"/></svg></span></div>
+            <div class="stat-val blue" id="s-ativos">0</div>
+            <div class="stat-change">em andamento</div>
+          </div>
+          <div class="stat">
+            <div class="stat-header"><span class="stat-label">Aguardando minha ação</span><span class="stat-ico green"><svg><use href="#ic-alert"/></svg></span></div>
+            <div class="stat-val green" id="s-minha-acao">0</div>
+            <div class="stat-change">para resolver hoje</div>
+          </div>
+          <div class="stat">
+            <div class="stat-header"><span class="stat-label">Devolvidos</span><span class="stat-ico red"><svg><use href="#ic-back"/></svg></span></div>
+            <div class="stat-val red" id="s-devolvidos">0</div>
+            <div class="stat-change">aguardando correção</div>
+          </div>
+          <div class="stat">
+            <div class="stat-header"><span class="stat-label">Concluídos</span><span class="stat-ico gold"><svg><use href="#ic-check"/></svg></span></div>
+            <div class="stat-val gold" id="s-concluidos">0</div>
+            <div class="stat-change">este mês</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div><div class="card-title">Aguardando minha ação</div><div class="card-sub">Processos na sua fila</div></div>
+            <button class="btn btn-secondary btn-sm" onclick="navigate('processos')">Ver todos</button>
+          </div>
+          <div id="dash-minha-acao-list" style="padding:0 0 4px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div><div class="card-title">Processos recentes</div><div class="card-sub">Últimos atualizados</div></div>
+          </div>
+          <div id="dash-recentes-list" style="padding:0 0 4px;"></div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: LISTA DE PROCESSOS -->
+      <div class="page" id="page-processos">
+        <div class="page-head">
+          <div>
+            <div class="page-title">Processos Licitatórios</div>
+            <div class="page-sub">Todos os processos da sua prefeitura</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary" onclick="abrirNovoProcesso()">
+              <svg><use href="#ic-plus"/></svg> Novo Processo
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head" style="gap:8px;">
+            <input type="text" id="search-proc" placeholder="Buscar por número ou objeto..." 
+              style="flex:1;padding:7px 12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;"
+              oninput="filtrarProcessos()">
+            <select id="filtro-status" style="padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;" onchange="filtrarProcessos()">
+              <option value="">Todos os status</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="devolvido">Devolvido</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table id="tabela-processos">
+              <thead><tr><th>Protocolo</th><th>Objeto</th><th>Tipo</th><th>Etapa</th><th>Status</th><th>Responsável atual</th><th>Atualizado</th></tr></thead>
+              <tbody id="tbody-processos"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted);">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: PROCESSO (visão individual) -->
+      <div class="page" id="page-processo">
+        <div class="page-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="navigate('processos')">
+              <svg><use href="#ic-arrow-left"/></svg> Voltar
+            </button>
+            <div>
+              <div class="page-title" id="proc-title">Processo</div>
+              <div class="page-sub" id="proc-sub">Protocolo</div>
+            </div>
+          </div>
+          <div class="page-actions" id="proc-actions"></div>
+        </div>
+
+        <div class="proc-layout">
+          <!-- sidebar do processo -->
+          <div>
+            <div class="proc-sidebar">
+              <div class="proc-info">
+                <div class="proc-num" id="proc-num">—</div>
+                <div class="proc-obj" id="proc-obj">—</div>
+                <div class="proc-meta">
+                  <div class="proc-meta-item"><span class="k">Tipo</span><span class="v" id="proc-tipo-label">—</span></div>
+                  <div class="proc-meta-item"><span class="k">Setor</span><span class="v" id="proc-setor">—</span></div>
+                  <div class="proc-meta-item"><span class="k">Valor est.</span><span class="v" id="proc-valor">—</span></div>
+                  <div class="proc-meta-item"><span class="k">Etapa</span><span class="v" id="proc-etapa-num">—</span></div>
+                  <div class="proc-meta-item"><span class="k">Status</span><span id="proc-status-badge">—</span></div>
+                </div>
+              </div>
+              <div class="etapa-list" id="proc-etapa-list"></div>
+            </div>
+          </div>
+
+          <!-- área principal do processo -->
+          <div class="proc-main">
+            <div class="doc-area" id="doc-area">
+              <div class="doc-head">
+                <div>
+                  <div style="font-size:13px;font-weight:600;" id="doc-etapa-title">Etapa atual</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="doc-etapa-resp">Responsável</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <span class="doc-badge" id="doc-status-badge">Rascunho</span>
+                </div>
+              </div>
+              <div class="doc-body" id="doc-body">
+                <!-- formulário da etapa atual renderizado aqui -->
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:16px;">
+              <div class="card-head">
+                <div><div class="card-title">Histórico de movimentações</div></div>
+              </div>
+              <div style="padding:4px 18px;" id="proc-historico"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══ MODAL: NOVO PROCESSO ══ -->
+<div class="modal-overlay" id="modal-novo">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>Novo Processo Licitatório</h3>
+        <p>Inicie com o Documento de Formalização de Demanda (DFD)</p>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-novo')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <!-- PASSO 1: Tipo de contratação -->
+      <div id="novo-passo1">
+        <div class="form-section-title">Passo 1 de 2 — Tipo de Contratação</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Selecione o tipo de objeto. Isso define quais documentos serão exigidos no processo.</p>
+        <div class="tipo-grid">
+          <div class="tipo-card" onclick="selecionarTipo('aquisicao_bens')">
+            <div class="tipo-ico">🛒</div>
+            <div class="tipo-label">Aquisição de Bens</div>
+            <div class="tipo-desc">Materiais, equipamentos, produtos</div>
+          </div>
+          <div class="tipo-card" onclick="selecionarTipo('servicos_comuns')">
+            <div class="tipo-ico">🔧</div>
+            <div class="tipo-label">Serviços Comuns</div>
+            <div class="tipo-desc">Limpeza, vigilância, TI, etc.</div>
+          </div>
+          <div class="tipo-card" onclick="selecionarTipo('obras_engenharia')">
+            <div class="tipo-ico">🏗️</div>
+            <div class="tipo-label">Obras e Engenharia</div>
+            <div class="tipo-desc">Construção, reforma, infraestrutura</div>
+          </div>
+          <div class="tipo-card" onclick="selecionarTipo('locacao_maquinas')">
+            <div class="tipo-ico">🚜</div>
+            <div class="tipo-label">Locação de Máquinas</div>
+            <div class="tipo-desc">Veículos, equipamentos, maquinário</div>
+          </div>
+          <div class="tipo-card" onclick="selecionarTipo('dispensa')">
+            <div class="tipo-ico">⚡</div>
+            <div class="tipo-label">Dispensa de Licitação</div>
+            <div class="tipo-desc">Art. 75 LLC — contratação direta</div>
+          </div>
+          <div class="tipo-card" onclick="selecionarTipo('inexigibilidade')">
+            <div class="tipo-ico">🔒</div>
+            <div class="tipo-label">Inexigibilidade</div>
+            <div class="tipo-desc">Art. 74 LLC — exclusividade</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASSO 2: DFD -->
+      <div id="novo-passo2" style="display:none;">
+        <div class="form-section-title">Passo 2 de 2 — Documento de Formalização de Demanda (DFD)</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Art. 7º, Inciso I da IN-009/23 TCM-GO | Art. 12, VII LLC</p>
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Unidade Requisitante <span class="req">*</span></label>
+            <input type="text" id="dfd-unidade" placeholder="Ex: Escola Municipal Pedro Xavier da Costa">
+            <span class="field-hint">Setor, escola, departamento ou secretaria que origina a demanda</span>
+          </div>
+          <div class="form-field">
+            <label>Nome do Responsável (Chefe do Órgão) <span class="req">*</span></label>
+            <input type="text" id="dfd-responsavel" placeholder="Nome completo do chefe">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Cargo do Responsável <span class="req">*</span></label>
+            <input type="text" id="dfd-cargo" placeholder="Ex: Diretor Escolar">
+          </div>
+          <div class="form-field">
+            <label>Grau de Prioridade <span class="req">*</span> <span class="ref">Art. 7º, I, f</span></label>
+            <select id="dfd-prioridade">
+              <option value="">Selecione...</option>
+              <option value="alta">Alta — Urgente</option>
+              <option value="media">Média — Normal</option>
+              <option value="baixa">Baixa — Planejamento</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Justificativa da Necessidade da Contratação <span class="req">*</span> <span class="ref">Art. 7º, I, a</span></label>
+          <textarea id="dfd-justificativa" rows="3" placeholder="Descreva por que esta contratação é necessária. Ex: A escola não possui material de limpeza suficiente para o período letivo 2026/2..."></textarea>
+          <span class="field-hint legal">⚡ IA disponível — clique em "Sugerir com IA" para gerar um rascunho</span>
+        </div>
+        <div class="form-field">
+          <label>Descrição Sucinta do Objeto <span class="req">*</span> <span class="ref">Art. 7º, I, b</span></label>
+          <input type="text" id="dfd-objeto" placeholder="Ex: Aquisição de materiais de limpeza para uso nas dependências da Escola Municipal">
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Quantidade a Contratar <span class="req">*</span> <span class="ref">Art. 7º, I, c</span></label>
+            <input type="text" id="dfd-quantidade" placeholder="Ex: 50 kits anuais">
+            <span class="field-hint">Expectativa de consumo anual</span>
+          </div>
+          <div class="form-field">
+            <label>Estimativa Preliminar do Valor (R$) <span class="req">*</span> <span class="ref">Art. 7º, I, d</span></label>
+            <input type="text" id="dfd-valor" placeholder="Ex: 15.000,00">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Prazo da Contratação <span class="req">*</span> <span class="ref">Art. 7º, I, e</span></label>
+            <input type="text" id="dfd-prazo" placeholder="Ex: 12 meses ou até 31/12/2026">
+          </div>
+          <div class="form-field">
+            <label>Compatível com Plano de Contratações Anual? <span class="ref">Art. 7º, I</span></label>
+            <select id="dfd-pca">
+              <option value="sim">Sim — consta no PCA</option>
+              <option value="nao">Não — fora do PCA</option>
+              <option value="na">Prefeitura não possui PCA</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Extra para Dispensa/Inexigibilidade -->
+        <div id="dfd-extra-dispensa" style="display:none;">
+          <div class="form-section-title" style="margin-top:8px;">Informações da Contratação Direta</div>
+          <div class="form-field">
+            <label>Hipótese Legal <span class="req">*</span></label>
+            <select id="dfd-hipotese">
+              <option value="">Selecione a hipótese...</option>
+              <optgroup label="Dispensa (Art. 75 LLC)">
+                <option value="art75-i">Art. 75, I — Valor inferior a R$ 50.000 (obras)</option>
+                <option value="art75-ii">Art. 75, II — Valor inferior a R$ 100.000 (outros)</option>
+                <option value="art75-iii">Art. 75, III — Emergência ou calamidade</option>
+                <option value="art75-iv">Art. 75, IV — Não atendida a licitação anterior</option>
+                <option value="art75-outro">Art. 75 — Outra hipótese</option>
+              </optgroup>
+              <optgroup label="Inexigibilidade (Art. 74 LLC)">
+                <option value="art74-i">Art. 74, I — Exclusividade de fornecedor</option>
+                <option value="art74-ii">Art. 74, II — Profissional do setor artístico</option>
+                <option value="art74-iii">Art. 74, III — Serviço técnico especializado</option>
+                <option value="art74-outro">Art. 74 — Outra hipótese</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Justificativa da Dispensa/Inexigibilidade <span class="req">*</span></label>
+            <textarea id="dfd-justificativa-direta" rows="3" placeholder="Descreva detalhadamente a justificativa legal para a contratação direta..."></textarea>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>Vinculação/Dependência com outra contratação <span class="ref">Art. 7º, I, g</span></label>
+          <input type="text" id="dfd-vinculacao" placeholder="Opcional — ex: Processo nº 001/2026 (reforma)">
+        </div>
+
+        <div id="novo-form-erro" class="form-alert form-alert-error" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="modal-novo-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-novo')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-avancar-passo" onclick="avancarNovoProcesso()" style="display:none;">
+        Próximo passo <svg><use href="#ic-arrow-right"/></svg>
+      </button>
+      <button class="btn btn-primary" id="btn-criar-processo" onclick="criarProcesso()" style="display:none;">
+        <svg><use href="#ic-send"/></svg> Criar e Enviar ao Protocolo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: AÇÃO (avançar/devolver) ══ -->
+<div class="modal-overlay" id="modal-acao">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div>
+        <h3 id="modal-acao-titulo">Avançar Etapa</h3>
+        <p id="modal-acao-desc">Confirme a ação para este processo</p>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-acao')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label id="modal-acao-label">Observação</label>
+        <textarea id="modal-acao-obs" rows="3" placeholder="Opcional..."></textarea>
+      </div>
+      <div id="modal-acao-alerta" style="display:none;" class="form-alert form-alert-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-acao')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-acao" onclick="confirmarAcao()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: IA ══ -->
+<div class="modal-overlay" id="modal-ia">
+  <div class="modal ia-modal">
+    <div class="modal-header">
+      <div>
+        <h3>✨ Sugerir com IA</h3>
+        <p id="modal-ia-campo-label">Gerando sugestão...</p>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-ia')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label>Contexto adicional (opcional)</label>
+        <textarea id="modal-ia-contexto" rows="2" placeholder="Ex: Material de limpeza para escola com 300 alunos..."></textarea>
+      </div>
+      <div id="modal-ia-spinner" style="text-align:center;padding:16px;display:none;">
+        <span class="spinner" style="width:20px;height:20px;border-width:2px;"></span>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Gerando com IA...</div>
+      </div>
+      <div id="modal-ia-resultado" class="ia-result" style="display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-ia')">Cancelar</button>
+      <button class="btn btn-secondary" id="btn-ia-gerar" onclick="executarIA()">
+        <svg><use href="#ic-ia"/></svg> Gerar
+      </button>
+      <button class="btn btn-primary" id="btn-ia-usar" onclick="usarTextoIA()" style="display:none;">
+        ✓ Usar este texto
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════════
+const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ══════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════
+let _user = null;
+let _perfil = null;
+let _processos = [];
+let _processoAtual = null;
+let _tipoSelecionado = null;
+let _acaoAtual = null; // { tipo: 'avancar'|'devolver', processoId }
+
+// ══════════════════════════════════════════════════════════
+//  ETAPAS E RESPONSÁVEIS
+// ══════════════════════════════════════════════════════════
+const ETAPAS = {
+  aquisicao_bens:     [
+    {n:1,nome:'DFD',full:'Formalização de Demanda',resp:'Requisitante'},
+    {n:2,nome:'Protocolo',full:'Registro e Protocolo',resp:'Protocolo'},
+    {n:3,nome:'ETP + TR',full:'ETP + Mapa de Risco + TR',resp:'Requisitante'},
+    {n:4,nome:'Pesquisa de Preços',full:'Cotação / Pesquisa de Preços',resp:'Compras'},
+    {n:5,nome:'Dotação Orç.',full:'Dotação Orçamentária',resp:'Contabilidade'},
+    {n:6,nome:'Autorização',full:'Autorização do Gestor',resp:'Secretaria'},
+    {n:7,nome:'Minuta Edital',full:'Minuta do Edital',resp:'Licitação'},
+    {n:8,nome:'Parecer Jurídico',full:'Parecer Jurídico',resp:'Jurídico'},
+    {n:9,nome:'Edital',full:'Edital Final',resp:'Licitação'},
+    {n:10,nome:'Publicação',full:'Publicação do Edital',resp:'Licitação'},
+  ],
+  servicos_comuns:    null, // mesmo que aquisicao_bens
+  obras_engenharia:   [
+    {n:1,nome:'DFD',full:'Formalização de Demanda',resp:'Requisitante'},
+    {n:2,nome:'Protocolo',full:'Registro e Protocolo',resp:'Protocolo'},
+    {n:3,nome:'ETP + Projeto',full:'ETP + Projeto Básico + Orçamento',resp:'Requisitante/Eng.'},
+    {n:4,nome:'Pesquisa de Preços',full:'Orçamento (SINAPI/SICRO)',resp:'Compras'},
+    {n:5,nome:'Dotação Orç.',full:'Dotação Orçamentária',resp:'Contabilidade'},
+    {n:6,nome:'Autorização',full:'Autorização do Gestor',resp:'Secretaria'},
+    {n:7,nome:'Minuta Edital',full:'Minuta do Edital',resp:'Licitação'},
+    {n:8,nome:'Parecer Jurídico',full:'Parecer Jurídico',resp:'Jurídico'},
+    {n:9,nome:'Edital',full:'Edital Final',resp:'Licitação'},
+    {n:10,nome:'Publicação',full:'Publicação do Edital',resp:'Licitação'},
+  ],
+  locacao_maquinas:   null, // mesmo que aquisicao_bens
+  dispensa:           [
+    {n:1,nome:'DFD',full:'Formalização da Demanda + Justificativa',resp:'Requisitante'},
+    {n:2,nome:'Protocolo',full:'Registro e Protocolo',resp:'Protocolo'},
+    {n:3,nome:'Pesquisa de Preços',full:'Cotação (mín. 3 fontes)',resp:'Compras'},
+    {n:4,nome:'Dotação Orç.',full:'Dotação Orçamentária',resp:'Contabilidade'},
+    {n:5,nome:'Autorização',full:'Autorização do Gestor',resp:'Secretaria'},
+    {n:6,nome:'Parecer Jurídico',full:'Parecer Jurídico',resp:'Jurídico'},
+    {n:7,nome:'Publicação',full:'Publicação no PNCP',resp:'Licitação'},
+  ],
+  inexigibilidade: null, // mesmo que dispensa
+};
+ETAPAS.servicos_comuns  = ETAPAS.aquisicao_bens;
+ETAPAS.locacao_maquinas = ETAPAS.aquisicao_bens;
+ETAPAS.inexigibilidade  = ETAPAS.dispensa;
+
+const TIPO_LABELS = {
+  aquisicao_bens:    'Aquisição de Bens',
+  servicos_comuns:   'Serviços Comuns',
+  obras_engenharia:  'Obras e Engenharia',
+  locacao_maquinas:  'Locação de Máquinas',
+  dispensa:          'Dispensa de Licitação',
+  inexigibilidade:   'Inexigibilidade',
+};
+
+// ══════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await carregarPerfil(session.user);
+    mostrarApp();
+  }
+})();
+
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn   = document.getElementById('btn-entrar');
+  const erro  = document.getElementById('login-erro');
+
+  if (!email || !senha) { mostrarErroLogin('Preencha e-mail e senha.'); return; }
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  erro.style.display = 'none';
+
+  try {
+    const { data: authData, error: authErr } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (authErr) throw authErr;
+
+    const { data: usuario, error: dbErr } = await sb.from('usuarios')
+      .select('*, organizacoes(nome)')
+      .eq('id', authData.user.id).single();
+
+    if (dbErr || !usuario) throw new Error('Usuário não encontrado.');
+    if (usuario.ativo === false) throw new Error('Usuário inativo. Contate o administrador.');
+
+    await carregarPerfil(authData.user, usuario);
+    mostrarApp();
+  } catch(e) {
+    const msg = e.message?.includes('Invalid') ? 'E-mail ou senha incorretos.' : (e.message || 'Erro ao entrar.');
+    mostrarErroLogin(msg);
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
+
+async function carregarPerfil(user, usuario = null) {
+  _user = user;
+  if (!usuario) {
+    const { data } = await sb.from('usuarios').select('*, organizacoes(nome)').eq('id', user.id).single();
+    usuario = data;
+  }
+  _perfil = usuario;
+}
+
+function mostrarApp() {
+  document.getElementById('view-login').classList.remove('active');
+  document.getElementById('view-app').classList.add('active');
+
+  // Preencher header
+  const nome = _perfil?.nome || _user?.email || '?';
+  const setor = _perfil?.setor || _perfil?.organizacoes?.nome || '—';
+  const letra = nome[0].toUpperCase();
+  const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
+  const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
+
+  document.getElementById('user-avatar').textContent = letra;
+  document.getElementById('user-avatar').style.background = bg;
+  document.getElementById('user-avatar').style.color = fg;
+  document.getElementById('user-name').textContent = nome;
+  document.getElementById('user-setor').textContent = setor;
+
+  // Saudação
+  const h = new Date().getHours();
+  const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
+
+  carregarDados();
+}
+
+async function fazerLogout() {
+  await sb.auth.signOut();
+  document.getElementById('view-app').classList.remove('active');
+  document.getElementById('view-login').classList.add('active');
+  _user = null; _perfil = null; _processos = [];
+}
+
+function mostrarErroLogin(msg) {
+  const el = document.getElementById('login-erro');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fazerLogin();
+});
+
+// ══════════════════════════════════════════════════════════
+//  DADOS
+// ══════════════════════════════════════════════════════════
+async function carregarDados() {
+  await carregarProcessos();
+  renderDashboard();
+  renderTabelaProcessos();
+}
+
+async function carregarProcessos() {
+  if (!_perfil?.prefeitura_id) { _processos = []; return; }
+
+  const { data, error } = await sb.from('processos')
+    .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
+    .eq('prefeitura_id', _perfil.prefeitura_id)
+    .order('atualizado_em', { ascending: false });
+
+  if (error) { console.error(error); _processos = []; return; }
+  _processos = data || [];
+  document.getElementById('nav-count-proc').textContent = _processos.length;
+}
+
+// ══════════════════════════════════════════════════════════
+//  NAVEGAÇÃO
+// ══════════════════════════════════════════════════════════
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + page);
+  const navEl  = document.getElementById('nav-' + page);
+  if (pageEl) pageEl.classList.add('active');
+  if (navEl)  navEl.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const ativos   = _processos.filter(p => p.status === 'em_andamento').length;
+  const devolvidos = _processos.filter(p => p.status === 'devolvido').length;
+  const concluidos = _processos.filter(p => p.status === 'concluido').length;
+
+  document.getElementById('s-ativos').textContent    = ativos;
+  document.getElementById('s-devolvidos').textContent = devolvidos;
+  document.getElementById('s-concluidos').textContent = concluidos;
+
+  // Minha ação (simplificado: todos em andamento são "minha ação" por ora)
+  const minhaAcao = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
+  document.getElementById('s-minha-acao').textContent = minhaAcao.length;
+
+  renderListaProcessos('dash-minha-acao-list', minhaAcao.slice(0, 3));
+  renderListaProcessos('dash-recentes-list', _processos.slice(0, 5));
+}
+
+function renderListaProcessos(containerId, lista) {
+  const el = document.getElementById(containerId);
+  if (!lista.length) {
+    el.innerHTML = `<div class="empty" style="padding:30px;"><svg><use href="#ic-file"/></svg><h4>Nenhum processo</h4><p>Crie o primeiro processo acima</p></div>`;
+    return;
+  }
+  el.innerHTML = lista.map(p => {
+    const etapas = ETAPAS[p.tipo_contratacao] || ETAPAS.aquisicao_bens;
+    const pct = Math.round(((p.etapa_atual - 1) / etapas.length) * 100);
+    const etapaInfo = etapas.find(e => e.n === p.etapa_atual) || etapas[0];
+    return `
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;"
+      onmouseenter="this.style.background='rgba(255,255,255,.02)'"
+      onmouseleave="this.style.background=''"
+      onclick="abrirProcesso('${p.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${p.numero_protocolo || '—'} · ${TIPO_LABELS[p.tipo_contratacao] || '—'}</div>
+          <div style="font-size:14px;font-weight:600;">${p.objeto || '—'}</div>
+        </div>
+        ${statusBadge(p.status)}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--text2);">Etapa ${p.etapa_atual}/${etapas.length} — ${etapaInfo.nome}</span>
+        <span style="font-size:11px;color:var(--muted);">${formatData(p.atualizado_em)}</span>
+      </div>
+      <div class="etapa-progress" style="margin-top:6px;"><div class="etapa-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+//  TABELA DE PROCESSOS
+// ══════════════════════════════════════════════════════════
+function renderTabelaProcessos(lista = null) {
+  const processos = lista || _processos;
+  const tbody = document.getElementById('tbody-processos');
+  if (!processos.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><svg><use href="#ic-file"/></svg><h4>Nenhum processo</h4><p>Crie o primeiro processo</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = processos.map(p => {
+    const etapas = ETAPAS[p.tipo_contratacao] || ETAPAS.aquisicao_bens;
+    const etapaInfo = etapas.find(e => e.n === p.etapa_atual) || etapas[0];
+    return `<tr onclick="abrirProcesso('${p.id}')">
+      <td><div class="td-main">${p.numero_protocolo || '—'}</div></td>
+      <td><div class="td-main" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.objeto || '—'}</div></td>
+      <td>${tipoBadge(p.tipo_contratacao)}</td>
+      <td style="font-size:12px;color:var(--text2);">Etapa ${p.etapa_atual}/${etapas.length}<div class="td-sub">${etapaInfo.nome}</div></td>
+      <td>${statusBadge(p.status)}</td>
+      <td style="font-size:12px;color:var(--text2);">${etapaInfo.resp}</td>
+      <td style="font-size:12px;color:var(--muted);">${formatData(p.atualizado_em)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarProcessos() {
+  const q = (document.getElementById('search-proc')?.value || '').toLowerCase();
+  const st = document.getElementById('filtro-status')?.value || '';
+  const f = _processos.filter(p => {
+    const matchQ = !q || (p.numero_protocolo||'').toLowerCase().includes(q) || (p.objeto||'').toLowerCase().includes(q);
+    const matchS = !st || p.status === st;
+    return matchQ && matchS;
+  });
+  renderTabelaProcessos(f);
+}
+
+// ══════════════════════════════════════════════════════════
+//  ABRIR PROCESSO
+// ══════════════════════════════════════════════════════════
+async function abrirProcesso(id) {
+  const proc = _processos.find(p => p.id === id);
+  if (!proc) return;
+  _processoAtual = proc;
+
+  // Carregar documentos e movimentações completos
+  const { data: docs }  = await sb.from('documentos').select('*').eq('processo_id', id).order('criado_em');
+  const { data: movs }  = await sb.from('movimentacoes').select('*, usuarios(nome)').eq('processo_id', id).order('criado_em');
+  _processoAtual.docs   = docs || [];
+  _processoAtual.movs   = movs || [];
+
+  // Preencher sidebar do processo
+  const etapas = ETAPAS[proc.tipo_contratacao] || ETAPAS.aquisicao_bens;
+  document.getElementById('proc-title').textContent = proc.objeto || 'Processo';
+  document.getElementById('proc-sub').textContent   = proc.numero_protocolo || '—';
+  document.getElementById('proc-num').textContent   = proc.numero_protocolo || '—';
+  document.getElementById('proc-obj').textContent   = proc.objeto || '—';
+  document.getElementById('proc-tipo-label').textContent = TIPO_LABELS[proc.tipo_contratacao] || '—';
+  document.getElementById('proc-setor').textContent = proc.setor_requisitante || '—';
+  document.getElementById('proc-valor').textContent = proc.valor_estimado ? 'R$ ' + Number(proc.valor_estimado).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  document.getElementById('proc-etapa-num').textContent = `${proc.etapa_atual}/${etapas.length}`;
+  document.getElementById('proc-status-badge').innerHTML = statusBadge(proc.status);
+
+  // Timeline de etapas
+  document.getElementById('proc-etapa-list').innerHTML = etapas.map(e => {
+    const cls = e.n < proc.etapa_atual ? 'concluida' : e.n === proc.etapa_atual ? 'ativa' : '';
+    return `<div class="etapa-item ${cls} ${e.n === proc.etapa_atual ? 'active' : ''}">
+      <div class="etapa-num">${e.n < proc.etapa_atual ? '✓' : e.n}</div>
+      <div class="etapa-info">
+        <div class="etapa-nome">${e.nome}</div>
+        <div class="etapa-resp">${e.resp}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Área do documento atual
+  const etapaAtual = etapas.find(e => e.n === proc.etapa_atual) || etapas[0];
+  document.getElementById('doc-etapa-title').textContent = etapaAtual.full;
+  document.getElementById('doc-etapa-resp').textContent  = `Responsável: ${etapaAtual.resp}`;
+
+  const docAtual = docs?.find(d => tipoParaEtapa(d.tipo, proc.tipo_contratacao) === proc.etapa_atual);
+  const statusDoc = docAtual?.status || 'rascunho';
+  const badgeEl = document.getElementById('doc-status-badge');
+  badgeEl.textContent = { rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', rejeitado: 'Devolvido' }[statusDoc] || statusDoc;
+  badgeEl.style.cssText = { rascunho:'background:var(--s3);color:var(--text2);', enviado:'background:var(--blue-l);color:var(--blue);', aprovado:'background:var(--green-l);color:var(--green);', rejeitado:'background:var(--red-l);color:var(--red);' }[statusDoc] || '';
+
+  // Renderizar formulário da etapa
+  renderFormEtapa(proc, etapaAtual, docAtual);
+
+  // Histórico
+  renderHistorico(movs || []);
+
+  // Ações disponíveis
+  renderAcoesProcesso(proc, etapaAtual);
+
+  navigate('processo');
+}
+
+function renderFormEtapa(proc, etapa, doc) {
+  const dados = doc?.dados || {};
+  let html = '';
+
+  if (etapa.n === 1) {
+    // DFD — leitura apenas se já enviado, editável se rascunho
+    html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div><div style="font-size:11px;color:var(--muted);">Unidade Requisitante</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.unidade||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);">Responsável</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.responsavel||'—'} (${dados.cargo||'—'})</div></div>
+    </div>
+    <div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Objeto</div><div style="font-size:14px;font-weight:500;">${dados.objeto||'—'}</div></div>
+    <div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Justificativa da Necessidade</div><div style="font-size:13px;color:var(--text2);line-height:1.5;">${dados.justificativa||'—'}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div><div style="font-size:11px;color:var(--muted);">Quantidade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.quantidade||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);">Valor Estimado</div><div style="font-size:13px;font-weight:500;margin-top:2px;">R$ ${dados.valor||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);">Prioridade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.prioridade||'—'}</div></div>
+    </div>
+    ${dados.hipotese ? `<div style="margin-top:12px;padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}`;
+  } else {
+    // Etapas ainda sem formulário completo — placeholder
+    html = `<div class="empty" style="padding:40px;">
+      <svg><use href="#ic-file"/></svg>
+      <h4>${etapa.full}</h4>
+      <p style="margin-top:8px;">Responsável: <strong>${etapa.resp}</strong></p>
+      <p style="margin-top:6px;font-size:12px;color:var(--muted);">Formulário desta etapa em desenvolvimento — Sprint 2</p>
+    </div>`;
+  }
+
+  document.getElementById('doc-body').innerHTML = html;
+}
+
+function renderHistorico(movs) {
+  const el = document.getElementById('proc-historico');
+  if (!movs.length) {
+    el.innerHTML = `<div style="padding:20px 0;text-align:center;color:var(--muted);font-size:13px;">Nenhuma movimentação ainda</div>`;
+    return;
+  }
+  const cores = { avanco:'var(--green)', devolucao:'var(--red)', aprovacao:'var(--green)', rejeicao:'var(--red)', criacao:'var(--blue)' };
+  el.innerHTML = movs.slice().reverse().map(m => `
+    <div class="hist-item">
+      <div class="hist-dot" style="background:${cores[m.acao]||'var(--text2)'}"></div>
+      <div class="hist-content">
+        <div class="hist-acao">${labelAcao(m)}</div>
+        <div class="hist-meta">${m.usuarios?.nome || '—'} · ${formatData(m.criado_em)}${m.observacao ? ` · "${m.observacao}"` : ''}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAcoesProcesso(proc, etapa) {
+  const actionsEl = document.getElementById('proc-actions');
+  const etapas = ETAPAS[proc.tipo_contratacao] || ETAPAS.aquisicao_bens;
+  const isUltimaEtapa = proc.etapa_atual === etapas.length;
+
+  if (proc.status === 'concluido') {
+    actionsEl.innerHTML = `<span class="badge badge-green" style="font-size:12px;padding:6px 14px;">Processo Publicado</span>`;
+    return;
+  }
+
+  let html = '';
+  if (proc.etapa_atual > 1) {
+    html += `<button class="btn btn-danger btn-sm" onclick="prepararAcao('devolver','${proc.id}')"><svg><use href="#ic-back"/></svg> Devolver</button>`;
+  }
+  if (!isUltimaEtapa) {
+    html += `<button class="btn btn-primary btn-sm" onclick="prepararAcao('avancar','${proc.id}')"><svg><use href="#ic-arrow-right"/></svg> Avançar para ${etapas.find(e=>e.n===proc.etapa_atual+1)?.nome||'próxima etapa'}</button>`;
+  } else {
+    html += `<button class="btn btn-primary btn-sm" onclick="prepararAcao('concluir','${proc.id}')"><svg><use href="#ic-check"/></svg> Concluir e Publicar</button>`;
+  }
+  actionsEl.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════
+//  NOVO PROCESSO
+// ══════════════════════════════════════════════════════════
+function abrirNovoProcesso() {
+  _tipoSelecionado = null;
+  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('novo-passo1').style.display = 'block';
+  document.getElementById('novo-passo2').style.display = 'none';
+  document.getElementById('btn-avancar-passo').style.display = 'none';
+  document.getElementById('btn-criar-processo').style.display = 'none';
+  document.getElementById('novo-form-erro').style.display = 'none';
+  document.getElementById('modal-novo').classList.add('show');
+}
+
+function selecionarTipo(tipo) {
+  _tipoSelecionado = tipo;
+  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('btn-avancar-passo').style.display = 'inline-flex';
+}
+
+function avancarNovoProcesso() {
+  if (!_tipoSelecionado) return;
+  document.getElementById('novo-passo1').style.display = 'none';
+  document.getElementById('novo-passo2').style.display = 'block';
+  document.getElementById('btn-avancar-passo').style.display = 'none';
+  document.getElementById('btn-criar-processo').style.display = 'inline-flex';
+
+  // Mostrar campos extras para dispensa/inexigibilidade
+  const isDirecto = ['dispensa','inexigibilidade'].includes(_tipoSelecionado);
+  document.getElementById('dfd-extra-dispensa').style.display = isDirecto ? 'block' : 'none';
+}
+
+async function criarProcesso() {
+  // Validações
+  const campos = {
+    'dfd-unidade':      'Unidade Requisitante',
+    'dfd-responsavel':  'Nome do Responsável',
+    'dfd-cargo':        'Cargo do Responsável',
+    'dfd-justificativa':'Justificativa da Necessidade',
+    'dfd-objeto':       'Descrição do Objeto',
+    'dfd-quantidade':   'Quantidade',
+    'dfd-valor':        'Valor Estimado',
+    'dfd-prazo':        'Prazo da Contratação',
+    'dfd-prioridade':   'Grau de Prioridade',
+  };
+  for (const [id, label] of Object.entries(campos)) {
+    if (!document.getElementById(id)?.value?.trim()) {
+      mostrarErroForm('novo-form-erro', `Campo obrigatório: ${label}`);
+      document.getElementById(id)?.focus();
+      return;
+    }
+  }
+
+  const btn = document.getElementById('btn-criar-processo');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Criando...';
+
+  try {
+    const prefId = _perfil?.prefeitura_id;
+    if (!prefId) throw new Error('Perfil sem prefeitura vinculada. Contate o administrador.');
+
+    // Gerar número de protocolo
+    const ano = new Date().getFullYear();
+    const { count } = await sb.from('processos').select('*', { count: 'exact', head: true }).eq('prefeitura_id', prefId);
+    const num = String((count || 0) + 1).padStart(4, '0');
+    const protocolo = `${num}/${ano}`;
+
+    // Dados do DFD
+    const dadosDFD = {
+      unidade:       document.getElementById('dfd-unidade').value.trim(),
+      responsavel:   document.getElementById('dfd-responsavel').value.trim(),
+      cargo:         document.getElementById('dfd-cargo').value.trim(),
+      justificativa: document.getElementById('dfd-justificativa').value.trim(),
+      objeto:        document.getElementById('dfd-objeto').value.trim(),
+      quantidade:    document.getElementById('dfd-quantidade').value.trim(),
+      valor:         document.getElementById('dfd-valor').value.trim(),
+      prazo:         document.getElementById('dfd-prazo').value.trim(),
+      prioridade:    document.getElementById('dfd-prioridade').value,
+      pca:           document.getElementById('dfd-pca').value,
+      vinculacao:    document.getElementById('dfd-vinculacao').value.trim(),
+      hipotese:      document.getElementById('dfd-hipotese')?.value || null,
+      justificativa_direta: document.getElementById('dfd-justificativa-direta')?.value?.trim() || null,
+      tipo_contratacao: _tipoSelecionado,
+    };
+
+    // Criar processo
+    const { data: proc, error: procErr } = await sb.from('processos').insert({
+      prefeitura_id:      prefId,
+      numero_protocolo:   protocolo,
+      tipo_contratacao:   _tipoSelecionado,
+      objeto:             dadosDFD.objeto,
+      setor_requisitante: dadosDFD.unidade,
+      etapa_atual:        1,
+      status:             'em_andamento',
+      valor_estimado:     parseFloat(dadosDFD.valor.replace(/\./g,'').replace(',','.')) || null,
+      criado_por:         _user.id,
+      atualizado_em:      new Date().toISOString(),
+    }).select().single();
+
+    if (procErr) throw procErr;
+
+    // Criar documento DFD
+    await sb.from('documentos').insert({
+      processo_id: proc.id,
+      tipo:        'DFD',
+      dados:       dadosDFD,
+      versao:      1,
+      status:      'enviado',
+      criado_por:  _user.id,
+    });
+
+    // Registrar movimentação
+    await sb.from('movimentacoes').insert({
+      processo_id: proc.id,
+      de_etapa:    0,
+      para_etapa:  1,
+      acao:        'criacao',
+      observacao:  'Processo criado — DFD enviado ao Protocolo',
+      criado_por:  _user.id,
+    });
+
+    fecharModal('modal-novo');
+    toast('Processo criado! Protocolo: ' + protocolo, 'success');
+    await carregarDados();
+    abrirProcesso(proc.id);
+
+  } catch(e) {
+    mostrarErroForm('novo-form-erro', e.message || 'Erro ao criar processo.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg><use href="#ic-send"/></svg> Criar e Enviar ao Protocolo';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  AÇÕES (avançar/devolver)
+// ══════════════════════════════════════════════════════════
+function prepararAcao(tipo, procId) {
+  _acaoAtual = { tipo, procId };
+  const proc = _processos.find(p => p.id === procId) || _processoAtual;
+  const etapas = ETAPAS[proc?.tipo_contratacao] || ETAPAS.aquisicao_bens;
+
+  document.getElementById('modal-acao-titulo').textContent = {
+    avancar: 'Avançar Etapa',
+    devolver: 'Devolver para Etapa Anterior',
+    concluir: 'Concluir e Publicar',
+  }[tipo];
+
+  const proxEtapa = etapas.find(e => e.n === (proc.etapa_atual + 1));
+  document.getElementById('modal-acao-desc').textContent = tipo === 'avancar'
+    ? `O processo será enviado para: ${proxEtapa?.resp || 'próxima etapa'}`
+    : tipo === 'devolver' ? 'Informe o motivo da devolução (obrigatório).'
+    : 'O processo será marcado como concluído e publicado.';
+
+  const label = document.getElementById('modal-acao-label');
+  label.textContent = tipo === 'devolver' ? 'Motivo da devolução *' : 'Observação (opcional)';
+
+  document.getElementById('modal-acao-obs').value = '';
+  document.getElementById('modal-acao-alerta').style.display = 'none';
+  document.getElementById('btn-confirmar-acao').className = tipo === 'devolver'
+    ? 'btn btn-danger' : 'btn btn-primary';
+
+  document.getElementById('modal-acao').classList.add('show');
+}
+
+async function confirmarAcao() {
+  if (!_acaoAtual) return;
+  const { tipo, procId } = _acaoAtual;
+  const obs = document.getElementById('modal-acao-obs').value.trim();
+
+  if (tipo === 'devolver' && !obs) {
+    document.getElementById('modal-acao-alerta').textContent = 'Informe o motivo da devolução.';
+    document.getElementById('modal-acao-alerta').style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirmar-acao');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const proc = _processos.find(p => p.id === procId) || _processoAtual;
+    const etapas = ETAPAS[proc.tipo_contratacao] || ETAPAS.aquisicao_bens;
+
+    let novaEtapa = proc.etapa_atual;
+    let novoStatus = proc.status;
+    let acao = tipo;
+
+    if (tipo === 'avancar') {
+      novaEtapa = Math.min(proc.etapa_atual + 1, etapas.length);
+      novoStatus = 'em_andamento';
+    } else if (tipo === 'devolver') {
+      novaEtapa = Math.max(proc.etapa_atual - 1, 1);
+      novoStatus = 'devolvido';
+    } else if (tipo === 'concluir') {
+      novoStatus = 'concluido';
+      acao = 'aprovacao';
+    }
+
+    await sb.from('processos').update({
+      etapa_atual:  novaEtapa,
+      status:       novoStatus,
+      atualizado_em: new Date().toISOString(),
+    }).eq('id', procId);
+
+    await sb.from('movimentacoes').insert({
+      processo_id: procId,
+      de_etapa:    proc.etapa_atual,
+      para_etapa:  novaEtapa,
+      acao,
+      observacao:  obs || null,
+      criado_por:  _user.id,
+    });
+
+    fecharModal('modal-acao');
+    toast(tipo === 'devolver' ? 'Processo devolvido.' : tipo === 'concluir' ? 'Processo concluído!' : 'Etapa avançada!',
+      tipo === 'devolver' ? 'info' : 'success');
+    await carregarDados();
+    abrirProcesso(procId);
+  } catch(e) {
+    document.getElementById('modal-acao-alerta').textContent = e.message || 'Erro.';
+    document.getElementById('modal-acao-alerta').style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Confirmar';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════
+function fecharModal(id) {
+  document.getElementById(id)?.classList.remove('show');
+}
+
+function toast(msg, type = 'success') {
+  const icons = { success: '#ic-check', error: '#ic-alert', info: '#ic-alert' };
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<svg><use href="${icons[type]||'#ic-check'}"/></svg>${msg}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function mostrarErroForm(id, msg) {
+  const el = document.getElementById(id);
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function statusBadge(s) {
+  const m = {
+    em_andamento: '<span class="badge badge-blue">Em andamento</span>',
+    devolvido:    '<span class="badge badge-red">Devolvido</span>',
+    concluido:    '<span class="badge badge-green">Concluído</span>',
+    rascunho:     '<span class="badge badge-gray">Rascunho</span>',
+  };
+  return m[s] || `<span class="badge badge-gray">${s}</span>`;
+}
+
+function tipoBadge(t) {
+  const m = {
+    aquisicao_bens:   '<span class="badge badge-blue">Aquisição</span>',
+    servicos_comuns:  '<span class="badge badge-purple">Serviços</span>',
+    obras_engenharia: '<span class="badge badge-orange">Obras</span>',
+    locacao_maquinas: '<span class="badge badge-gold">Locação</span>',
+    dispensa:         '<span class="badge badge-gray">Dispensa</span>',
+    inexigibilidade:  '<span class="badge badge-gray">Inexigibilidade</span>',
+  };
+  return m[t] || `<span class="badge badge-gray">${t}</span>`;
+}
+
+function labelAcao(m) {
+  const map = {
+    criacao:   '📄 Processo criado',
+    avanco:    '▶️ Avançado para etapa ' + m.para_etapa,
+    devolucao: '↩️ Devolvido para etapa ' + m.para_etapa,
+    aprovacao: '✅ Aprovado',
+    rejeicao:  '❌ Rejeitado',
+  };
+  return map[m.acao] || m.acao;
+}
+
+function tipoParaEtapa(tipoDoc, tipoContratacao) {
+  const mapa = { DFD:1, PROTOCOLO:2, ETP:3, TR:3, MAPA_RISCO:3, PP:4, DO:5, AUTH:6, MINUTA:7, PARECER:8, EDITAL:9, PUBLICACAO:10 };
+  if (['dispensa','inexigibilidade'].includes(tipoContratacao)) {
+    const mapaD = { DFD:1, PROTOCOLO:2, PP:3, DO:4, AUTH:5, PARECER:6, PUBLICACAO:7 };
+    return mapaD[tipoDoc] || 0;
+  }
+  return mapa[tipoDoc] || 0;
+}
+
+function formatData(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 60000);
+  if (diff < 1) return 'agora';
+  if (diff < 60) return `${diff}min atrás`;
+  if (diff < 1440) return `${Math.floor(diff/60)}h atrás`;
+  return d.toLocaleDateString('pt-BR');
+}
+
+// Fechar modais clicando fora
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+});
+
+// ══════════════════════════════════════════════════════════
+//  FORMULÁRIOS COMPLETOS DE TODAS AS ETAPAS
+// ══════════════════════════════════════════════════════════
+// PARTE 2 — FORMULÁRIOS DE TODAS AS ETAPAS
+
+// Formatos de formulário por tipo de documento
+function formETP(dados, readonly) {
+  const r = readonly;
+  const v = (k) => dados[k] || '';
+  const inp = (id, ph='') => r
+    ? `<div class="fv">${v(id)||'—'}</div>`
+    : `<input type="text" id="etp-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
+  const ta = (id, ph='', rows=3) => r
+    ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>`
+    : `<textarea id="etp-${id}" rows="${rows}" placeholder="${ph}">${esc(v(id))}</textarea>`;
+  const sel = (id, opts, label='') => r
+    ? `<div class="fv">${v(id)||'—'}</div>`
+    : `<select id="etp-${id}">${opts}</select>`;
+
+  return `
+<div class="form-section-title">ETP — Estudo Técnico Preliminar · Art. 7º, II IN-009/23</div>
+<div class="form-grid">
+  <div class="form-field"><label>Área Requisitante<span class="req">*</span></label>${inp('area','Secretaria / Departamento')}</div>
+  <div class="form-field"><label>Referência ao DFD</label>${inp('ref_dfd','Nº do processo')}</div>
+</div>
+<div class="form-field"><label>Descrição da Necessidade<span class="req">*</span><span class="ref">Art. 18, I LLC</span></label>
+  ${ta('necessidade','Descreva o problema ou necessidade que origina esta contratação...',4)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-necessidade','Descrição da necessidade de contratação')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Levantamento de Soluções Possíveis<span class="req">*</span><span class="ref">Art. 18, III LLC</span></label>
+  ${ta('solucoes','Liste as alternativas consideradas antes de chegar à solução escolhida...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-solucoes','Levantamento de soluções alternativas')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Solução Escolhida e Justificativa<span class="req">*</span><span class="ref">Art. 18, IV LLC</span></label>
+  ${ta('solucao_escolhida','Explique a solução selecionada e por que é a mais adequada...',4)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-solucao_escolhida','Justificativa da solução escolhida')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Estimativa de Quantidade<span class="req">*</span><span class="ref">Art. 18, V LLC</span></label>${inp('quantidade','Ex: 50 unidades')}</div>
+  <div class="form-field"><label>Estimativa de Valor (R$)<span class="req">*</span><span class="ref">Art. 18, V LLC</span></label>${inp('valor','Ex: 15.000,00')}</div>
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Declaração de Viabilidade<span class="req">*</span><span class="ref">Art. 18, VI LLC</span></label>
+    ${sel('viabilidade','<option value="viavel">Viável — recomendo a contratação</option><option value="inviavel">Inviável — contratação não recomendada</option>')}
+  </div>
+  <div class="form-field"><label>Responsável Técnico<span class="req">*</span><span class="ref">Art. 5º, §3º IN</span></label>${inp('responsavel','Nome e registro profissional')}</div>
+</div>
+${!r?`<div style="margin-top:8px;display:flex;gap:8px;">
+  <button class="btn btn-primary" onclick="salvarDocEtapa('ETP')">💾 Salvar ETP</button>
+</div>`:''}`;
+}
+
+function formMapaRisco(dados, readonly) {
+  const r = readonly;
+  const riscos = dados.riscos || [{ id: Date.now(), risco:'', categoria:'tecnico', prob:'media', impacto:'medio', mitigacao:'', contingencia:'', responsavel:'', alocacao:'administracao' }];
+  const cats = [{v:'tecnico',l:'Técnico'},{v:'financeiro',l:'Financeiro'},{v:'legal',l:'Legal'},{v:'operacional',l:'Operacional'},{v:'ambiental',l:'Ambiental'}];
+  const probs = [{v:'alta',l:'Alta'},{v:'media',l:'Média'},{v:'baixa',l:'Baixa'}];
+  const imp = [{v:'alto',l:'Alto'},{v:'medio',l:'Médio'},{v:'baixo',l:'Baixo'}];
+  const aloc = [{v:'administracao',l:'Administração'},{v:'contratado',l:'Contratado'},{v:'compartilhado',l:'Compartilhado'}];
+
+  const nivel = (p,i) => {
+    const pts = {alta:3,media:2,baixa:1,alto:3,medio:2,baixo:1};
+    const n = (pts[p]||1)*(pts[i]||1);
+    if(n>=6) return '<span class="badge badge-red">ALTO</span>';
+    if(n>=3) return '<span class="badge badge-gold">MÉDIO</span>';
+    return '<span class="badge badge-green">BAIXO</span>';
+  };
+
+  return `
+<div class="form-section-title">Mapa de Risco · Art. 7º, XV IN-009/23 | Arts. 22 e 103 LLC</div>
+<p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Identifique os riscos que podem comprometer esta contratação. Mínimo 1 risco.</p>
+<div id="mapa-riscos-container">
+${riscos.map((risco, idx) => `
+  <div class="risco-row" id="risco-${risco.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:12px;font-weight:600;color:var(--text2);">Risco #${idx+1}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${nivel(risco.prob, risco.impacto)}
+        ${!r?`<button class="btn btn-danger btn-sm" onclick="removerRisco('${risco.id}')">✕</button>`:''}
+      </div>
+    </div>
+    <div class="form-field"><label>Identificação do Risco<span class="req">*</span></label>
+      ${r?`<div class="fv">${risco.risco||'—'}</div>`:`<input type="text" class="risco-campo" data-risco="${risco.id}" data-campo="risco" value="${esc(risco.risco)}" placeholder="Descreva o risco...">`}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <div class="form-field"><label>Categoria</label>
+        ${r?`<div class="fv">${risco.categoria||'—'}</div>`:`<select class="risco-campo" data-risco="${risco.id}" data-campo="categoria">${cats.map(c=>`<option value="${c.v}" ${risco.categoria===c.v?'selected':''}>${c.l}</option>`).join('')}</select>`}
+      </div>
+      <div class="form-field"><label>Probabilidade</label>
+        ${r?`<div class="fv">${risco.prob||'—'}</div>`:`<select class="risco-campo" data-risco="${risco.id}" data-campo="prob" onchange="atualizarNivelRisco('${risco.id}')">${probs.map(p=>`<option value="${p.v}" ${risco.prob===p.v?'selected':''}>${p.l}</option>`).join('')}</select>`}
+      </div>
+      <div class="form-field"><label>Impacto</label>
+        ${r?`<div class="fv">${risco.impacto||'—'}</div>`:`<select class="risco-campo" data-risco="${risco.id}" data-campo="impacto" onchange="atualizarNivelRisco('${risco.id}')">${imp.map(i=>`<option value="${i.v}" ${risco.impacto===i.v?'selected':''}>${i.l}</option>`).join('')}</select>`}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-field"><label>Medida Preventiva / Mitigação</label>
+        ${r?`<div class="fv">${risco.mitigacao||'—'}</div>`:`<textarea class="risco-campo" data-risco="${risco.id}" data-campo="mitigacao" rows="2" placeholder="Como evitar ou reduzir este risco...">${esc(risco.mitigacao)}</textarea>`}
+      </div>
+      <div class="form-field"><label>Medida de Contingência</label>
+        ${r?`<div class="fv">${risco.contingencia||'—'}</div>`:`<textarea class="risco-campo" data-risco="${risco.id}" data-campo="contingencia" rows="2" placeholder="O que fazer se o risco ocorrer...">${esc(risco.contingencia)}</textarea>`}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-field"><label>Responsável pela Mitigação</label>
+        ${r?`<div class="fv">${risco.responsavel||'—'}</div>`:`<input class="risco-campo" data-risco="${risco.id}" data-campo="responsavel" type="text" value="${esc(risco.responsavel)}" placeholder="Nome/setor responsável">`}
+      </div>
+      <div class="form-field"><label>Alocação do Risco<span class="ref">Art. 103 LLC</span></label>
+        ${r?`<div class="fv">${risco.alocacao||'—'}</div>`:`<select class="risco-campo" data-risco="${risco.id}" data-campo="alocacao">${aloc.map(a=>`<option value="${a.v}" ${risco.alocacao===a.v?'selected':''}>${a.l}</option>`).join('')}</select>`}
+      </div>
+    </div>
+  </div>
+`).join('')}
+</div>
+${!r?`<div style="display:flex;gap:8px;margin-top:4px;">
+  <button class="btn btn-secondary" onclick="adicionarRisco()">+ Adicionar Risco</button>
+  <button class="btn btn-primary" onclick="salvarDocEtapa('MAPA_RISCO')">💾 Salvar Mapa de Risco</button>
+</div>`:''}`;
+}
+
+function formTR(dados, readonly, tipo) {
+  const r = readonly;
+  const v = (k) => dados[k] || '';
+  const inp = (id, ph='') => r ? `<div class="fv">${v(id)||'—'}</div>` : `<input type="text" id="tr-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
+  const ta = (id, ph='', rows=3) => r ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>` : `<textarea id="tr-${id}" rows="${rows}" placeholder="${ph}">${esc(v(id))}</textarea>`;
+  const sel = (id, opts) => r ? `<div class="fv">${v(id)||'—'}</div>` : `<select id="tr-${id}">${opts}</select>`;
+
+  return `
+<div class="form-section-title">Termo de Referência · Art. 7º, III IN-009/23 | Art. 6º, XXIII LLC</div>
+<div class="form-field"><label>Objeto da Contratação<span class="req">*</span><span class="ref">Art. 6º, XXIII LLC</span></label>${inp('objeto','Ex: Aquisição de materiais de limpeza para uso nas dependências municipais')}</div>
+<div class="form-field"><label>Fundamentação da Necessidade<span class="req">*</span><span class="ref">Art. 6º, XXIII, b LLC</span></label>
+  ${ta('fundamentacao','Fundamentação da necessidade, com referência ao ETP...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-fundamentacao','Fundamentação da necessidade de contratação')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Descrição Detalhada do Objeto<span class="req">*</span><span class="ref">Art. 41, I LLC</span></label>
+  ${ta('descricao','Descreva detalhadamente o objeto, incluindo especificações técnicas obrigatórias...',5)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-descricao','Descrição técnica detalhada do objeto')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Quantidade Total<span class="req">*</span><span class="ref">Art. 40, §1º LLC</span></label>${inp('quantidade','Ex: 100')}</div>
+  <div class="form-field"><label>Unidade de Medida<span class="req">*</span></label>${inp('unidade','Ex: unidade, kg, m², serviço')}</div>
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Valor Estimado Total (R$)<span class="req">*</span><span class="ref">Art. 23 LLC</span></label>${inp('valor','Ex: 25.000,00')}</div>
+  <div class="form-field"><label>Modalidade de Licitação Sugerida<span class="req">*</span><span class="ref">Art. 28 LLC</span></label>
+    ${sel('modalidade','<option value="">Selecione...</option><option value="pregao_eletronico">Pregão Eletrônico</option><option value="pregao_presencial">Pregão Presencial</option><option value="concorrencia">Concorrência</option><option value="dispensa">Dispensa — Art. 75 LLC</option>')}
+  </div>
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Critério de Julgamento<span class="req">*</span><span class="ref">Art. 33 LLC</span></label>
+    ${sel('criterio','<option value="menor_preco">Menor Preço</option><option value="maior_desconto">Maior Desconto</option><option value="melhor_tecnica">Melhor Técnica e Preço</option>')}
+  </div>
+  <div class="form-field"><label>Modo de Disputa<span class="req">*</span><span class="ref">Art. 56 LLC</span></label>
+    ${sel('modo_disputa','<option value="aberto">Aberto</option><option value="fechado">Fechado</option><option value="misto">Misto (Aberto e Fechado)</option>')}
+  </div>
+</div>
+<div class="form-field"><label>Prazo de Entrega / Execução<span class="req">*</span></label>${inp('prazo','Ex: 15 dias úteis após emissão da Ordem de Fornecimento')}</div>
+<div class="form-field"><label>Local de Entrega / Execução<span class="req">*</span></label>${inp('local','Ex: Almoxarifado Central — Rua X, nº Y')}</div>
+<div class="form-field"><label>Condições de Pagamento<span class="req">*</span><span class="ref">Art. 18, VII LLC</span></label>
+  ${ta('pagamento','Ex: Mediante apresentação de Nota Fiscal, pagamento em até 30 dias...',2)}
+</div>
+<div class="form-field"><label>Obrigações da Contratante<span class="req">*</span><span class="ref">Art. 41 LLC</span></label>
+  ${ta('obrig_contratante','Descreva as obrigações da prefeitura no contrato...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-obrig_contratante','Obrigações da Administração Pública contratante')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Obrigações da Contratada<span class="req">*</span><span class="ref">Art. 41 LLC</span></label>
+  ${ta('obrig_contratada','Descreva as obrigações da empresa contratada...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-obrig_contratada','Obrigações da empresa contratada')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Critério de Recebimento<span class="req">*</span><span class="ref">Art. 18, VIII LLC</span></label>
+  ${ta('recebimento','Ex: Provisório — em até 5 dias; Definitivo — em até 30 dias após verificação de conformidade',2)}
+</div>
+<div class="form-field"><label>Penalidades<span class="req">*</span><span class="ref">Arts. 155-163 LLC</span></label>
+  ${ta('penalidades','Ex: Advertência; Multa de X% sobre o valor do contrato; Impedimento de contratar...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-penalidades','Penalidades administrativas para descumprimento contratual')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Garantia Contratual Exigida?<span class="ref">Arts. 96-102 LLC</span></label>
+    ${sel('garantia','<option value="nao">Não exigida</option><option value="2">Sim — 2% do valor</option><option value="5">Sim — 5% do valor</option><option value="10">Sim — 10% do valor</option>')}
+  </div>
+  <div class="form-field"><label>Aplica LC 123/2006 (ME/EPP)?<span class="req">*</span></label>
+    ${sel('lc123','<option value="sim">Sim — aplica benefícios ME/EPP</option><option value="nao">Não se aplica</option>')}
+  </div>
+</div>
+<div class="form-field"><label>Dotação Orçamentária<span class="ref">Preenchida pela Contabilidade</span></label>
+  <input type="text" id="tr-dotacao" value="${esc(v('dotacao'))}" placeholder="A ser preenchida pelo setor de Contabilidade" ${r?'readonly':''}>
+</div>
+<div class="form-field"><label>Responsável Técnico (Elaboração)<span class="req">*</span><span class="ref">Art. 5º, §3º IN</span></label>${inp('responsavel','Nome e cargo do responsável')}</div>
+${!r?`<div style="margin-top:8px;display:flex;gap:8px;">
+  <button class="btn btn-primary" onclick="salvarDocEtapa('TR')">💾 Salvar Termo de Referência</button>
+</div>`:''}`;
+}
+
+function formPP(dados, readonly) {
+  const r = readonly;
+  const v = (k) => dados[k] || '';
+  const fontes = dados.fontes || [
+    {id:1, tipo:'', identificacao:'', valor:'', data:''},
+    {id:2, tipo:'', identificacao:'', valor:'', data:''},
+    {id:3, tipo:'', identificacao:'', valor:'', data:''},
+  ];
+  const tiposFonte = [
+    {v:'painel_precos',l:'Painel de Preços — compras.gov.br'},
+    {v:'pncp',l:'PNCP — Contratações anteriores'},
+    {v:'portal_go',l:'Portal de Compras de Goiás'},
+    {v:'sinapi',l:'SINAPI (obras civis)'},
+    {v:'fipe',l:'Tabela FIPE (veículos)'},
+    {v:'site_especializado',l:'Site especializado (com data/hora)'},
+    {v:'nota_fiscal',l:'Nota Fiscal'},
+    {v:'cotacao_fornecedor',l:'Cotação direta com fornecedor'},
+    {v:'outro',l:'Outra fonte justificada'},
+  ];
+
+  // Calcular médias
+  const valores = fontes.map(f => parseFloat((f.valor||'0').replace(/\./g,'').replace(',','.'))).filter(v => v > 0);
+  const media = valores.length ? (valores.reduce((a,b)=>a+b,0)/valores.length).toFixed(2) : '—';
+  const menorPreco = valores.length ? Math.min(...valores).toFixed(2) : '—';
+
+  return `
+<div class="form-section-title">Pesquisa de Preços · Art. 7º, IX IN-009/23 | Art. 23, §1º LLC</div>
+<p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Mínimo 3 fontes de pesquisa. Siga a hierarquia de fontes conforme IN-009/23 Anexo 1.</p>
+<div class="form-grid">
+  <div class="form-field"><label>Item Pesquisado<span class="req">*</span></label>
+    <input type="text" id="pp-item" value="${esc(v('item'))}" placeholder="Descrição do item ou serviço" ${r?'readonly':''}>
+  </div>
+  <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="form-field"><label>Quantidade</label>
+      <input type="text" id="pp-quantidade" value="${esc(v('quantidade'))}" placeholder="Ex: 100 un" ${r?'readonly':''}>
+    </div>
+    <div class="form-field"><label>Unidade</label>
+      <input type="text" id="pp-unidade" value="${esc(v('unidade'))}" placeholder="Ex: un" ${r?'readonly':''}>
+    </div>
+  </div>
+</div>
+
+<div id="pp-fontes-container">
+${fontes.map((f, idx) => `
+<div class="pp-fonte" id="pp-fonte-${f.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <span style="font-size:12px;font-weight:700;color:var(--text2);">Fonte ${idx+1} de Pesquisa</span>
+    ${idx > 2 && !r ? `<button class="btn btn-danger btn-sm" onclick="removerFontePP(${f.id})">✕</button>` : ''}
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr;gap:10px;align-items:end;">
+    <div class="form-field" style="margin:0;"><label>Tipo de Fonte</label>
+      ${r ? `<div class="fv">${f.tipo||'—'}</div>` : `<select class="pp-campo" data-fonte="${f.id}" data-campo="tipo">${tiposFonte.map(t=>`<option value="${t.v}" ${f.tipo===t.v?'selected':''}>${t.l}</option>`).join('')}</select>`}
+    </div>
+    <div class="form-field" style="margin:0;"><label>Identificação / Link</label>
+      ${r ? `<div class="fv">${f.identificacao||'—'}</div>` : `<input class="pp-campo" data-fonte="${f.id}" data-campo="identificacao" type="text" value="${esc(f.identificacao)}" placeholder="URL, nº do processo, empresa...">`}
+    </div>
+    <div class="form-field" style="margin:0;"><label>Valor Unit. (R$)</label>
+      ${r ? `<div class="fv">${f.valor||'—'}</div>` : `<input class="pp-campo" data-fonte="${f.id}" data-campo="valor" type="text" value="${esc(f.valor)}" placeholder="0,00" oninput="recalcularMedia()">`}
+    </div>
+    <div class="form-field" style="margin:0;"><label>Data</label>
+      ${r ? `<div class="fv">${f.data||'—'}</div>` : `<input class="pp-campo" data-fonte="${f.id}" data-campo="data" type="date" value="${f.data||''}">`}
+    </div>
+  </div>
+</div>
+`).join('')}
+</div>
+
+${!r?`<button class="btn btn-secondary btn-sm" onclick="adicionarFontePP()" style="margin-bottom:14px;">+ Adicionar Fonte</button>`:''}
+
+<div style="background:var(--green-l);border:1px solid rgba(65,243,106,.2);border-radius:var(--r);padding:14px;margin:12px 0;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+    <div><div style="font-size:11px;color:var(--muted);">Menor Preço</div><div style="font-size:18px;font-weight:700;color:var(--text);" id="pp-menor">R$ ${menorPreco}</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">Preço Médio</div><div style="font-size:18px;font-weight:700;color:var(--green);" id="pp-media">R$ ${media}</div></div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Metodologia<span class="req">*</span></div>
+      ${r ? `<div class="fv">${v('metodologia')||'—'}</div>` : `<select id="pp-metodologia"><option value="media">Média aritmética</option><option value="mediana">Mediana</option><option value="menor">Menor preço</option></select>`}
+    </div>
+  </div>
+</div>
+
+<div class="form-grid">
+  <div class="form-field"><label>Valor de Referência Adotado (R$)<span class="req">*</span></label>
+    <input type="text" id="pp-valor_referencia" value="${esc(v('valor_referencia'))}" placeholder="Valor que será utilizado no TR" ${r?'readonly':''}>
+  </div>
+  <div class="form-field"><label>Responsável pela Pesquisa<span class="req">*</span></label>
+    <input type="text" id="pp-responsavel" value="${esc(v('responsavel'))}" placeholder="Nome e cargo" ${r?'readonly':''}>
+  </div>
+</div>
+
+${!r?`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+  <button class="btn btn-secondary" onclick="buscarPNCP()">
+    <svg width="14" height="14"><use href="#ic-arrow-right"/></svg> Buscar no Licit.ai (PNCP)
+  </button>
+  <button class="btn btn-primary" onclick="salvarDocEtapa('PP')">💾 Salvar Pesquisa de Preços</button>
+</div>`:''}`;
+}
+
+function formDotacao(dados, readonly) {
+  const r = readonly;
+  const v = (k) => dados[k] || '';
+  const inp = (id, ph='') => r ? `<div class="fv">${v(id)||'—'}</div>` : `<input type="text" id="do-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
+  const ta = (id, ph='', rows=3) => r ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>` : `<textarea id="do-${id}" rows="${rows}" placeholder="${ph}">${esc(v(id))}</textarea>`;
+
+  return `
+<div class="form-section-title">Dotação Orçamentária · Art. 7º, XIII e XIV IN-009/23 | Art. 16 LC 101/2000 (LRF)</div>
+<div class="form-grid">
+  <div class="form-field"><label>Unidade Gestora<span class="req">*</span></label>${inp('unidade_gestora','Ex: Secretaria Municipal de Educação')}</div>
+  <div class="form-field"><label>Exercício Financeiro<span class="req">*</span></label>${inp('exercicio',new Date().getFullYear().toString())}</div>
+</div>
+<div class="form-section-title" style="margin-top:8px;">Classificação Orçamentária (LRF)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+  <div class="form-field"><label>Função<span class="req">*</span></label>${inp('funcao','Ex: 12 — Educação')}</div>
+  <div class="form-field"><label>Subfunção<span class="req">*</span></label>${inp('subfuncao','Ex: 361 — Ensino Fundamental')}</div>
+  <div class="form-field"><label>Programa<span class="req">*</span></label>${inp('programa','Ex: 1012')}</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+  <div class="form-field"><label>Ação<span class="req">*</span></label>${inp('acao','Ex: 2025')}</div>
+  <div class="form-field"><label>Natureza da Despesa<span class="req">*</span></label>${inp('natureza','Ex: 3.3.90.30 — Material de Consumo')}</div>
+  <div class="form-field"><label>Fonte de Recurso<span class="req">*</span></label>${inp('fonte','Ex: 0100 — Recursos Próprios')}</div>
+</div>
+<div class="form-section-title" style="margin-top:8px;">Disponibilidade Orçamentária (Art. 16, I LC 101)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+  <div class="form-field"><label>Saldo Disponível (R$)<span class="req">*</span></label>${inp('saldo_disponivel','Ex: 50.000,00')}</div>
+  <div class="form-field"><label>Reserva Orçamentária (R$)<span class="req">*</span></label>${inp('reserva','Ex: 25.000,00')}</div>
+  <div class="form-field"><label>Valor Autorizado (R$)<span class="req">*</span></label>${inp('valor_autorizado','Ex: 15.000,00')}</div>
+</div>
+<div class="form-section-title" style="margin-top:8px;">Impacto LRF (Art. 16, I)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+  <div class="form-field"><label>Exercício Corrente (R$)<span class="req">*</span></label>${inp('impacto_corrente','Ex: 15.000,00')}</div>
+  <div class="form-field"><label>1º Exercício Subsequente (R$)<span class="req">*</span></label>${inp('impacto_1','0,00')}</div>
+  <div class="form-field"><label>2º Exercício Subsequente (R$)<span class="req">*</span></label>${inp('impacto_2','0,00')}</div>
+</div>
+<div class="form-section-title" style="margin-top:8px;">Declarações Obrigatórias</div>
+<div class="form-field"><label>Declaração do Contador<span class="req">*</span><span class="ref">Art. 7º, XIII IN</span></label>
+  ${ta('decl_contador','Declaro que existe saldo orçamentário suficiente para atender à despesa...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('do-decl_contador','Declaração de suficiência orçamentária do contador')">✨ Sugerir texto</button>`:''}
+</div>
+<div class="form-field"><label>CRC do Contador<span class="req">*</span></label>${inp('crc_contador','Ex: CRC-GO 123456/O')}</div>
+<div class="form-field"><label>Declaração do Ordenador de Despesa<span class="req">*</span><span class="ref">Art. 7º, XIV IN</span></label>
+  ${ta('decl_ordenador','Declaro que o aumento de despesa tem adequação orçamentária com a LOA e compatibilidade com PPA e LDO...',3)}
+</div>
+<div class="form-field"><label>Nome e Cargo do Ordenador<span class="req">*</span></label>${inp('ordenador','Ex: João da Silva — Secretário Municipal de Finanças')}</div>
+${!r?`<div style="margin-top:8px;">
+  <button class="btn btn-primary" onclick="salvarDocEtapa('DO')">💾 Salvar Dotação Orçamentária</button>
+</div>`:''}`;
+}
+
+function formAutorizacao(dados, readonly) {
+  const r = readonly;
+  const v = (k) => dados[k] || '';
+  return `
+<div class="form-section-title">Autorização do Gestor · Art. 54 LLC | Art. 53, §3º LLC</div>
+<div class="form-field"><label>Decisão<span class="req">*</span></label>
+  ${r ? statusBadge(v('decisao')) : `<select id="auth-decisao" onchange="toggleAuthCampos(this.value)">
+    <option value="">Selecione a decisão...</option>
+    <option value="autorizado" ${v('decisao')==='autorizado'?'selected':''}>✅ Autorizado — aprovado para avançar</option>
+    <option value="autorizado_ressalvas" ${v('decisao')==='autorizado_ressalvas'?'selected':''}>⚠️ Autorizado com Ressalvas</option>
+    <option value="rejeitado" ${v('decisao')==='rejeitado'?'selected':''}>❌ Rejeitado — devolver ao setor</option>
+  </select>`}
+</div>
+<div class="form-field"><label>Despacho / Motivação<span class="req">*</span></label>
+  ${r ? `<div class="fv" style="white-space:pre-wrap;">${v('despacho')||'—'}</div>` : `<textarea id="auth-despacho" rows="4" placeholder="Descreva os motivos da decisão, análise do processo e considerações relevantes...">${esc(v('despacho'))}</textarea>`}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('auth-despacho','Despacho de autorização de gestor público para licitação')">✨ Sugerir com IA</button>`:''}
+</div>
+<div id="auth-campo-ressalvas" style="${v('decisao')==='autorizado_ressalvas'?'':'display:none'}">
+  <div class="form-field"><label>Ressalvas / Condições<span class="req">*</span></label>
+    ${r ? `<div class="fv">${v('ressalvas')||'—'}</div>` : `<textarea id="auth-ressalvas" rows="3" placeholder="Descreva as ressalvas ou condições para aprovação...">${esc(v('ressalvas'))}</textarea>`}
+  </div>
+</div>
+<div class="form-field"><label>Nome e Cargo do Gestor<span class="req">*</span></label>
+  ${r ? `<div class="fv">${v('gestor')||'—'}</div>` : `<input type="text" id="auth-gestor" value="${esc(v('gestor'))}" placeholder="Ex: Maria Santos — Secretária Municipal de Educação">`}
+</div>
+${!r?`<div style="margin-top:8px;">
+  <button class="btn btn-primary" onclick="salvarDocEtapa('AUTH')">💾 Registrar Autorização</button>
+</div>`:''}`;
+}
+
+function formParecer(dados, readonly) {
+  const r = readonly;
+  const v = (k) => dados[k] || '';
+  const ta = (id, ph='', rows=3) => r ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>` : `<textarea id="par-${id}" rows="${rows}" placeholder="${ph}">${esc(v(id))}</textarea>`;
+
+  return `
+<div class="form-section-title">Parecer Jurídico · Art. 7º, XX IN-009/23 | Art. 53 LLC — OBRIGATÓRIO</div>
+<div style="background:var(--gold-l);border:1px solid rgba(255,200,87,.2);border-radius:var(--r-sm);padding:10px;margin-bottom:16px;font-size:12px;color:var(--gold);">
+  ⚠️ O Parecer Jurídico é OBRIGATÓRIO conforme Art. 53, §4º da LLC. O processo só pode avançar com conclusão favorável.
+</div>
+<div class="form-field"><label>Análise do DFD<span class="req">*</span></label>
+  ${ta('analise_dfd','Analise a conformidade do Documento de Formalização de Demanda...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:4px;" onclick="sugerirIA('par-analise_dfd','Análise jurídica do DFD de licitação')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Análise do ETP e TR<span class="req">*</span></label>
+  ${ta('analise_etp_tr','Analise a conformidade do Estudo Técnico Preliminar e do Termo de Referência...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:4px;" onclick="sugerirIA('par-analise_etp_tr','Análise jurídica do ETP e TR de licitação')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Análise da Pesquisa de Preços<span class="req">*</span></label>
+  ${ta('analise_pp','Analise a conformidade da pesquisa de preços com os art. 23 da LLC...',2)}
+</div>
+<div class="form-field"><label>Análise da Minuta de Edital<span class="req">*</span></label>
+  ${ta('analise_edital','Analise a conformidade da minuta do edital e do contrato...',3)}
+  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:4px;" onclick="sugerirIA('par-analise_edital','Análise jurídica da minuta de edital licitatório')">✨ Sugerir com IA</button>`:''}
+</div>
+<div class="form-field"><label>Fundamentação Legal do Parecer<span class="req">*</span></label>
+  ${ta('fundamentacao','Ex: Com base na Lei 14.133/2021, art. 53, e na IN-009/23 TCM-GO...',3)}
+</div>
+<div class="form-field"><label>Conclusão<span class="req">*</span></label>
+  ${r ? `<div class="fv">${v('conclusao')||'—'}</div>` : `<select id="par-conclusao">
+    <option value="">Selecione...</option>
+    <option value="favoravel">✅ Favorável — aprovado para publicação</option>
+    <option value="favoravel_ressalvas">⚠️ Favorável com Ressalvas</option>
+    <option value="desfavoravel">❌ Desfavorável — há irregularidades</option>
+  </select>`}
+</div>
+<div class="form-field" id="par-campo-ressalvas" style="${v('conclusao')==='favoravel_ressalvas'?'':'display:none'}">
+  <label>Ressalvas e Pendências<span class="req">*</span></label>
+  ${ta('ressalvas','Liste as ressalvas ou irregularidades encontradas...',3)}
+</div>
+<div class="form-grid">
+  <div class="form-field"><label>Responsável Jurídico (Nome)<span class="req">*</span></label>
+    ${r?`<div class="fv">${v('responsavel')||'—'}</div>`:`<input type="text" id="par-responsavel" value="${esc(v('responsavel'))}" placeholder="Nome do advogado/procurador">`}
+  </div>
+  <div class="form-field"><label>Número OAB<span class="req">*</span><span class="ref">Art. 5º, §3º IN</span></label>
+    ${r?`<div class="fv">${v('oab')||'—'}</div>`:`<input type="text" id="par-oab" value="${esc(v('oab'))}" placeholder="Ex: OAB/GO 123456">`}
+  </div>
+</div>
+${!r?`<div style="margin-top:8px;">
+  <button class="btn btn-primary" onclick="salvarDocEtapa('PARECER')">💾 Emitir Parecer Jurídico</button>
+</div>`:''}`;
+}
+
+
+
+// Mapeamento de etapa para tipo de documento
+function etapaParaTipoDoc(etapa, tipo) {
+  if (['dispensa','inexigibilidade'].includes(tipo)) {
+    const m = {1:'DFD',2:'PROTOCOLO',3:'PP',4:'DO',5:'AUTH',6:'PARECER',7:'PUBLICACAO'};
+    return m[etapa];
+  }
+  const m = {1:'DFD',2:'PROTOCOLO',3:'TR', // ETP+Mapa+TR ficam na etapa 3
+    4:'PP',5:'DO',6:'AUTH',7:'MINUTA',8:'PARECER',9:'EDITAL',10:'PUBLICACAO'};
+  return m[etapa];
+}
+
+// Override do renderFormEtapa com formulários completos
+function renderFormEtapa(proc, etapa, doc) {
+  const dados = doc?.dados || {};
+  const readonly = doc?.status === 'aprovado';
+  let html = '';
+
+  if (etapa.n === 1) {
+    // DFD — visualização
+    html = renderDFDView(dados);
+  } else if (etapa.n === 3 && !['dispensa','inexigibilidade'].includes(proc.tipo_contratacao)) {
+    // ETP + Mapa de Risco + TR (formulário em abas)
+    html = renderEtapa3(proc, dados, doc, readonly);
+  } else if (etapa.n === 4 || (etapa.n === 3 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
+    html = formPP(dados, readonly);
+  } else if (etapa.n === 5 || (etapa.n === 4 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
+    html = formDotacao(dados, readonly);
+  } else if (etapa.n === 6 || (etapa.n === 5 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
+    html = formAutorizacao(dados, readonly);
+  } else if (etapa.n === 8 || (etapa.n === 6 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
+    html = formParecer(dados, readonly);
+  } else {
+    const etapaNomes = {2:'Protocolo',7:'Minuta de Edital',9:'Edital Final',10:'Publicação'};
+    html = `<div class="empty" style="padding:40px;">
+      <svg><use href="#ic-file"/></svg>
+      <h4>${etapa.full}</h4>
+      <p style="margin-top:8px;">Responsável: <strong>${etapa.resp}</strong></p>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">
+        <button class="btn btn-secondary" onclick="prepararAcao('devolver','${proc.id}')">↩ Devolver</button>
+        <button class="btn btn-primary" onclick="prepararAcao('avancar','${proc.id}')">Avançar ▶</button>
+      </div>
+    </div>`;
+  }
+  document.getElementById('doc-body').innerHTML = html;
+}
+
+function renderDFDView(dados) {
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+    <div><div style="font-size:11px;color:var(--muted);">Unidade Requisitante</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.unidade||'—'}</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">Responsável (Chefe do Órgão)</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.responsavel||'—'} · ${dados.cargo||'—'}</div></div>
+  </div>
+  <div style="margin-bottom:14px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Objeto</div><div style="font-size:15px;font-weight:600;">${dados.objeto||'—'}</div></div>
+  <div style="margin-bottom:14px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Justificativa da Necessidade</div><div style="font-size:13px;color:var(--text2);line-height:1.6;">${dados.justificativa||'—'}</div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Quantidade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.quantidade||'—'}</div></div>
+    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Valor Estimado</div><div style="font-size:13px;font-weight:500;margin-top:2px;">R$ ${dados.valor||'—'}</div></div>
+    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Prazo</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.prazo||'—'}</div></div>
+    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Prioridade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.prioridade||'—'}</div></div>
+  </div>
+  ${dados.hipotese ? `<div style="padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal — Contratação Direta</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}
+  <div style="margin-top:14px;display:flex;gap:8px;">
+    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar PDF do DFD</button>
+  </div>`;
+}
+
+function renderEtapa3(proc, dados, doc, readonly) {
+  const docETP = _processoAtual?.docs?.find(d => d.tipo === 'ETP');
+  const docMR  = _processoAtual?.docs?.find(d => d.tipo === 'MAPA_RISCO');
+  const docTR  = _processoAtual?.docs?.find(d => d.tipo === 'TR');
+  
+  return `
+  <div style="display:flex;gap:6px;margin-bottom:16px;" id="etapa3-tabs">
+    <button class="btn btn-secondary btn-sm tab-btn active" data-tab="etp" onclick="switchTab3('etp')">📋 ETP</button>
+    <button class="btn btn-secondary btn-sm tab-btn" data-tab="mapa" onclick="switchTab3('mapa')">⚠️ Mapa de Risco</button>
+    <button class="btn btn-secondary btn-sm tab-btn" data-tab="tr" onclick="switchTab3('tr')">📄 Termo de Referência</button>
+  </div>
+  <div id="tab-etp">${formETP(docETP?.dados||{}, readonly)}</div>
+  <div id="tab-mapa" style="display:none;">${formMapaRisco(docMR?.dados||{}, readonly)}</div>
+  <div id="tab-tr" style="display:none;">${formTR(docTR?.dados||{}, readonly, proc.tipo_contratacao)}</div>`;
+}
+
+function switchTab3(tab) {
+  document.querySelectorAll('#etapa3-tabs .tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+    b.style.background = b.dataset.tab === tab ? 'var(--s3)' : '';
+    b.style.borderColor = b.dataset.tab === tab ? 'var(--border2)' : '';
+  });
+  ['etp','mapa','tr'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+}
+
+// ── SALVAR DOCUMENTO DE ETAPA ──
+async function salvarDocEtapa(tipo) {
+  if (!_processoAtual) return;
+  const proc = _processoAtual;
+  const dados = coletarDadosForm(tipo);
+
+  try {
+    const existing = proc.docs?.find(d => d.tipo === tipo);
+    if (existing) {
+      await sb.from('documentos').update({
+        dados, atualizado_em: new Date().toISOString(), status: 'enviado'
+      }).eq('id', existing.id);
+    } else {
+      await sb.from('documentos').insert({
+        processo_id: proc.id, tipo, dados, versao: 1,
+        status: 'enviado', criado_por: _user.id,
+      });
+    }
+    toast('Documento salvo com sucesso!', 'success');
+    await abrirProcesso(proc.id);
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
+function coletarDadosForm(tipo) {
+  const dados = {};
+  if (tipo === 'ETP') {
+    ['area','ref_dfd','necessidade','solucoes','solucao_escolhida','quantidade','valor','viabilidade','responsavel']
+      .forEach(k => { const el = document.getElementById('etp-'+k); if(el) dados[k] = el.value; });
+  } else if (tipo === 'MAPA_RISCO') {
+    const riscos = [];
+    document.querySelectorAll('.risco-row').forEach(row => {
+      const id = row.id.replace('risco-','');
+      const r = { id };
+      row.querySelectorAll('.risco-campo').forEach(c => { r[c.dataset.campo] = c.value; });
+      riscos.push(r);
+    });
+    dados.riscos = riscos;
+  } else if (tipo === 'TR') {
+    ['objeto','fundamentacao','descricao','quantidade','unidade','valor','modalidade','criterio',
+     'modo_disputa','prazo','local','pagamento','obrig_contratante','obrig_contratada',
+     'recebimento','penalidades','garantia','lc123','dotacao','responsavel']
+      .forEach(k => { const el = document.getElementById('tr-'+k); if(el) dados[k] = el.value; });
+  } else if (tipo === 'PP') {
+    ['item','quantidade','unidade','metodologia','valor_referencia','responsavel']
+      .forEach(k => { const el = document.getElementById('pp-'+k); if(el) dados[k] = el.value; });
+    const fontes = [];
+    document.querySelectorAll('.pp-fonte').forEach(row => {
+      const id = row.id.replace('pp-fonte-','');
+      const f = { id };
+      row.querySelectorAll('.pp-campo').forEach(c => { f[c.dataset.campo] = c.value; });
+      fontes.push(f);
+    });
+    dados.fontes = fontes;
+  } else if (tipo === 'DO') {
+    ['unidade_gestora','exercicio','funcao','subfuncao','programa','acao','natureza','fonte',
+     'saldo_disponivel','reserva','valor_autorizado','impacto_corrente','impacto_1','impacto_2',
+     'decl_contador','crc_contador','decl_ordenador','ordenador']
+      .forEach(k => { const el = document.getElementById('do-'+k); if(el) dados[k] = el.value; });
+  } else if (tipo === 'AUTH') {
+    ['decisao','despacho','ressalvas','gestor']
+      .forEach(k => { const el = document.getElementById('auth-'+k); if(el) dados[k] = el.value; });
+  } else if (tipo === 'PARECER') {
+    ['analise_dfd','analise_etp_tr','analise_pp','analise_edital','fundamentacao','conclusao','ressalvas','responsavel','oab']
+      .forEach(k => { const el = document.getElementById('par-'+k); if(el) dados[k] = el.value; });
+  }
+  return dados;
+}
+
+// ── IA ──
+let _iaTargetId = null;
+let _iaTextoGerado = '';
+
+function sugerirIA(targetId, label) {
+  _iaTargetId = targetId;
+  _iaTextoGerado = '';
+  document.getElementById('modal-ia-campo-label').textContent = label;
+  document.getElementById('modal-ia-contexto').value = '';
+  document.getElementById('modal-ia-resultado').style.display = 'none';
+  document.getElementById('modal-ia-spinner').style.display = 'none';
+  document.getElementById('btn-ia-usar').style.display = 'none';
+  document.getElementById('modal-ia').classList.add('show');
+}
+
+async function executarIA() {
+  const proc = _processoAtual;
+  const ctx   = document.getElementById('modal-ia-contexto').value.trim();
+  const label = document.getElementById('modal-ia-campo-label').textContent;
+  
+  document.getElementById('modal-ia-spinner').style.display = 'block';
+  document.getElementById('modal-ia-resultado').style.display = 'none';
+  document.getElementById('btn-ia-gerar').disabled = true;
+  document.getElementById('btn-ia-usar').style.display = 'none';
+
+  const prompt = `Você é especialista em licitações públicas municipais brasileiras.
+Estou elaborando o seguinte campo de um documento licitatório: "${label}"
+Processo: ${proc?.objeto || '—'} | Tipo: ${TIPO_LABELS[proc?.tipo_contratacao]||'—'} | Prefeitura: Municipal
+${ctx ? 'Contexto adicional: ' + ctx : ''}
+
+Regras para o texto:
+- Linguagem formal e técnica, própria de documentos da Administração Pública
+- Referências à legislação quando pertinente (LLC, IN-009/23 TCM-GO)
+- Texto direto e objetivo, pronto para inserir no documento
+- Máximo 200 palavras
+
+Escreva APENAS o texto do campo, sem introdução ou explicação.`;
+
+  try {
+    const resp = await fetch('/api/ia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 500 })
+    });
+    const data = await resp.json();
+    _iaTextoGerado = data.texto || data.content?.[0]?.text || 'Erro ao gerar texto.';
+    document.getElementById('modal-ia-resultado').textContent = _iaTextoGerado;
+    document.getElementById('modal-ia-resultado').style.display = 'block';
+    document.getElementById('btn-ia-usar').style.display = 'inline-flex';
+  } catch(e) {
+    document.getElementById('modal-ia-resultado').textContent = 'Erro: ' + e.message;
+    document.getElementById('modal-ia-resultado').style.display = 'block';
+  } finally {
+    document.getElementById('modal-ia-spinner').style.display = 'none';
+    document.getElementById('btn-ia-gerar').disabled = false;
+  }
+}
+
+function usarTextoIA() {
+  if (!_iaTargetId || !_iaTextoGerado) return;
+  const el = document.getElementById(_iaTargetId);
+  if (el) { el.value = _iaTextoGerado; el.focus(); }
+  fecharModal('modal-ia');
+  toast('Texto inserido!', 'success');
+}
+
+// ── HELPERS ──
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function adicionarRisco() {
+  const id = Date.now();
+  const html = document.getElementById('mapa-riscos-container').innerHTML;
+  const idx = document.querySelectorAll('.risco-row').length + 1;
+  const newRow = `
+  <div class="risco-row" id="risco-${id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:12px;font-weight:600;color:var(--text2);">Risco #${idx}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="nivel-${id}" class="badge badge-green">BAIXO</span>
+        <button class="btn btn-danger btn-sm" onclick="removerRisco('${id}')">✕</button>
+      </div>
+    </div>
+    <div class="form-field"><label>Identificação do Risco<span class="req">*</span></label>
+      <input type="text" class="risco-campo" data-risco="${id}" data-campo="risco" placeholder="Descreva o risco...">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <div class="form-field"><label>Categoria</label>
+        <select class="risco-campo" data-risco="${id}" data-campo="categoria">
+          <option value="tecnico">Técnico</option><option value="financeiro">Financeiro</option>
+          <option value="legal">Legal</option><option value="operacional">Operacional</option><option value="ambiental">Ambiental</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Probabilidade</label>
+        <select class="risco-campo" data-risco="${id}" data-campo="prob" onchange="atualizarNivelRisco('${id}')">
+          <option value="alta">Alta</option><option value="media" selected>Média</option><option value="baixa">Baixa</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Impacto</label>
+        <select class="risco-campo" data-risco="${id}" data-campo="impacto" onchange="atualizarNivelRisco('${id}')">
+          <option value="alto">Alto</option><option value="medio" selected>Médio</option><option value="baixo">Baixo</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-field"><label>Medida de Mitigação</label>
+        <textarea class="risco-campo" data-risco="${id}" data-campo="mitigacao" rows="2" placeholder="Como evitar..."></textarea>
+      </div>
+      <div class="form-field"><label>Medida de Contingência</label>
+        <textarea class="risco-campo" data-risco="${id}" data-campo="contingencia" rows="2" placeholder="Se ocorrer..."></textarea>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-field"><label>Responsável</label>
+        <input type="text" class="risco-campo" data-risco="${id}" data-campo="responsavel" placeholder="Setor responsável">
+      </div>
+      <div class="form-field"><label>Alocação do Risco</label>
+        <select class="risco-campo" data-risco="${id}" data-campo="alocacao">
+          <option value="administracao">Administração</option>
+          <option value="contratado">Contratado</option>
+          <option value="compartilhado">Compartilhado</option>
+        </select>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('mapa-riscos-container').insertAdjacentHTML('beforeend', newRow);
+}
+
+function removerRisco(id) {
+  document.getElementById('risco-'+id)?.remove();
+}
+
+function atualizarNivelRisco(id) {
+  const prob = document.querySelector(`.risco-campo[data-risco="${id}"][data-campo="prob"]`)?.value;
+  const imp  = document.querySelector(`.risco-campo[data-risco="${id}"][data-campo="impacto"]`)?.value;
+  const pts = {alta:3,media:2,baixa:1,alto:3,medio:2,baixo:1};
+  const n = (pts[prob]||1)*(pts[imp]||1);
+  const badge = document.getElementById('nivel-'+id);
+  if (!badge) return;
+  if (n>=6) { badge.className='badge badge-red'; badge.textContent='ALTO'; }
+  else if (n>=3) { badge.className='badge badge-gold'; badge.textContent='MÉDIO'; }
+  else { badge.className='badge badge-green'; badge.textContent='BAIXO'; }
+}
+
+let _ppFonteId = 4;
+function adicionarFontePP() {
+  const id = ++_ppFonteId;
+  const idx = document.querySelectorAll('.pp-fonte').length + 1;
+  const tiposFonte = [
+    {v:'painel_precos',l:'Painel de Preços — compras.gov.br'},
+    {v:'pncp',l:'PNCP — Contratações anteriores'},
+    {v:'portal_go',l:'Portal de Compras de Goiás'},
+    {v:'sinapi',l:'SINAPI (obras civis)'},
+    {v:'fipe',l:'Tabela FIPE'},
+    {v:'site_especializado',l:'Site especializado'},
+    {v:'nota_fiscal',l:'Nota Fiscal'},
+    {v:'cotacao_fornecedor',l:'Cotação direta'},
+    {v:'outro',l:'Outra fonte'},
+  ];
+  const row = `<div class="pp-fonte" id="pp-fonte-${id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:12px;font-weight:700;color:var(--text2);">Fonte ${idx}</span>
+      <button class="btn btn-danger btn-sm" onclick="removerFontePP(${id})">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr;gap:10px;">
+      <div class="form-field" style="margin:0;"><label>Tipo de Fonte</label>
+        <select class="pp-campo" data-fonte="${id}" data-campo="tipo">${tiposFonte.map(t=>`<option value="${t.v}">${t.l}</option>`).join('')}</select>
+      </div>
+      <div class="form-field" style="margin:0;"><label>Identificação</label>
+        <input class="pp-campo" data-fonte="${id}" data-campo="identificacao" type="text" placeholder="URL, empresa...">
+      </div>
+      <div class="form-field" style="margin:0;"><label>Valor Unit. (R$)</label>
+        <input class="pp-campo" data-fonte="${id}" data-campo="valor" type="text" placeholder="0,00" oninput="recalcularMedia()">
+      </div>
+      <div class="form-field" style="margin:0;"><label>Data</label>
+        <input class="pp-campo" data-fonte="${id}" data-campo="data" type="date">
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('pp-fontes-container').insertAdjacentHTML('beforeend', row);
+}
+
+function removerFontePP(id) { document.getElementById('pp-fonte-'+id)?.remove(); recalcularMedia(); }
+
+function recalcularMedia() {
+  const valores = [];
+  document.querySelectorAll('.pp-campo[data-campo="valor"]').forEach(el => {
+    const v = parseFloat((el.value||'0').replace(/\./g,'').replace(',','.'));
+    if (v > 0) valores.push(v);
+  });
+  const f = n => 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2});
+  document.getElementById('pp-media') && (document.getElementById('pp-media').textContent = valores.length ? f(valores.reduce((a,b)=>a+b,0)/valores.length) : '—');
+  document.getElementById('pp-menor') && (document.getElementById('pp-menor').textContent = valores.length ? f(Math.min(...valores)) : '—');
+}
+
+function toggleAuthCampos(v) {
+  document.getElementById('auth-campo-ressalvas').style.display = v === 'autorizado_ressalvas' ? '' : 'none';
+}
+
+function buscarPNCP() {
+  // Abre o Licit.ai em nova aba
+  window.open('https://licit-app-eight.vercel.app/index.html', '_blank');
+  toast('Abrir o Licit.ai, pesquise os preços e copie os valores aqui', 'info');
+}
+
+// ── GERAR PDF ──
+async function gerarPDFDoc(tipo) {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const doc = proc.docs?.find(d => d.tipo === tipo);
+  const dados = doc?.dados || {};
+
+  toast('Gerando PDF...', 'info');
+
+  // Build HTML para impressão
+  const html = buildPDFHtml(tipo, dados, proc);
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 800);
+}
+
+function buildPDFHtml(tipo, dados, proc) {
+  const nomes = {DFD:'Documento de Formalização de Demanda',ETP:'Estudo Técnico Preliminar',TR:'Termo de Referência',PP:'Pesquisa de Preços',DO:'Dotação Orçamentária',AUTH:'Autorização do Gestor',PARECER:'Parecer Jurídico'};
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title>
+  <style>
+    body{font-family:'Times New Roman',serif;font-size:12pt;margin:2cm;color:#000;}
+    h1{font-size:14pt;text-align:center;text-transform:uppercase;margin:0 0 4px;}
+    h2{font-size:12pt;text-align:center;margin:0 0 20px;}
+    .campo{margin-bottom:12px;}
+    .campo label{font-weight:bold;display:block;margin-bottom:2px;}
+    .campo .val{border-bottom:1px solid #000;min-height:20px;padding:2px 0;}
+    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:20px;}
+    .footer{text-align:center;font-size:9pt;margin-top:30px;border-top:1px solid #000;padding-top:8px;}
+    .assinatura{margin-top:40px;text-align:center;}
+    @media print{body{margin:1cm;}}
+  </style></head><body>
+  <div class="header">
+    <h1>PREFEITURA MUNICIPAL</h1>
+    <h2>${nomes[tipo]||tipo}</h2>
+    <p>Processo nº ${proc.numero_protocolo} | ${TIPO_LABELS[proc.tipo_contratacao]}</p>
+  </div>
+  ${Object.entries(dados).map(([k,v]) => v ? `<div class="campo"><label>${k.replace(/_/g,' ').toUpperCase()}</label><div class="val">${String(v)}</div></div>` : '').join('')}
+  <div class="assinatura">
+    <p>___________________________________</p>
+    <p>${dados.responsavel || '_______________________'}</p>
+    <p>${dados.cargo || 'Responsável'} — Data: ${hoje}</p>
+  </div>
+  <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+  </body></html>`;
+}
+
+</script>
+</body>
+</html>
