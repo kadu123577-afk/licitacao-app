@@ -836,12 +836,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
       <!-- PASSO 2: DFD -->
       <div id="novo-passo2" style="display:none;">
         <div class="form-section-title">Passo 2 de 2 — Documento de Formalização de Demanda (DFD)</div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Art. 7º, Inciso I da IN-009/23 TCM-GO | Art. 12, VII LLC</p>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Art. 7º, Inciso I da IN-009/23 TCM-GO | Art. 12, VII LLC — Preencha os campos abaixo. A IA irá gerar os textos técnicos automaticamente.</p>
 
         <div class="form-grid">
           <div class="form-field">
             <label>Unidade Requisitante <span class="req">*</span></label>
-            <input type="text" id="dfd-unidade" placeholder="Ex: Escola Municipal Pedro Xavier da Costa">
+            <input type="text" id="dfd-unidade" placeholder="Ex: Secretaria Municipal de Saúde">
             <span class="field-hint">Setor, escola, departamento ou secretaria que origina a demanda</span>
           </div>
           <div class="form-field">
@@ -852,7 +852,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
         <div class="form-grid">
           <div class="form-field">
             <label>Cargo do Responsável <span class="req">*</span></label>
-            <input type="text" id="dfd-cargo" placeholder="Ex: Diretor Escolar">
+            <input type="text" id="dfd-cargo" placeholder="Ex: Secretário Municipal de Saúde">
           </div>
           <div class="form-field">
             <label>Grau de Prioridade <span class="req">*</span> <span class="ref">Art. 7º, I, f</span></label>
@@ -864,15 +864,35 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
             </select>
           </div>
         </div>
-        <div class="form-field">
-          <label>Justificativa da Necessidade da Contratação <span class="req">*</span> <span class="ref">Art. 7º, I, a</span></label>
-          <textarea id="dfd-justificativa" rows="3" placeholder="Descreva por que esta contratação é necessária. Ex: A escola não possui material de limpeza suficiente para o período letivo 2026/2..."></textarea>
-          <span class="field-hint legal">⚡ IA disponível — clique em "Sugerir com IA" para gerar um rascunho</span>
-        </div>
+
+        <!-- OBJETO PRIMEIRO -->
         <div class="form-field">
           <label>Descrição Sucinta do Objeto <span class="req">*</span> <span class="ref">Art. 7º, I, b</span></label>
-          <input type="text" id="dfd-objeto" placeholder="Ex: Aquisição de materiais de limpeza para uso nas dependências da Escola Municipal">
+          <input type="text" id="dfd-objeto" placeholder="Ex: materiais de limpeza — rodo, água sanitária, detergente, sabão em pó" oninput="mostrarBtnGerarIA()">
+          <span class="field-hint">Descreva brevemente o que será contratado. A IA irá completar os textos técnicos.</span>
         </div>
+
+        <!-- BOTÃO GERAR COM IA -->
+        <div id="dfd-ia-area" style="display:none; background:var(--surface2); border:1px solid var(--primary); border-radius:8px; padding:14px; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <span style="font-size:20px;">✨</span>
+            <div>
+              <div style="font-weight:600; font-size:13px;">Gerar textos técnicos com IA</div>
+              <div style="font-size:12px; color:var(--text2);">A IA irá preencher automaticamente a justificativa e descrição completa do objeto com base nos modelos oficiais da Lei 14.133/2021</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-gerar-ia-dfd" onclick="gerarTextosIA()" type="button">
+            ✨ Gerar Justificativa e Descrição com IA
+          </button>
+          <span id="dfd-ia-status" style="font-size:12px; color:var(--text2); margin-left:10px;"></span>
+        </div>
+
+        <!-- JUSTIFICATIVA (gerada ou editável) -->
+        <div class="form-field">
+          <label>Justificativa da Necessidade da Contratação <span class="req">*</span> <span class="ref">Art. 7º, I, a</span></label>
+          <textarea id="dfd-justificativa" rows="5" placeholder="Preencha o objeto acima e clique em ✨ Gerar com IA, ou escreva manualmente..."></textarea>
+        </div>
+
         <div class="form-grid">
           <div class="form-field">
             <label>Quantidade a Contratar <span class="req">*</span> <span class="ref">Art. 7º, I, c</span></label>
@@ -1112,7 +1132,7 @@ async function fazerLogin() {
     if (authErr) throw authErr;
 
     const { data: usuario, error: dbErr } = await sb.from('usuarios')
-      .select('*, organizacoes(nome)')
+      .select('*')
       .eq('id', authData.user.id).single();
 
     if (dbErr || !usuario) throw new Error('Usuário não encontrado.');
@@ -1130,7 +1150,7 @@ async function fazerLogin() {
 async function carregarPerfil(user, usuario = null) {
   _user = user;
   if (!usuario) {
-    const { data } = await sb.from('usuarios').select('*, organizacoes(nome)').eq('id', user.id).single();
+    const { data } = await sb.from('usuarios').select('*').eq('id', user.id).single();
     usuario = data;
   }
   _perfil = usuario;
@@ -1142,7 +1162,7 @@ function mostrarApp() {
 
   // Preencher header
   const nome = _perfil?.nome || _user?.email || '?';
-  const setor = _perfil?.setor || _perfil?.organizacoes?.nome || '—';
+  const setor = _perfil?.setor || _perfil?.setor || '—';
   const letra = nome[0].toUpperCase();
   const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
   const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
@@ -2537,6 +2557,67 @@ function buscarPNCP() {
 }
 
 // ── GERAR PDF ──
+function mostrarBtnGerarIA() {
+  const obj = document.getElementById('dfd-objeto').value.trim();
+  document.getElementById('dfd-ia-area').style.display = obj.length > 5 ? 'block' : 'none';
+}
+
+async function gerarTextosIA() {
+  const objeto = document.getElementById('dfd-objeto').value.trim();
+  const unidade = document.getElementById('dfd-unidade').value.trim() || 'órgão público municipal';
+  const tipo = TIPO_LABELS[_tipoSelecionado] || 'Aquisição de Bens';
+  const btn = document.getElementById('btn-gerar-ia-dfd');
+  const status = document.getElementById('dfd-ia-status');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando...';
+  status.textContent = 'Consultando IA...';
+
+  const prompt = `Você é especialista em licitações públicas municipais brasileiras, com domínio da Lei nº 14.133/2021.
+
+Elabore a JUSTIFICATIVA DA NECESSIDADE DA CONTRATAÇÃO para um Documento de Formalização de Demanda (DFD), com base nas seguintes informações:
+
+- Objeto: ${objeto}
+- Órgão requisitante: ${unidade}
+- Tipo de contratação: ${tipo}
+
+A justificativa deve seguir EXATAMENTE o padrão dos documentos oficiais de prefeituras municipais brasileiras, com:
+1. Explicação da importância e necessidade da contratação para o serviço público
+2. Impacto para a população caso não seja realizada
+3. Referência à gestão eficiente dos recursos públicos e ao planejamento orçamentário
+4. Linguagem formal, técnica e densa, própria da Administração Pública Municipal
+5. Mínimo de 150 palavras, máximo de 300 palavras
+6. Texto em parágrafos corridos, sem títulos ou tópicos
+
+Escreva APENAS o texto da justificativa, pronto para inserir no documento oficial.`;
+
+  try {
+    const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
+    const DURL = typeof DEEPSEEK_URL !== 'undefined' ? DEEPSEEK_URL : 'https://api.deepseek.com/v1/chat/completions';
+    
+    const resp = await fetch(DURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DKEY },
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    const texto = data.choices?.[0]?.message?.content || '';
+    
+    if (texto) {
+      document.getElementById('dfd-justificativa').value = texto;
+      status.textContent = '✅ Gerado com sucesso! Você pode editar o texto.';
+      status.style.color = 'var(--success)';
+    } else {
+      status.textContent = '⚠️ Erro ao gerar. Escreva manualmente.';
+    }
+  } catch(e) {
+    status.textContent = '⚠️ Erro: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Gerar novamente';
+  }
+}
+
 async function gerarPDFDoc(tipo) {
   const proc = _processoAtual;
   if (!proc) return;
