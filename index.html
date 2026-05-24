@@ -838,6 +838,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
         <div class="form-section-title">Passo 2 de 2 — Documento de Formalização de Demanda (DFD)</div>
         <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Art. 7º, Inciso I da IN-009/23 TCM-GO | Art. 12, VII LLC — Preencha os campos abaixo. A IA irá gerar os textos técnicos automaticamente.</p>
 
+        <!-- IDENTIFICAÇÃO -->
         <div class="form-grid">
           <div class="form-field">
             <label>Unidade Requisitante <span class="req">*</span></label>
@@ -846,7 +847,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
           </div>
           <div class="form-field">
             <label>Nome do Responsável (Chefe do Órgão) <span class="req">*</span></label>
-            <input type="text" id="dfd-responsavel" placeholder="Nome completo do chefe">
+            <input type="text" id="dfd-responsavel" placeholder="Nome completo do chefe" oninput="autoPreencherContato()">
           </div>
         </div>
         <div class="form-grid">
@@ -864,30 +865,42 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
             </select>
           </div>
         </div>
-
-        <!-- OBJETO PRIMEIRO -->
-        <div class="form-field">
-          <label>Descrição Sucinta do Objeto <span class="req">*</span> <span class="ref">Art. 7º, I, b</span></label>
-          <input type="text" id="dfd-objeto" placeholder="Ex: materiais de limpeza — rodo, água sanitária, detergente, sabão em pó" oninput="mostrarBtnGerarIA()">
-          <span class="field-hint">Descreva brevemente o que será contratado. A IA irá completar os textos técnicos.</span>
+        <!-- CONTATO (melhoria #1) -->
+        <div class="form-grid">
+          <div class="form-field">
+            <label>E-mail Institucional</label>
+            <input type="email" id="dfd-email" placeholder="Ex: saude@prefeitura.go.gov.br">
+            <span class="field-hint">💾 Salvo automaticamente para próximos processos</span>
+          </div>
+          <div class="form-field">
+            <label>Telefone</label>
+            <input type="text" id="dfd-telefone" placeholder="Ex: (62) 3333-0000">
+          </div>
         </div>
 
-        <!-- BOTÃO GERAR COM IA -->
+        <!-- OBJETO -->
+        <div class="form-field">
+          <label>Descrição Sucinta do Objeto <span class="req">*</span> <span class="ref">Art. 7º, I, b</span></label>
+          <input type="text" id="dfd-objeto" placeholder="Ex: medicamentos para o Hospital Municipal e Unidades Básicas de Saúde" oninput="mostrarBtnGerarIA()">
+          <span class="field-hint">Descreva brevemente o que será contratado. A IA irá gerar a justificativa automaticamente.</span>
+        </div>
+
+        <!-- BOTÃO GERAR COM IA (melhoria #3 — prompt refinado) -->
         <div id="dfd-ia-area" style="display:none; background:var(--surface2); border:1px solid var(--primary); border-radius:8px; padding:14px; margin-bottom:16px;">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
             <span style="font-size:20px;">✨</span>
             <div>
-              <div style="font-weight:600; font-size:13px;">Gerar textos técnicos com IA</div>
-              <div style="font-size:12px; color:var(--text2);">A IA irá preencher automaticamente a justificativa e descrição completa do objeto com base nos modelos oficiais da Lei 14.133/2021</div>
+              <div style="font-weight:600; font-size:13px;">Gerar Justificativa com IA</div>
+              <div style="font-size:12px; color:var(--text2);">A IA vai gerar um texto no padrão oficial de prefeituras municipais — denso, formal e fundamentado na Lei 14.133/2021</div>
             </div>
           </div>
           <button class="btn btn-primary btn-sm" id="btn-gerar-ia-dfd" onclick="gerarTextosIA()" type="button">
-            ✨ Gerar Justificativa e Descrição com IA
+            ✨ Gerar Justificativa com IA
           </button>
-          <span id="dfd-ia-status" style="font-size:12px; color:var(--text2); margin-left:10px;"></span>
+          <span id="dfd-ia-status" style="font-size:12px; margin-left:10px;"></span>
         </div>
 
-        <!-- JUSTIFICATIVA (gerada ou editável) -->
+        <!-- JUSTIFICATIVA -->
         <div class="form-field">
           <label>Justificativa da Necessidade da Contratação <span class="req">*</span> <span class="ref">Art. 7º, I, a</span></label>
           <textarea id="dfd-justificativa" rows="5" placeholder="Preencha o objeto acima e clique em ✨ Gerar com IA, ou escreva manualmente..."></textarea>
@@ -914,12 +927,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
         <div class="form-grid">
           <div class="form-field">
             <label>Estimativa Preliminar do Valor (R$) <span class="req">*</span> <span class="ref">Art. 7º, I, d</span></label>
-            <input type="text" id="dfd-valor" placeholder="Ex: 15.000,00">
+            <input type="text" id="dfd-valor" placeholder="Ex: 1.000.000,00">
           </div>
           <div class="form-field">
-            <label>Quantidade Total (resumo) <span class="ref">Art. 7º, I, c</span></label>
-            <input type="text" id="dfd-quantidade" placeholder="Ex: 146 itens / 50 kits anuais">
-            <span class="field-hint">Resumo — detalhes na tabela acima</span>
+            <label>Quantidade Total <span class="ref">Art. 7º, I, c</span></label>
+            <input type="text" id="dfd-quantidade" placeholder="Preenchido automaticamente pelos itens" readonly style="background:var(--surface2);cursor:default;">
+            <span class="field-hint">Calculado automaticamente após importar itens</span>
           </div>
         </div>
         <div class="form-grid">
@@ -928,13 +941,18 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
             <input type="text" id="dfd-prazo" placeholder="Ex: 12 meses ou até 31/12/2026">
           </div>
           <div class="form-field">
-            <label>Compatível com Plano de Contratações Anual? <span class="ref">Art. 7º, I</span></label>
-            <select id="dfd-pca">
+            <label>Alinhamento ao PCA <span class="ref">Art. 12, VII LLC</span></label>
+            <select id="dfd-pca" onchange="atualizarPCAPreview()">
               <option value="sim">Sim — consta no PCA</option>
               <option value="nao">Não — fora do PCA</option>
-              <option value="na">Prefeitura não possui PCA</option>
+              <option value="na" selected>Prefeitura não possui PCA</option>
             </select>
           </div>
+        </div>
+        <!-- PCA PREVIEW (melhoria #4) -->
+        <div id="dfd-pca-preview" style="background:var(--surface2);border-left:3px solid var(--primary);padding:10px 12px;border-radius:4px;font-size:12px;margin-top:-8px;margin-bottom:12px;color:var(--text2);">
+          <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Texto que será inserido no documento:</strong><br>
+          <span id="dfd-pca-texto">Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.</span>
         </div>
 
         <!-- Extra para Dispensa/Inexigibilidade -->
@@ -1531,6 +1549,7 @@ async function criarProcesso() {
   btn.innerHTML = '<span class="spinner"></span> Criando...';
 
   try {
+    salvarContato();
     const prefId = _perfil?.prefeitura_id;
     if (!prefId) throw new Error('Perfil sem prefeitura vinculada. Contate o administrador.');
 
@@ -1545,6 +1564,8 @@ async function criarProcesso() {
       unidade:       document.getElementById('dfd-unidade').value.trim(),
       responsavel:   document.getElementById('dfd-responsavel').value.trim(),
       cargo:         document.getElementById('dfd-cargo').value.trim(),
+      email:         document.getElementById('dfd-email').value.trim(),
+      telefone:      document.getElementById('dfd-telefone').value.trim(),
       justificativa: document.getElementById('dfd-justificativa').value.trim(),
       objeto:        document.getElementById('dfd-objeto').value.trim(),
       itens:         document.getElementById('dfd-itens-json')?.value || '[]',
@@ -2595,46 +2616,52 @@ async function gerarTextosIA() {
   btn.disabled = true;
   btn.textContent = '⏳ Gerando...';
   status.textContent = 'Consultando IA...';
+  status.style.color = 'var(--text2)';
 
-  const prompt = `Você é especialista em licitações públicas municipais brasileiras, com domínio da Lei nº 14.133/2021.
+  const prompt = `Você é especialista em licitações públicas municipais brasileiras, com domínio da Lei nº 14.133/2021 (Nova Lei de Licitações) e ampla experiência na elaboração de documentos oficiais para prefeituras do interior.
 
-Elabore a JUSTIFICATIVA DA NECESSIDADE DA CONTRATAÇÃO para um Documento de Formalização de Demanda (DFD), com base nas seguintes informações:
+Elabore a JUSTIFICATIVA DA NECESSIDADE DA CONTRATAÇÃO para um Documento de Formalização de Demanda (DFD) oficial de prefeitura municipal, com as seguintes informações:
 
 - Objeto: ${objeto}
 - Órgão requisitante: ${unidade}
 - Tipo de contratação: ${tipo}
 
-A justificativa deve seguir EXATAMENTE o padrão dos documentos oficiais de prefeituras municipais brasileiras, com:
-1. Explicação da importância e necessidade da contratação para o serviço público
-2. Impacto para a população caso não seja realizada
-3. Referência à gestão eficiente dos recursos públicos e ao planejamento orçamentário
-4. Linguagem formal, técnica e densa, própria da Administração Pública Municipal
-5. Mínimo de 150 palavras, máximo de 300 palavras
-6. Texto em parágrafos corridos, sem títulos ou tópicos
+INSTRUÇÕES OBRIGATÓRIAS — siga à risca:
 
-Escreva APENAS o texto da justificativa, pronto para inserir no documento oficial.`;
+1. Use o vocabulário técnico dos documentos oficiais de prefeituras goianas, incluindo expressões como: "eventual fornecimento", "de suma importância", "melhoria do atendimento aos cidadãos do Município", "distritos adjacentes ao Município", "gestão financeira mais equilibrada", "planejamento adequado dos recursos públicos", "garantir a produtividade e a qualidade dos serviços prestados"
+
+2. Estruture em 2 a 3 parágrafos:
+   - Parágrafo 1: importância da contratação para o atendimento da população e continuidade dos serviços públicos
+   - Parágrafo 2: benefícios da aquisição parcelada para a gestão financeira municipal e planejamento orçamentário
+   - Parágrafo 3 (opcional): consequências do não atendimento e fundamentação na Lei 14.133/2021
+
+3. Linguagem: formal, técnica, densa — própria de secretaria municipal brasileira. Nunca use linguagem coloquial ou corporativa moderna.
+
+4. Extensão: mínimo 180 palavras, máximo 320 palavras.
+
+5. Escreva APENAS o texto da justificativa, sem título, sem introdução, sem explicação — direto ao corpo do parágrafo.`;
 
   try {
     const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
     const DURL = typeof DEEPSEEK_URL !== 'undefined' ? DEEPSEEK_URL : 'https://api.deepseek.com/v1/chat/completions';
-    
     const resp = await fetch(DURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DKEY },
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await resp.json();
     const texto = data.choices?.[0]?.message?.content || '';
-    
     if (texto) {
-      document.getElementById('dfd-justificativa').value = texto;
-      status.textContent = '✅ Gerado com sucesso! Você pode editar o texto.';
-      status.style.color = 'var(--success)';
+      document.getElementById('dfd-justificativa').value = texto.trim();
+      status.textContent = '✅ Gerado! Revise e ajuste se necessário.';
+      status.style.color = 'var(--success,#4caf50)';
     } else {
       status.textContent = '⚠️ Erro ao gerar. Escreva manualmente.';
+      status.style.color = 'var(--danger,#e55)';
     }
   } catch(e) {
     status.textContent = '⚠️ Erro: ' + e.message;
+    status.style.color = 'var(--danger,#e55)';
   } finally {
     btn.disabled = false;
     btn.textContent = '✨ Gerar novamente';
@@ -2966,6 +2993,7 @@ function setDFDItens(arr) {
   const el = document.getElementById('dfd-itens-json');
   if (el) el.value = JSON.stringify(arr);
   renderDFDItens();
+  atualizarQuantidadeTotal();
 }
 
 function renderDFDItens() {
@@ -3098,6 +3126,49 @@ function executarImportarDFD() {
   fecharModal('modal-importar-dfd');
   toast('✓ ' + itens.length + ' itens importados', 'success');
 }
+
+
+// ── PCA PREVIEW (melhoria #4) ──
+const PCA_TEXTOS = {
+  sim: 'A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício vigente, em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.',
+  nao: 'A presente contratação não consta no Plano de Contratações Anual – PCA do exercício vigente, sendo necessária sua inclusão por meio de revisão ou aditamento, conforme faculdade prevista na Lei nº 14.133/2021.',
+  na:  'Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.'
+};
+function atualizarPCAPreview() {
+  const val = document.getElementById('dfd-pca')?.value || 'na';
+  const el = document.getElementById('dfd-pca-texto');
+  if (el) el.textContent = PCA_TEXTOS[val] || PCA_TEXTOS.na;
+}
+
+// ── AUTO-SOMA ITENS → campo quantidade (melhoria #2) ──
+function atualizarQuantidadeTotal() {
+  const itens = getDFDItens ? getDFDItens() : [];
+  const campo = document.getElementById('dfd-quantidade');
+  if (!campo) return;
+  if (itens.length === 0) {
+    campo.value = '';
+    return;
+  }
+  campo.value = itens.length + ' item' + (itens.length > 1 ? 'ns' : '') + ' conforme tabela';
+}
+
+// ── AUTO-PREENCHER CONTATO (melhoria #1) ──
+function autoPreencherContato() {
+  const nome = document.getElementById('dfd-responsavel')?.value?.trim() || '';
+  const emailSalvo = localStorage.getItem('licite_email_' + nome);
+  const telSalvo   = localStorage.getItem('licite_tel_' + nome);
+  if (emailSalvo) document.getElementById('dfd-email').value = emailSalvo;
+  if (telSalvo)   document.getElementById('dfd-telefone').value = telSalvo;
+}
+
+function salvarContato() {
+  const nome  = document.getElementById('dfd-responsavel')?.value?.trim() || '';
+  const email = document.getElementById('dfd-email')?.value?.trim() || '';
+  const tel   = document.getElementById('dfd-telefone')?.value?.trim() || '';
+  if (nome && email) localStorage.setItem('licite_email_' + nome, email);
+  if (nome && tel)   localStorage.setItem('licite_tel_' + nome, tel);
+}
+
 
 
 </script>
