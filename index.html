@@ -893,15 +893,33 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
           <textarea id="dfd-justificativa" rows="5" placeholder="Preencha o objeto acima e clique em ✨ Gerar com IA, ou escreva manualmente..."></textarea>
         </div>
 
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Quantidade a Contratar <span class="req">*</span> <span class="ref">Art. 7º, I, c</span></label>
-            <input type="text" id="dfd-quantidade" placeholder="Ex: 50 kits anuais">
-            <span class="field-hint">Expectativa de consumo anual</span>
+        <!-- MÓDULO DE ITENS -->
+        <div class="form-field">
+          <label>Descrição e Quantidades <span class="req">*</span> <span class="ref">Art. 7º, I, c</span></label>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalImportarDFD()">
+              📋 Importar do Excel / Colar Lista
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="adicionarItemDFD()">
+              + Adicionar Item
+            </button>
           </div>
+          <div id="dfd-itens-lista" style="border:1px solid var(--border);border-radius:6px;min-height:60px;padding:8px;background:var(--surface2);">
+            <div id="dfd-itens-vazio" style="color:var(--text2);font-size:12px;padding:8px;">Nenhum item adicionado. Use os botões acima para inserir os produtos/serviços.</div>
+          </div>
+          <input type="hidden" id="dfd-itens-json" value="[]">
+          <span class="field-hint">Itens serão exibidos em tabela no documento gerado</span>
+        </div>
+
+        <div class="form-grid">
           <div class="form-field">
             <label>Estimativa Preliminar do Valor (R$) <span class="req">*</span> <span class="ref">Art. 7º, I, d</span></label>
             <input type="text" id="dfd-valor" placeholder="Ex: 15.000,00">
+          </div>
+          <div class="form-field">
+            <label>Quantidade Total (resumo) <span class="ref">Art. 7º, I, c</span></label>
+            <input type="text" id="dfd-quantidade" placeholder="Ex: 146 itens / 50 kits anuais">
+            <span class="field-hint">Resumo — detalhes na tabela acima</span>
           </div>
         </div>
         <div class="form-grid">
@@ -1477,6 +1495,10 @@ function avancarNovoProcesso() {
   document.getElementById('novo-passo2').style.display = 'block';
   document.getElementById('btn-avancar-passo').style.display = 'none';
   document.getElementById('btn-criar-processo').style.display = 'inline-flex';
+  // Reset itens
+  const jel = document.getElementById('dfd-itens-json');
+  if (jel) jel.value = '[]';
+  renderDFDItens();
 
   // Mostrar campos extras para dispensa/inexigibilidade
   const isDirecto = ['dispensa','inexigibilidade'].includes(_tipoSelecionado);
@@ -1525,6 +1547,7 @@ async function criarProcesso() {
       cargo:         document.getElementById('dfd-cargo').value.trim(),
       justificativa: document.getElementById('dfd-justificativa').value.trim(),
       objeto:        document.getElementById('dfd-objeto').value.trim(),
+      itens:         document.getElementById('dfd-itens-json')?.value || '[]',
       quantidade:    document.getElementById('dfd-quantidade').value.trim(),
       valor:         document.getElementById('dfd-valor').value.trim(),
       prazo:         document.getElementById('dfd-prazo').value.trim(),
@@ -2931,7 +2954,236 @@ function buildPDFHtml(tipo, dados, proc) {
   <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
   </body></html>`;
 }
+// ══════════════════════════════════════════════════════════
+//  MÓDULO DE ITENS DO DFD
+// ══════════════════════════════════════════════════════════
+
+function getDFDItens() {
+  try { return JSON.parse(document.getElementById('dfd-itens-json')?.value || '[]'); } catch(e) { return []; }
+}
+
+function setDFDItens(arr) {
+  const el = document.getElementById('dfd-itens-json');
+  if (el) el.value = JSON.stringify(arr);
+  renderDFDItens();
+}
+
+function renderDFDItens() {
+  const lista = document.getElementById('dfd-itens-lista');
+  const vazio = document.getElementById('dfd-itens-vazio');
+  if (!lista) return;
+  const itens = getDFDItens();
+  if (itens.length === 0) {
+    lista.innerHTML = '<div id="dfd-itens-vazio" style="color:var(--text2);font-size:12px;padding:8px;">Nenhum item adicionado. Use os botões acima para inserir os produtos/serviços.</div>';
+    return;
+  }
+  lista.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:var(--surface);">
+      <th style="padding:4px 6px;text-align:center;width:4%;border-bottom:1px solid var(--border);">Nº</th>
+      <th style="padding:4px 6px;text-align:left;border-bottom:1px solid var(--border);">Descrição</th>
+      <th style="padding:4px 6px;text-align:center;width:8%;border-bottom:1px solid var(--border);">Unid.</th>
+      <th style="padding:4px 6px;text-align:center;width:10%;border-bottom:1px solid var(--border);">Qtd.</th>
+      <th style="padding:4px 6px;text-align:center;width:6%;border-bottom:1px solid var(--border);">✕</th>
+    </tr></thead><tbody>
+    ${itens.map((it,i) => `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:3px 6px;text-align:center;">${i+1}</td>
+      <td style="padding:3px 6px;">${it.descricao||it.nome||'—'}</td>
+      <td style="padding:3px 6px;text-align:center;">${it.unidade||'UN'}</td>
+      <td style="padding:3px 6px;text-align:center;">${it.quantidade||1}</td>
+      <td style="padding:3px 6px;text-align:center;"><button type="button" onclick="removerItemDFD(${i})" style="background:none;border:none;color:#e55;cursor:pointer;font-size:14px;padding:0;">✕</button></td>
+    </tr>`).join('')}
+    </tbody></table>
+    <div style="font-size:11px;color:var(--text2);padding:4px 6px;text-align:right;">${itens.length} item(s)</div>`;
+}
+
+function removerItemDFD(idx) {
+  const itens = getDFDItens();
+  itens.splice(idx, 1);
+  setDFDItens(itens);
+}
+
+function adicionarItemDFD() {
+  document.getElementById('item-dfd-desc').value = '';
+  document.getElementById('item-dfd-unid').value = 'UN';
+  document.getElementById('item-dfd-qtd').value = '';
+  document.getElementById('modal-item-dfd').classList.add('show');
+}
+
+function salvarItemDFD() {
+  const desc = document.getElementById('item-dfd-desc').value.trim();
+  const unid = document.getElementById('item-dfd-unid').value.trim() || 'UN';
+  const qtd  = parseFloat(document.getElementById('item-dfd-qtd').value) || 1;
+  if (!desc) { alert('Informe a descrição do item.'); return; }
+  const itens = getDFDItens();
+  itens.push({ descricao: desc, unidade: unid.toUpperCase(), quantidade: qtd });
+  setDFDItens(itens);
+  fecharModal('modal-item-dfd');
+  toast('Item adicionado', 'success');
+}
+
+function parsearListaItensDFD(texto, unidadePadrao, qtdPadrao) {
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const itens = [], ignoradas = [];
+  for (const linha of linhas) {
+    let partes;
+    if (linha.includes('\t'))      partes = linha.split('\t').map(p => p.trim());
+    else if (linha.includes('|'))  partes = linha.split('|').map(p => p.trim());
+    else if (linha.includes(';'))  partes = linha.split(';').map(p => p.trim());
+    else                           partes = [linha];
+    partes = partes.filter(p => p.length > 0);
+    if (partes.length === 0) continue;
+    let descricao, unidade, quantidade;
+    if (partes.length >= 4) {
+      if (/^[0-9]+$/.test(partes[0])) { descricao=partes[1]; unidade=partes[2]||unidadePadrao; quantidade=parseFloat(partes[3].replace(',','.'))||qtdPadrao; }
+      else { descricao=partes[0]; unidade=partes[1]||unidadePadrao; quantidade=parseFloat(partes[2].replace(',','.'))||qtdPadrao; }
+    } else if (partes.length === 3) {
+      descricao=partes[0]; unidade=partes[1]||unidadePadrao; quantidade=parseFloat(partes[2].replace(',','.'))||qtdPadrao;
+    } else if (partes.length === 2) {
+      const num = parseFloat(partes[1].replace(',','.'));
+      if (!isNaN(num) && num > 0) { descricao=partes[0]; unidade=unidadePadrao; quantidade=num; }
+      else { descricao=partes[0]; unidade=partes[1]||unidadePadrao; quantidade=qtdPadrao; }
+    } else {
+      descricao=partes[0]; unidade=unidadePadrao; quantidade=qtdPadrao;
+    }
+    if (/^(item|n[o]|ord|descri|unid|qtd|quant|lote|---|====)/i.test(descricao) || descricao.length < 3) { ignoradas.push(linha); continue; }
+    descricao = descricao.replace(/^[0-9]+\s*[-.)|]\s*/, '').trim();
+    if (descricao.length < 3) { ignoradas.push(linha); continue; }
+    itens.push({ descricao, unidade: unidade.toUpperCase(), quantidade });
+  }
+  return { itens, ignoradas };
+}
+
+function abrirModalImportarDFD() {
+  document.getElementById('dfd-imp-texto').value = '';
+  document.getElementById('dfd-imp-substituir').checked = false;
+  document.getElementById('dfd-imp-preview').style.display = 'none';
+  document.getElementById('modal-importar-dfd').classList.add('show');
+  setTimeout(() => document.getElementById('dfd-imp-texto').focus(), 100);
+}
+
+function previewImportarDFD() {
+  const texto = document.getElementById('dfd-imp-texto').value;
+  if (!texto.trim()) { toast('Cole a lista primeiro', 'error'); return; }
+  const unid = document.getElementById('dfd-imp-unidade').value || 'UN';
+  const qtd  = parseFloat(document.getElementById('dfd-imp-qtd').value) || 1;
+  const { itens, ignoradas } = parsearListaItensDFD(texto, unid, qtd);
+  const prev = document.getElementById('dfd-imp-preview');
+  const cont = document.getElementById('dfd-imp-preview-content');
+  if (itens.length === 0) {
+    cont.innerHTML = '<span style="color:#e55;">Nenhum item válido encontrado. Verifique o formato.</span>';
+    prev.style.display = 'block'; return;
+  }
+  let html = '<strong style="color:green;">' + itens.length + ' itens detectados</strong>';
+  if (ignoradas.length > 0) html += ' <span style="opacity:.6;">(' + ignoradas.length + ' linhas ignoradas)</span>';
+  html += '<br><br>';
+  for (let i = 0; i < Math.min(5, itens.length); i++) {
+    const it = itens[i];
+    html += '<div style="margin-bottom:5px;"><strong>' + (i+1) + '.</strong> ' + it.descricao.slice(0,80) + (it.descricao.length>80?'...':'') + '<br><span style="opacity:.7;margin-left:16px;">Un: <strong>' + it.unidade + '</strong> · Qtd: <strong>' + it.quantidade.toLocaleString('pt-BR') + '</strong></span></div>';
+  }
+  if (itens.length > 5) html += '<div style="opacity:.6;margin-top:6px;">... e mais ' + (itens.length-5) + ' itens</div>';
+  cont.innerHTML = html;
+  prev.style.display = 'block';
+}
+
+function executarImportarDFD() {
+  const texto = document.getElementById('dfd-imp-texto').value;
+  if (!texto.trim()) { toast('Cole a lista primeiro', 'error'); return; }
+  const unid = document.getElementById('dfd-imp-unidade').value || 'UN';
+  const qtd  = parseFloat(document.getElementById('dfd-imp-qtd').value) || 1;
+  const { itens } = parsearListaItensDFD(texto, unid, qtd);
+  if (itens.length === 0) { toast('Nenhum item válido encontrado', 'error'); return; }
+  const substituir = document.getElementById('dfd-imp-substituir').checked;
+  const existentes = substituir ? [] : getDFDItens();
+  setDFDItens([...existentes, ...itens]);
+  fecharModal('modal-importar-dfd');
+  toast('✓ ' + itens.length + ' itens importados', 'success');
+}
+
 
 </script>
+
+<!-- ══ MODAL: IMPORTAR ITENS DFD ══ -->
+<div class="modal-overlay" id="modal-importar-dfd">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-header">
+      <div>
+        <h3>📋 Importar Itens em Lote</h3>
+        <p>Cole a lista de itens do Excel — uma linha por item</p>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-importar-dfd')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;font-size:12px;">
+        <strong>💡 Formatos aceitos:</strong><br>
+        • <strong>2 colunas do Excel</strong> (Descrição + Quantidade): selecione e cole<br>
+        • <strong>3 colunas</strong> (Descrição + Unidade + Quantidade)<br>
+        • <strong>4 colunas</strong> (Nº + Descrição + Unidade + Quantidade)<br>
+        • <strong>Só a descrição</strong>: uma por linha<br>
+        Separadores aceitos: <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">TAB</code> (Excel), <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">|</code> ou <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">;</code>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="form-field" style="flex:1;min-width:140px;margin:0;">
+          <label style="font-size:12px;">Unidade padrão</label>
+          <input type="text" id="dfd-imp-unidade" value="UN" placeholder="UN, KG, CX...">
+        </div>
+        <div class="form-field" style="flex:1;min-width:120px;margin:0;">
+          <label style="font-size:12px;">Quantidade padrão</label>
+          <input type="number" id="dfd-imp-qtd" value="1" min="1">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Cole aqui a lista de itens</label>
+        <textarea id="dfd-imp-texto" rows="10" style="font-family:monospace;font-size:12px;" placeholder="ÁCIDO TRANEXÂMICO 50MG/05 ML	UND.	15.600&#10;ÁGUA DESTILADA 10 ML	UN	10.000&#10;ÁGUA OXIGENADA 01 LTS	UN	1.000&#10;...&#10;&#10;(Cole direto do Excel: Descrição + TAB + Quantidade)"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <input type="checkbox" id="dfd-imp-substituir" style="margin:0;">
+        <label for="dfd-imp-substituir" style="font-size:13px;cursor:pointer;">Substituir itens existentes</label>
+      </div>
+      <div id="dfd-imp-preview" style="margin-top:12px;display:none;">
+        <strong style="font-size:12px;">Pré-visualização (primeiros 5 itens):</strong>
+        <div id="dfd-imp-preview-content" style="background:var(--surface2);padding:10px;border-radius:6px;font-family:monospace;font-size:11px;line-height:1.6;margin-top:4px;max-height:160px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-importar-dfd')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="previewImportarDFD()">👁 Pré-visualizar</button>
+      <button class="btn btn-primary" onclick="executarImportarDFD()">📥 Importar Itens</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ADICIONAR ITEM MANUAL DFD ══ -->
+<div class="modal-overlay" id="modal-item-dfd">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div><h3>Adicionar Item</h3></div>
+      <button class="modal-close" onclick="fecharModal('modal-item-dfd')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label>Descrição do Item <span class="req">*</span></label>
+        <input type="text" id="item-dfd-desc" placeholder="Ex: DIPIRONA 500MG/ML 2ML">
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Unidade</label>
+          <input type="text" id="item-dfd-unid" value="UN" placeholder="UN, KG, CX, AMP...">
+        </div>
+        <div class="form-field">
+          <label>Quantidade <span class="req">*</span></label>
+          <input type="number" id="item-dfd-qtd" placeholder="Ex: 1000" min="1">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-item-dfd')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarItemDFD()">Salvar Item</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
