@@ -1190,6 +1190,11 @@ async function carregarPerfil(user, usuario = null) {
     usuario = data;
   }
   _perfil = usuario;
+  // Load prefeitura data for municipality name
+  if (usuario?.prefeitura_id) {
+    const { data: pref } = await sb.from('prefeituras').select('nome,municipio,uf').eq('id', usuario.prefeitura_id).single();
+    if (pref) _perfil._prefeitura = pref;
+  }
 }
 
 function mostrarApp() {
@@ -2686,7 +2691,7 @@ async function gerarPDFDoc(tipo) {
 
 function buildPDFHtml(tipo, dados, proc) {
   const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'});
-  const municipio = dados.municipio || proc.municipio || 'Nova Crixás';
+  const municipio = dados.municipio || proc.municipio || _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace('Prefeitura Municipal de ','').replace('Prefeitura de ','') || 'município';
   const orgao = dados.unidade || dados.orgao || dados.setor_requisitante || proc.setor_requisitante || '—';
   const responsavel = dados.responsavel || '—';
   const cargo = dados.cargo || '—';
@@ -2713,86 +2718,109 @@ function buildPDFHtml(tipo, dados, proc) {
 
   // Build items table HTML
   function buildItensTable(cols) {
+    // Se não há itens — texto padrão
     if (!itensArray || itensArray.length === 0) {
       return '<p style="text-align:justify;">Conforme relação de itens constante nos autos do processo administrativo licitatório, devidamente instruído com as especificações técnicas e quantitativos aprovados pela unidade requisitante.</p>';
     }
-    let html = `<table style="width:100%;border-collapse:collapse;font-size:10pt;margin:10px 0;page-break-inside:auto;">
-      <thead><tr style="background:#e8e8e8;">
-        <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:4%">Nº</th>
-        <th style="border:1px solid #000;padding:5px 4px;text-align:left;font-weight:bold;">Nome do Produto / Descrição</th>
-        <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:10%">Unid.</th>
-        <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:10%">Quant.</th>`;
-    if (cols === 'tr') {
-      html += `<th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:13%">V. Unit. (R$)</th>
-               <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:13%">V. Total (R$)</th>`;
-    }
-    html += `</tr></thead><tbody>`;
+    // Há itens — renderiza tabela completa com cabeçalho repetível
+    const extraCols = cols === 'tr'
+      ? '<th style="width:13%">V. Unit. (R$)</th><th style="width:13%">V. Total (R$)</th>'
+      : '';
+    let html = `<table>
+      <thead>
+        <tr>
+          <th style="width:4%;text-align:center;">Nº</th>
+          <th style="text-align:left;">Nome do Produto / Descrição</th>
+          <th style="width:9%;text-align:center;">Unid. Medida</th>
+          <th style="width:9%;text-align:center;">Quantidade</th>
+          ${extraCols}
+        </tr>
+      </thead>
+      <tbody>`;
     itensArray.forEach((it, i) => {
       const nome = it.nome || it.descricao || it.produto || '—';
-      const unid = it.unidade || it.unid || '—';
-      const qtd = it.quantidade || it.qtd || '—';
-      html += `<tr style="page-break-inside:avoid;">
-        <td style="border:1px solid #000;padding:4px;text-align:center;">${i+1}</td>
-        <td style="border:1px solid #000;padding:4px;">${nome}</td>
-        <td style="border:1px solid #000;padding:4px;text-align:center;">${unid}</td>
-        <td style="border:1px solid #000;padding:4px;text-align:center;">${qtd}</td>`;
+      const unid = it.unidade || it.unid || 'UN';
+      const qtd  = it.quantidade !== undefined ? Number(it.quantidade).toLocaleString('pt-BR') : '—';
+      let extraCells = '';
       if (cols === 'tr') {
         const vu = it.valor_unitario ? parseFloat(it.valor_unitario).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
-        const vt = it.valor_total ? parseFloat(it.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
-        html += `<td style="border:1px solid #000;padding:4px;text-align:right;">${vu}</td>
-                 <td style="border:1px solid #000;padding:4px;text-align:right;">${vt}</td>`;
+        const vt = it.valor_total   ? parseFloat(it.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2})    : '—';
+        extraCells = `<td style="text-align:right;">${vu}</td><td style="text-align:right;">${vt}</td>`;
       }
-      html += `</tr>`;
+      const rowBg = (i % 2 === 1) ? ' style="background:#f9f9f9;"' : '';
+      html += `<tr${rowBg}>
+        <td style="text-align:center;">${i+1}</td>
+        <td>${nome}</td>
+        <td style="text-align:center;">${unid}</td>
+        <td style="text-align:center;">${qtd}</td>
+        ${extraCells}
+      </tr>`;
     });
     html += `</tbody></table>`;
+    html += `<p style="font-size:10pt;text-align:right;margin-top:4px;"><em>Total: ${itensArray.length} item(s)</em></p>`;
     return html;
   }
 
   const CSS = `
     @page { margin: 2.5cm 2cm; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #000; line-height: 1.6; margin: 0; }
-    h1 { font-size: 13pt; text-align: center; text-transform: uppercase; font-weight: bold; margin: 0 0 2px; }
-    h2 { font-size: 12pt; text-align: center; font-weight: bold; margin: 0 0 4px; }
-    .subtitle { text-align: center; font-size: 11pt; margin: 0 0 18px; }
-    .header-box { border: 1.5px solid #000; margin-bottom: 20px; }
-    .header-row { border-bottom: 1px solid #000; padding: 6px 10px; font-size: 11pt; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Times New Roman', Times, serif !important; font-size: 12pt; color: #000; line-height: 1.6; margin: 0; background: #fff; }
+    h1 { font-family: 'Times New Roman', Times, serif !important; font-size: 13pt; text-align: center; text-transform: uppercase; font-weight: bold; margin: 0 0 3px; letter-spacing: 1px; }
+    h2 { font-family: 'Times New Roman', Times, serif !important; font-size: 12pt; text-align: center; font-weight: bold; margin: 0 0 4px; }
+    .subtitle { text-align: center; font-size: 11pt; margin: 0 0 20px; }
+    .header-box { border: 1.5px solid #000; margin-bottom: 18px; }
+    .header-row { border-bottom: 1px solid #000; padding: 5px 10px; font-size: 11pt; line-height: 1.4; }
     .header-row:last-child { border-bottom: none; }
-    .header-row .lbl { font-weight: bold; }
-    .header-row-grid { display: grid; grid-template-columns: 1fr 1fr; }
-    .header-row-grid .cell { padding: 6px 10px; font-size: 11pt; }
-    .header-row-grid .cell:first-child { border-right: 1px solid #000; }
-    .secao { margin-bottom: 22px; }
-    .secao-titulo { font-weight: bold; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 10px; font-size: 12pt; letter-spacing: 0.3px; }
-    p { margin: 0 0 8px; text-align: justify; }
-    .assinatura { margin-top: 60px; text-align: center; }
-    .assinatura .linha { border-top: 1px solid #000; width: 320px; margin: 0 auto 6px; }
-    .assinatura .nome { font-weight: bold; font-size: 12pt; }
-    .assinatura .cargo { font-size: 11pt; }
-    .footer { text-align: center; font-size: 9pt; margin-top: 40px; border-top: 1px solid #999; padding-top: 6px; color: #555; }
-    table thead tr { display: table-header-group; }
-    @media print { body { margin: 0; } .footer { position: fixed; bottom: 0; width: 100%; } }`;
+    .header-row b { font-weight: bold; }
+    .header-row-2col { display: table; width: 100%; border-bottom: 1px solid #000; }
+    .header-row-2col:last-child { border-bottom: none; }
+    .header-cell { display: table-cell; padding: 5px 10px; font-size: 11pt; vertical-align: middle; }
+    .header-cell:first-child { border-right: 1px solid #000; width: 50%; }
+    .titulo-faixa { text-align: center; font-weight: bold; font-size: 12pt; border: 1px solid #000; padding: 7px 10px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+    .secao { margin-bottom: 20px; }
+    .secao-titulo { font-family: 'Times New Roman', Times, serif !important; font-weight: bold; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 10px; font-size: 12pt; letter-spacing: 0.5px; }
+    p { margin: 0 0 8px; text-align: justify; font-size: 12pt; }
+    table { border-collapse: collapse; width: 100%; font-size: 10.5pt; margin: 8px 0; }
+    table thead { display: table-header-group; }
+    table th { border: 1px solid #000; padding: 5px 5px; background: #e8e8e8; font-weight: bold; text-align: center; font-size: 10.5pt; }
+    table td { border: 1px solid #000; padding: 4px 5px; vertical-align: top; font-size: 10.5pt; }
+    table tr { page-break-inside: avoid; }
+    .assinatura { margin-top: 55px; text-align: center; page-break-inside: avoid; }
+    .assinatura .linha { border-top: 1px solid #000; width: 340px; margin: 0 auto 5px; }
+    .assinatura .nome { font-weight: bold; font-size: 12pt; font-family: 'Times New Roman', Times, serif !important; }
+    .assinatura .cargo-ass { font-size: 11pt; margin-top: 2px; }
+    .footer { text-align: center; font-size: 9pt; margin-top: 35px; border-top: 1px solid #aaa; padding-top: 5px; color: #666; }
+    @media print {
+      body { margin: 0; }
+      .no-print { display: none; }
+      table { page-break-inside: auto; }
+      table tr { page-break-inside: avoid; page-break-after: auto; }
+      table thead { display: table-header-group; }
+      table tfoot { display: table-footer-group; }
+    }`;
 
   if (tipo === 'DFD') {
+    const emailVal    = dados.email    || '—';
+    const telefoneVal = dados.telefone || '—';
+    const itensCount  = itensArray.length;
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 
     <h1>PREFEITURA MUNICIPAL</h1>
-    <h2>Documento de Formalização de Demanda – DFD</h2>
+    <h2>Documento de Formalização de Demanda</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo} | ${TIPO_LABELS[proc.tipo_contratacao] || 'Aquisição de Bens'}</div>
 
     <div class="header-box">
-      <div class="header-row"><span class="lbl">Órgão: </span>${orgao}</div>
-      <div class="header-row"><span class="lbl">Setor Requisitante (Unidade/Setor/Departamento): </span>${orgao}</div>
-      <div class="header-row"><span class="lbl">Responsável pela Demanda: </span>${responsavel}&nbsp;&nbsp;&nbsp;&nbsp;<span class="lbl">Matrícula: </span>${dados.matricula || '___________'}</div>
-      <div class="header-row-grid">
-        <div class="cell"><span class="lbl">E-mail: </span>${dados.email || '—'}</div>
-        <div class="cell"><span class="lbl">Telefone: </span>${dados.telefone || '—'}</div>
+      <div class="header-row"><b>Órgão:</b> ${orgao}</div>
+      <div class="header-row"><b>Setor Requisitante (Unidade/Setor/Departamento):</b> ${orgao}</div>
+      <div class="header-row"><b>Responsável pela Demanda:</b> ${responsavel} &nbsp;&nbsp; <b>Matrícula:</b> ${dados.matricula || '___________'}</div>
+      <div class="header-row-2col">
+        <div class="header-cell"><b>E-mail:</b> ${emailVal}</div>
+        <div class="header-cell"><b>Telefone:</b> ${telefoneVal}</div>
       </div>
     </div>
 
-    <div style="text-align:center;font-weight:bold;font-size:12pt;border:1px solid #000;padding:8px;margin-bottom:20px;text-transform:uppercase;letter-spacing:1px;">
-      DOCUMENTO DE FORMALIZAÇÃO DE DEMANDA – DFD
-    </div>
+    <div class="titulo-faixa">DOCUMENTO DE FORMALIZAÇÃO DE DEMANDA – DFD</div>
 
     <div class="secao">
       <div class="secao-titulo">1. Descrição do Objeto</div>
@@ -2828,7 +2856,7 @@ function buildPDFHtml(tipo, dados, proc) {
     <div class="assinatura">
       <div class="linha"></div>
       <div class="nome">${responsavel}</div>
-      <div class="cargo">${cargo}</div>
+      <div class="cargo-ass">${cargo}</div>
     </div>
 
     <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
