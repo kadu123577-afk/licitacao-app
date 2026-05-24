@@ -2623,28 +2623,25 @@ async function gerarTextosIA() {
   status.textContent = 'Consultando IA...';
   status.style.color = 'var(--text2)';
 
-  const prompt = `Você é especialista em licitações públicas municipais brasileiras, com domínio da Lei nº 14.133/2021 (Nova Lei de Licitações) e ampla experiência na elaboração de documentos oficiais para prefeituras do interior.
+  const municipioIA = _perfil?._prefeitura?.municipio || 'do Município';
+  const prompt = `Você é um servidor público experiente de prefeitura municipal do interior de Goiás, especialista na elaboração de documentos licitatórios conforme a Lei nº 14.133/2021.
 
-Elabore a JUSTIFICATIVA DA NECESSIDADE DA CONTRATAÇÃO para um Documento de Formalização de Demanda (DFD) oficial de prefeitura municipal, com as seguintes informações:
+Redija a JUSTIFICATIVA DA NECESSIDADE DA CONTRATAÇÃO para o Documento de Formalização de Demanda (DFD) com base nas informações abaixo:
 
 - Objeto: ${objeto}
-- Órgão requisitante: ${unidade}
-- Tipo de contratação: ${tipo}
+- Secretaria/Órgão: ${unidade}
+- Município: ${municipioIA}
+- Tipo: ${tipo}
 
-INSTRUÇÕES OBRIGATÓRIAS — siga à risca:
+MODELO DE REFERÊNCIA — o texto gerado deve soar exatamente como o exemplo abaixo:
+"A eventual aquisição de [objeto] é de suma importância, para a melhoria do atendimento aos cidadãos do Município de ${municipioIA}, propiciando qualidade [no serviço] dentro da Cidade de ${municipioIA} e distritos adjacentes ao Município. Além disso, a aquisição parcelada proporciona uma gestão financeira mais equilibrada, permitindo o planejamento adequado dos recursos públicos. Dessa forma, o fornecimento desses [itens] é fundamental para garantir a produtividade e a qualidade dos serviços prestados pela ${unidade}."
 
-1. Use o vocabulário técnico dos documentos oficiais de prefeituras goianas, incluindo expressões como: "eventual fornecimento", "de suma importância", "melhoria do atendimento aos cidadãos do Município", "distritos adjacentes ao Município", "gestão financeira mais equilibrada", "planejamento adequado dos recursos públicos", "garantir a produtividade e a qualidade dos serviços prestados"
-
-2. Estruture em 2 a 3 parágrafos:
-   - Parágrafo 1: importância da contratação para o atendimento da população e continuidade dos serviços públicos
-   - Parágrafo 2: benefícios da aquisição parcelada para a gestão financeira municipal e planejamento orçamentário
-   - Parágrafo 3 (opcional): consequências do não atendimento e fundamentação na Lei 14.133/2021
-
-3. Linguagem: formal, técnica, densa — própria de secretaria municipal brasileira. Nunca use linguagem coloquial ou corporativa moderna.
-
-4. Extensão: mínimo 180 palavras, máximo 320 palavras.
-
-5. Escreva APENAS o texto da justificativa, sem título, sem introdução, sem explicação — direto ao corpo do parágrafo.`;
+REGRAS ABSOLUTAS:
+1. Use OBRIGATORIAMENTE as seguintes expressões: "eventual fornecimento/aquisição", "de suma importância", "cidadãos do Município de ${municipioIA}", "distritos adjacentes ao Município", "aquisição parcelada proporciona uma gestão financeira mais equilibrada", "planejamento adequado dos recursos públicos", "qualidade dos serviços prestados"
+2. Estruture em exatamente 2 parágrafos corridos
+3. Linguagem: densa, formal, de secretaria municipal brasileira do interior. Sem expressões modernas ou corporativas
+4. Entre 180 e 280 palavras
+5. Escreva SOMENTE o texto final — sem título, sem prefácio, sem explicação`;
 
   try {
     const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
@@ -2701,12 +2698,13 @@ function buildPDFHtml(tipo, dados, proc) {
   const prazo = dados.prazo || '—';
 
   // PCA text
+  const ano = new Date().getFullYear();
   const pcaVal = dados.pca || 'na';
   const pcaTexto = pcaVal === 'sim'
-    ? 'A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício vigente, em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.'
+    ? `A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício ${ano}, em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.`
     : pcaVal === 'nao'
-    ? 'A presente contratação não consta no Plano de Contratações Anual – PCA do exercício vigente, sendo necessária sua inclusão por meio de revisão, conforme faculdade prevista na Lei nº 14.133/2021.'
-    : 'Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.';
+    ? `A presente contratação não consta no Plano de Contratações Anual – PCA do exercício ${ano}, sendo necessária sua inclusão por meio de revisão ou aditamento, conforme faculdade prevista na Lei nº 14.133/2021.`
+    : `Não foi adotado o Plano de Contratações Anual – PCA para o exercício ${ano}, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.`;
 
   // Parse items
   let itensArray = [];
@@ -2859,7 +2857,10 @@ function buildPDFHtml(tipo, dados, proc) {
       <div class="cargo-ass">${cargo}</div>
     </div>
 
-    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+    <div class="footer">
+      Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}<br>
+      <span style="font-size:8pt;">Documento gerado eletronicamente — autenticidade verificável em <strong>licitacao-app.vercel.app</strong> | ID: ${proc.id ? proc.id.slice(0,8).toUpperCase() : '—'}</span>
+    </div>
     </body></html>`;
   }
 
@@ -2939,7 +2940,7 @@ function buildPDFHtml(tipo, dados, proc) {
       <div class="nome">${responsavel}</div>
       <div class="cargo">${cargo}</div>
     </div>
-    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}<br><span style="font-size:8pt;">Documento gerado eletronicamente — autenticidade verificável em <strong>licitacao-app.vercel.app</strong> | ID: ${proc.id ? proc.id.slice(0,8).toUpperCase() : '—'}</span></div>
     </body></html>`;
   }
 
@@ -2994,7 +2995,7 @@ function buildPDFHtml(tipo, dados, proc) {
       <div class="nome">${responsavel}</div>
       <div class="cargo">${cargo}</div>
     </div>
-    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}<br><span style="font-size:8pt;">Documento gerado eletronicamente — autenticidade verificável em <strong>licitacao-app.vercel.app</strong> | ID: ${proc.id ? proc.id.slice(0,8).toUpperCase() : '—'}</span></div>
     </body></html>`;
   }
 
@@ -3060,14 +3061,14 @@ function removerItemDFD(idx) {
 
 function adicionarItemDFD() {
   document.getElementById('item-dfd-desc').value = '';
-  document.getElementById('item-dfd-unid').value = 'UN';
+  document.getElementById('item-dfd-unid').selectedIndex = 0;
   document.getElementById('item-dfd-qtd').value = '';
   document.getElementById('modal-item-dfd').classList.add('show');
 }
 
 function salvarItemDFD() {
   const desc = document.getElementById('item-dfd-desc').value.trim();
-  const unid = document.getElementById('item-dfd-unid').value.trim() || 'UN';
+  const unid = document.getElementById('item-dfd-unid').value || 'UN';
   const qtd  = parseFloat(document.getElementById('item-dfd-qtd').value) || 1;
   if (!desc) { alert('Informe a descrição do item.'); return; }
   const itens = getDFDItens();
@@ -3157,11 +3158,15 @@ function executarImportarDFD() {
 
 
 // ── PCA PREVIEW (melhoria #4) ──
-const PCA_TEXTOS = {
-  sim: 'A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício vigente, em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.',
-  nao: 'A presente contratação não consta no Plano de Contratações Anual – PCA do exercício vigente, sendo necessária sua inclusão por meio de revisão ou aditamento, conforme faculdade prevista na Lei nº 14.133/2021.',
-  na:  'Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.'
-};
+function getPCATextos() {
+  const ano = new Date().getFullYear();
+  return {
+    sim: `A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício ${ano}, em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.`,
+    nao: `A presente contratação não consta no Plano de Contratações Anual – PCA do exercício ${ano}, sendo necessária sua inclusão por meio de revisão ou aditamento, conforme faculdade prevista na Lei nº 14.133/2021.`,
+    na:  `Não foi adotado o Plano de Contratações Anual – PCA para o exercício ${ano}, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.`
+  };
+}
+const PCA_TEXTOS = getPCATextos();
 function atualizarPCAPreview() {
   const val = document.getElementById('dfd-pca')?.value || 'na';
   const el = document.getElementById('dfd-pca-texto');
@@ -3177,7 +3182,7 @@ function atualizarQuantidadeTotal() {
     campo.value = '';
     return;
   }
-  campo.value = itens.length + ' item' + (itens.length > 1 ? 'ns' : '') + ' conforme tabela';
+  campo.value = itens.length + ' ' + (itens.length === 1 ? 'item conforme tabela abaixo' : 'itens conforme detalhado na tabela de itens da Seção 3 deste documento');
 }
 
 // ── AUTO-PREENCHER CONTATO (melhoria #1) ──
@@ -3269,8 +3274,29 @@ function salvarContato() {
       </div>
       <div class="form-grid">
         <div class="form-field">
-          <label>Unidade</label>
-          <input type="text" id="item-dfd-unid" value="UN" placeholder="UN, KG, CX, AMP...">
+          <label>Unidade de Medida</label>
+          <select id="item-dfd-unid">
+            <option value="UN">UN — Unidade</option>
+            <option value="UND">UND — Unidade</option>
+            <option value="AMP">AMP — Ampola</option>
+            <option value="CX">CX — Caixa</option>
+            <option value="FR">FR — Frasco</option>
+            <option value="KG">KG — Quilograma</option>
+            <option value="LT">LT — Litro</option>
+            <option value="MT">MT — Metro</option>
+            <option value="M2">M² — Metro quadrado</option>
+            <option value="PC">PC — Peça</option>
+            <option value="PAR">PAR — Par</option>
+            <option value="PCT">PCT — Pacote</option>
+            <option value="RL">RL — Rolo</option>
+            <option value="SC">SC — Saco</option>
+            <option value="SV">SV — Serviço</option>
+            <option value="TB">TB — Tubo</option>
+            <option value="HR">HR — Hora</option>
+            <option value="DI">DI — Diária</option>
+            <option value="MES">MÊS — Mês</option>
+            <option value="COMP">COMP — Comprimido</option>
+          </select>
         </div>
         <div class="form-field">
           <label>Quantidade <span class="req">*</span></label>
