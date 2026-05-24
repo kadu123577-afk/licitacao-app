@@ -1016,9 +1016,11 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 // ══════════════════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════════════════
-const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
+const SUPA_URL = 'https://oputbtpimowgxpsmfamn.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdXRidHBpbW93Z3hwc21mYW1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTYyMDksImV4cCI6MjA5NDkzMjIwOX0.9NtzdNnbrvVKyABlfU27RbwIg9gpbjiyG_SsWekOYoU';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const DEEPSEEK_KEY = 'sk-e289ba7d38e8418d9cbc14c2c5509da8';
+const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 // ══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
@@ -1110,7 +1112,7 @@ async function fazerLogin() {
     if (authErr) throw authErr;
 
     const { data: usuario, error: dbErr } = await sb.from('usuarios')
-      .select('*')
+      .select('*, organizacoes(nome)')
       .eq('id', authData.user.id).single();
 
     if (dbErr || !usuario) throw new Error('Usuário não encontrado.');
@@ -1128,7 +1130,7 @@ async function fazerLogin() {
 async function carregarPerfil(user, usuario = null) {
   _user = user;
   if (!usuario) {
-    const { data } = await sb.from('usuarios').select('*').eq('id', user.id).single();
+    const { data } = await sb.from('usuarios').select('*, organizacoes(nome)').eq('id', user.id).single();
     usuario = data;
   }
   _perfil = usuario;
@@ -1140,7 +1142,7 @@ function mostrarApp() {
 
   // Preencher header
   const nome = _perfil?.nome || _user?.email || '?';
-  const setor = _perfil?.setor || _perfil?.setor || '—';
+  const setor = _perfil?.setor || _perfil?.organizacoes?.nome || '—';
   const letra = nome[0].toUpperCase();
   const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
   const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
@@ -2352,27 +2354,30 @@ async function executarIA() {
   document.getElementById('btn-ia-gerar').disabled = true;
   document.getElementById('btn-ia-usar').style.display = 'none';
 
-  const prompt = `Você é especialista em licitações públicas municipais brasileiras.
-Estou elaborando o seguinte campo de um documento licitatório: "${label}"
-Processo: ${proc?.objeto || '—'} | Tipo: ${TIPO_LABELS[proc?.tipo_contratacao]||'—'} | Prefeitura: Municipal
-${ctx ? 'Contexto adicional: ' + ctx : ''}
+  const prompt = `Você é especialista em licitações públicas municipais brasileiras, com domínio da Lei nº 14.133/2021 (Nova Lei de Licitações) e das normas do TCM-GO.
+Estou elaborando o campo: "${label}"
+Processo: ${proc?.objeto || '—'} | Tipo: ${TIPO_LABELS[proc?.tipo_contratacao]||'—'} | Órgão: Prefeitura Municipal
+${ctx ? 'Informações adicionais: ' + ctx : ''}
 
-Regras para o texto:
-- Linguagem formal e técnica, própria de documentos da Administração Pública
-- Referências à legislação quando pertinente (LLC, IN-009/23 TCM-GO)
-- Texto direto e objetivo, pronto para inserir no documento
-- Máximo 200 palavras
+INSTRUÇÕES:
+- Use linguagem formal, técnica e densa, própria de documentos da Administração Pública Municipal
+- Faça referências à legislação pertinente (Lei 14.133/2021, Constituição Federal, normas ANVISA/ABNT quando aplicável)
+- O texto deve ser completo, detalhado e com densidade jurídico-administrativa
+- Mínimo de 150 palavras, máximo de 400 palavras
+- Use parágrafos bem estruturados, com conectivos formais
+- Inclua fundamentos legais, técnicos e de interesse público quando pertinente
+- Escreva APENAS o texto final do campo, sem introdução, explicação ou título
 
-Escreva APENAS o texto do campo, sem introdução ou explicação.`;
+Texto:`;
 
   try {
-    const resp = await fetch('/api/ia', {
+    const resp = await fetch(DEEPSEEK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, max_tokens: 500 })
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await resp.json();
-    _iaTextoGerado = data.texto || data.content?.[0]?.text || 'Erro ao gerar texto.';
+    _iaTextoGerado = data.choices?.[0]?.message?.content || 'Erro ao gerar texto.';
     document.getElementById('modal-ia-resultado').textContent = _iaTextoGerado;
     document.getElementById('modal-ia-resultado').style.display = 'block';
     document.getElementById('btn-ia-usar').style.display = 'inline-flex';
@@ -2549,34 +2554,261 @@ async function gerarPDFDoc(tipo) {
 }
 
 function buildPDFHtml(tipo, dados, proc) {
-  const nomes = {DFD:'Documento de Formalização de Demanda',ETP:'Estudo Técnico Preliminar',TR:'Termo de Referência',PP:'Pesquisa de Preços',DO:'Dotação Orçamentária',AUTH:'Autorização do Gestor',PARECER:'Parecer Jurídico'};
   const hoje = new Date().toLocaleDateString('pt-BR');
-  
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title>
-  <style>
-    body{font-family:'Times New Roman',serif;font-size:12pt;margin:2cm;color:#000;}
-    h1{font-size:14pt;text-align:center;text-transform:uppercase;margin:0 0 4px;}
-    h2{font-size:12pt;text-align:center;margin:0 0 20px;}
-    .campo{margin-bottom:12px;}
-    .campo label{font-weight:bold;display:block;margin-bottom:2px;}
-    .campo .val{border-bottom:1px solid #000;min-height:20px;padding:2px 0;}
-    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:20px;}
-    .footer{text-align:center;font-size:9pt;margin-top:30px;border-top:1px solid #000;padding-top:8px;}
-    .assinatura{margin-top:40px;text-align:center;}
-    @media print{body{margin:1cm;}}
-  </style></head><body>
-  <div class="header">
+  const municipio = dados.municipio || proc.setor_requisitante || 'Nova Crixás';
+  const orgao = dados.orgao || dados.setor_requisitante || proc.setor_requisitante || '—';
+  const responsavel = dados.responsavel || dados.nome_responsavel || '—';
+  const cargo = dados.cargo || '—';
+  const objeto = dados.objeto || proc.objeto || '—';
+  const justificativa = dados.justificativa || dados.justificativa_necessidade || '—';
+  const valor = dados.valor_estimado ? 'R$ ' + parseFloat(dados.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—';
+  const prazo = dados.prazo || '08';
+  const pca = dados.pca || 'Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021.';
+
+  const CSS = `
+    body{font-family:'Times New Roman',serif;font-size:12pt;margin:3cm 2.5cm;color:#000;line-height:1.5;}
+    h1{font-size:13pt;text-align:center;text-transform:uppercase;font-weight:bold;margin:0 0 4px;}
+    h2{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 6px;}
+    h3{font-size:12pt;font-weight:bold;margin:18px 0 6px;}
+    .subtitle{text-align:center;font-size:11pt;margin:0 0 16px;}
+    .header-box{border:1px solid #000;padding:8px 12px;margin-bottom:16px;}
+    .header-box table{width:100%;border-collapse:collapse;}
+    .header-box td{padding:3px 6px;font-size:11pt;vertical-align:top;}
+    .header-box .lbl{font-weight:bold;}
+    .secao{margin-bottom:20px;}
+    .secao-titulo{font-weight:bold;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:10px;font-size:12pt;}
+    p{margin:6px 0;text-align:justify;}
+    table.itens{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt;}
+    table.itens th{background:#e0e0e0;border:1px solid #000;padding:4px 6px;text-align:center;font-weight:bold;}
+    table.itens td{border:1px solid #000;padding:4px 6px;vertical-align:top;}
+    table.itens td.num{text-align:center;}
+    table.itens td.qtd{text-align:center;}
+    .assinatura{margin-top:50px;text-align:center;}
+    .assinatura .linha{border-top:1px solid #000;width:280px;margin:0 auto 6px;}
+    .footer{text-align:center;font-size:9pt;margin-top:30px;border-top:1px solid #666;padding-top:6px;color:#444;}
+    .risco-table{width:100%;border-collapse:collapse;font-size:10pt;margin:10px 0;}
+    .risco-table th{background:#ddd;border:1px solid #000;padding:5px;text-align:center;font-weight:bold;}
+    .risco-table td{border:1px solid #000;padding:5px;vertical-align:top;}
+    @media print{body{margin:2cm 2cm;}}`;
+
+  // --- ITENS TABLE ---
+  let itensHtml = '';
+  try {
+    const itens = dados.itens ? (typeof dados.itens === 'string' ? JSON.parse(dados.itens) : dados.itens) : [];
+    if (itens.length > 0) {
+      itensHtml = `<table class="itens"><thead><tr>
+        <th style="width:4%">Nº</th>
+        <th style="width:46%">Nome do Produto / Serviço</th>
+        <th style="width:10%">Unid.</th>
+        <th style="width:10%">Quant.</th>
+        <th style="width:15%">V. Unitário</th>
+        <th style="width:15%">V. Total</th>
+      </tr></thead><tbody>`;
+      itens.forEach((it, i) => {
+        const vu = it.valor_unitario ? 'R$ ' + parseFloat(it.valor_unitario).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—';
+        const vt = it.valor_total ? 'R$ ' + parseFloat(it.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—';
+        itensHtml += `<tr><td class="num">${i+1}</td><td>${it.nome||it.descricao||'—'}</td><td class="qtd">${it.unidade||'—'}</td><td class="qtd">${it.quantidade||'—'}</td><td>${vu}</td><td>${vt}</td></tr>`;
+      });
+      itensHtml += '</tbody></table>';
+    }
+  } catch(e) {}
+
+  if (tipo === 'DFD') {
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
     <h1>PREFEITURA MUNICIPAL</h1>
-    <h2>${nomes[tipo]||tipo}</h2>
-    <p>Processo nº ${proc.numero_protocolo} | ${TIPO_LABELS[proc.tipo_contratacao]}</p>
-  </div>
-  ${Object.entries(dados).map(([k,v]) => v ? `<div class="campo"><label>${k.replace(/_/g,' ').toUpperCase()}</label><div class="val">${String(v)}</div></div>` : '').join('')}
-  <div class="assinatura">
-    <p>___________________________________</p>
-    <p>${dados.responsavel || '_______________________'}</p>
-    <p>${dados.cargo || 'Responsável'} — Data: ${hoje}</p>
-  </div>
+    <h2>Documento de Formalização de Demanda</h2>
+    <div class="subtitle">Processo nº ${proc.numero_protocolo} | Aquisição de Bens e Serviços</div>
+
+    <div class="header-box">
+      <table>
+        <tr><td class="lbl">Órgão:</td><td>${orgao}</td></tr>
+        <tr><td class="lbl">Setor Requisitante:</td><td>${orgao}</td></tr>
+        <tr><td class="lbl">Responsável pela Demanda:</td><td>${responsavel}</td><td class="lbl">Matrícula:</td><td>${dados.matricula||'—'}</td></tr>
+        <tr><td class="lbl">E-mail:</td><td>${dados.email||'—'}</td><td class="lbl">Telefone:</td><td>${dados.telefone||'—'}</td></tr>
+      </table>
+    </div>
+
+    <div class="secao">
+      <div class="secao-titulo">1. Descrição do Objeto</div>
+      <p>${objeto}</p>
+    </div>
+
+    <div class="secao">
+      <div class="secao-titulo">2. Justificativa da Necessidade</div>
+      <p>${justificativa}</p>
+    </div>
+
+    <div class="secao">
+      <div class="secao-titulo">3. Descrição e Quantidades</div>
+      ${itensHtml || '<p>Conforme relação constante nos autos do processo administrativo.</p>'}
+    </div>
+
+    <div class="secao">
+      <div class="secao-titulo">4. Valor Estimado Preliminar para a Contratação</div>
+      <p>${valor}</p>
+    </div>
+
+    <div class="secao">
+      <div class="secao-titulo">5. Alinhamento ao Plano de Contratação Anual – PCA</div>
+      <p>${pca}</p>
+    </div>
+
+    <div class="secao">
+      <div class="secao-titulo">6. Encaminhamento</div>
+      <p>Em conformidade com a legislação que rege o tema, encaminhe-se à autoridade competente para análise de conveniência e oportunidade para a presente contratação e demais providências cabíveis.</p>
+      <p>${municipio}, ${hoje}.</p>
+    </div>
+
+    <div class="assinatura">
+      <div class="linha"></div>
+      <p><strong>${responsavel}</strong></p>
+      <p>${cargo}</p>
+    </div>
+    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+    </body></html>`;
+  }
+
+  if (tipo === 'ETP') {
+    const fundamentacao = dados.fundamentacao || `A presente contratação encontra respaldo nos seguintes dispositivos legais: Lei nº 14.133/2021, especialmente: Art. 6º, inciso XXIII – definição de bens e serviços comuns; Art. 11 – princípios da legalidade, eficiência, economicidade e planejamento; Art. 18 – obrigatoriedade do Estudo Técnico Preliminar; Art. 40 – planejamento das contratações públicas; Art. 82 e seguintes – Sistema de Registro de Preços; Art. 141 – gestão e fiscalização contratual. Constituição Federal, art. 196, que estabelece a saúde como direito de todos e dever do Estado. Demais normas regulamentadoras aplicáveis ao objeto da contratação.`;
+    const requisitos = dados.requisitos || `O objeto contratado deverá: possuir registro/certificação válido(a) junto aos órgãos competentes; ser entregue/prestado em conformidade com as especificações técnicas exigidas; atender às normas técnicas brasileiras vigentes; possuir rastreabilidade e controle de qualidade; a empresa deverá comprovar regularidade fiscal, trabalhista e previdenciária.`;
+    const solucao = dados.solucao || dados.descricao_solucao || `Contratação de empresa especializada para ${objeto}, mediante processo licitatório na modalidade Pregão Eletrônico, preferencialmente via Sistema de Registro de Preços, em conformidade com a Lei nº 14.133/2021.`;
+    const resultados = dados.resultados || `Garantia de abastecimento/atendimento contínuo; redução de riscos de desabastecimento/interrupção; melhoria da qualidade dos serviços prestados à população; otimização dos recursos públicos municipais; cumprimento dos princípios constitucionais da eficiência e economicidade.`;
+    const impactos = dados.impactos || `Os impactos ambientais são considerados baixos. Deverão ser observadas as normas de descarte e destinação adequada de resíduos, embalagens e materiais correlatos, em conformidade com a legislação ambiental vigente.`;
+    const conclusao = dados.conclusao || `A contratação é indispensável, tecnicamente viável e atende ao interesse público, estando em plena conformidade com a Lei nº 14.133/2021 e demais normas aplicáveis. Recomenda-se o prosseguimento do processo licitatório.`;
+
+    const riscos = [
+      {risco:'Atraso na entrega/execução', prob:'Média', impacto:'Alto', mitigacao:'Penalidades contratuais, prazo de substituição e fornecedores/prestadores alternativos'},
+      {risco:'Produto/serviço fora da especificação', prob:'Baixa', impacto:'Alto', mitigacao:'Fiscalização rigorosa, recebimento provisório e substituição imediata'},
+      {risco:'Desabastecimento/interrupção', prob:'Média', impacto:'Alto', mitigacao:'Planejamento antecipado, estoque mínimo de segurança e SRP'},
+      {risco:'Variação de preços de mercado', prob:'Média', impacto:'Médio', mitigacao:'Adoção de Sistema de Registro de Preços e pesquisa periódica'},
+      {risco:'Inexecução contratual', prob:'Baixa', impacto:'Alto', mitigacao:'Exigência de garantias, penalidades e fiscalização contratual'},
+    ];
+    const riscoHtml = `<table class="risco-table"><thead><tr><th>Risco Identificado</th><th>Probabilidade</th><th>Impacto</th><th>Medida de Mitigação</th></tr></thead><tbody>
+      ${riscos.map(r=>`<tr><td>${r.risco}</td><td style="text-align:center">${r.prob}</td><td style="text-align:center">${r.impacto}</td><td>${r.mitigacao}</td></tr>`).join('')}
+    </tbody></table>`;
+
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ETP — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+    <h1>PREFEITURA MUNICIPAL</h1>
+    <h2>Estudo Técnico Preliminar – ETP</h2>
+    <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
+
+    <div class="secao"><div class="secao-titulo">1. Descrição da Necessidade da Contratação</div>
+    <p>${dados.necessidade || objeto}</p></div>
+
+    <div class="secao"><div class="secao-titulo">2. Fundamentação Legal</div>
+    <p>${fundamentacao}</p></div>
+
+    <div class="secao"><div class="secao-titulo">3. Requisitos da Contratação</div>
+    <p>${requisitos}</p></div>
+
+    <div class="secao"><div class="secao-titulo">4. Detalhamento Técnico do Objeto</div>
+    <p>${dados.detalhamento || objeto}</p>
+    ${itensHtml}</div>
+
+    <div class="secao"><div class="secao-titulo">5. Estimativa das Quantidades</div>
+    <p>${dados.estimativa_quantidades || 'Baseada no histórico de consumo, sazonalidade e demanda do Município, conforme relação constante nos autos do processo administrativo.'}</p></div>
+
+    <div class="secao"><div class="secao-titulo">6. Levantamento de Mercado</div>
+    <p>${dados.mercado || 'O mercado apresenta ampla concorrência, sendo recomendada licitação via Sistema de Registro de Preços para garantir economicidade e flexibilidade na contratação.'}</p></div>
+
+    <div class="secao"><div class="secao-titulo">7. Estimativa do Valor da Contratação</div>
+    <p>Valor estimado: <strong>${valor}</strong>. Será definido mediante pesquisa de preços com base em banco de preços públicos, contratos similares e fornecedores do ramo, conforme IN SEGES nº 65/2021.</p></div>
+
+    <div class="secao"><div class="secao-titulo">8. Descrição da Solução</div>
+    <p>${solucao}</p></div>
+
+    <div class="secao"><div class="secao-titulo">9. Justificativa do Parcelamento</div>
+    <p>${dados.parcelamento || 'O parcelamento da contratação é necessário em razão da natureza do objeto e da variabilidade de consumo, permitindo gestão financeira mais equilibrada e planejamento adequado dos recursos públicos municipais.'}</p></div>
+
+    <div class="secao"><div class="secao-titulo">10. Resultados Pretendidos</div>
+    <p>${resultados}</p></div>
+
+    <div class="secao"><div class="secao-titulo">11. Providências a Adotar</div>
+    <p>Realização de pesquisa de preços; elaboração do Termo de Referência; publicação do edital licitatório; fiscalização e gestão contratual nos termos da Lei nº 14.133/2021.</p></div>
+
+    <div class="secao"><div class="secao-titulo">12. Impactos Ambientais</div>
+    <p>${impactos}</p></div>
+
+    <div class="secao"><div class="secao-titulo">13. Mapa de Risco</div>
+    ${riscoHtml}</div>
+
+    <div class="secao"><div class="secao-titulo">14. Conclusão</div>
+    <p>${conclusao}</p>
+    <p>${municipio}, ${hoje}.</p></div>
+
+    <div class="assinatura">
+      <div class="linha"></div>
+      <p><strong>${responsavel}</strong></p>
+      <p>${cargo}</p>
+    </div>
+    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+    </body></html>`;
+  }
+
+  if (tipo === 'TR') {
+    const obrigContratada = dados.obrig_contratada || `7.1.1. Expedir Nota Fiscal dos itens com descrição, quantitativo, valor unitário e global, fazendo acompanhar das autorizações de fornecimento ou assinaturas dos responsáveis. 7.1.2. Estar à disposição da Administração sempre que solicitado. 7.1.3. Entregar o objeto em conformidade com o exigido no termo convocatório, submetendo-se à fiscalização do Município. 7.1.4. Responder por danos causados diretamente à Administração ou a terceiros, comprovada culpa ou dolo. 7.1.5. Responder pelos encargos trabalhistas, previdenciários, fiscais e comerciais resultantes da execução do contrato. 7.1.6. Arcar com todas as despesas inerentes ao objeto, tais como transporte, encargos trabalhistas, impostos e demais incidentes. 7.1.7. Aceitar, nas mesmas condições, acréscimos ou supressões de até 25% do valor total adjudicado, conforme art. 125 da Lei nº 14.133/2021.`;
+    const obrigContratante = dados.obrig_contratante || `a) Acompanhar e fiscalizar a execução do contrato; b) Permitir o livre acesso dos empregados da contratada às dependências do contratante; c) Rejeitar, no todo ou em parte, os serviços/fornecimentos em desacordo com o contrato; d) Proceder ao pagamento na forma e prazo pactuados; e) Notificar formalmente a contratada sobre irregularidades identificadas.`;
+    const penalidades = dados.penalidades || `Pela inexecução total ou parcial do contrato, a Contratada poderá sujeitar-se às seguintes penalidades: a) Advertência; b) Multa de até 10% sobre o valor do contrato; c) Suspensão temporária de participar em licitação e impedimento de contratar com a Administração Municipal por prazo não superior a 02 (dois) anos; d) Declaração de inidoneidade para licitar e contratar com a Administração Pública, enquanto perdurarem os motivos determinantes da punição, conforme art. 156 da Lei nº 14.133/2021.`;
+    const prazoEntrega = dados.prazo_entrega || '05 (cinco) dias úteis após o recebimento da Ordem de Fornecimento/Serviço';
+    const localEntrega = dados.local_entrega || 'Sede da Secretaria requisitante ou local indicado pelo gestor do contrato';
+    const pagamento = dados.pagamento || `O pagamento será realizado mediante apresentação de Nota Fiscal devidamente atestada pelo Gestor do Contrato, contendo: data de emissão, endereço completo do contratante, CNPJ, valor unitário e total, e especificação do objeto. Cada pagamento somente será efetuado após comprovação pelo contratado de que se encontra em dia com suas obrigações sociais, mediante apresentação das Certidões Negativas de INSS, FGTS, Federal, Estadual, Municipal e Trabalhista.`;
+
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TR — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+    <h1>PREFEITURA MUNICIPAL</h1>
+    <h2>Termo de Referência</h2>
+    <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
+
+    <div class="secao"><div class="secao-titulo">1. Do Objeto</div>
+    <p>1.1. Compreende o objeto do presente certame ${objeto}.</p></div>
+
+    <div class="secao"><div class="secao-titulo">2. Da Justificativa</div>
+    <p>2.1. ${justificativa}</p></div>
+
+    <div class="secao"><div class="secao-titulo">3. Do Quantitativo</div>
+    ${itensHtml || '<p>Conforme relação constante nos autos do processo administrativo.</p>'}
+    </div>
+
+    <div class="secao"><div class="secao-titulo">4. Do Valor Estimado</div>
+    <p>4.1. O valor estimado para a presente contratação é de <strong>${valor}</strong>.</p>
+    <p>4.2. O valor unitário e total será anexado aos autos do processo administrativo após a realização das cotações prévias de preços pelo Departamento de Compras junto a empresas do ramo.</p></div>
+
+    <div class="secao"><div class="secao-titulo">5. Do Prazo e Forma de Entrega/Execução</div>
+    <p>5.1. O prazo para entrega/execução é de ${prazoEntrega}.</p>
+    <p>5.2. O objeto deverá ser entregue/executado em: ${localEntrega}.</p>
+    <p>5.3. O objeto será recebido provisoriamente para efeito de posterior verificação da conformidade com as especificações, e somente após aferição da qualidade e quantidade haverá o aceite definitivo.</p>
+    <p>5.4. A substituição de itens entregues com defeito ou em desacordo com as especificações deverá ser feita no prazo máximo de 03 (três) dias úteis, a contar da data do recebimento da notificação formal.</p></div>
+
+    <div class="secao"><div class="secao-titulo">6. Da Despesa Orçamentária e Forma de Pagamento</div>
+    <p>6.1. As despesas com o presente objeto serão empenhadas a cargo de Dotações Orçamentárias indicadas no termo editalício.</p>
+    <p>6.2. ${pagamento}</p>
+    <p>6.3. Para recebimento, a empresa deverá protocolar a(s) Nota(s) Fiscal(is) na Prefeitura Municipal, de segunda a sexta-feira, em horário comercial.</p></div>
+
+    <div class="secao"><div class="secao-titulo">7. Das Obrigações das Partes</div>
+    <h3>7.1. Da Contratada:</h3>
+    <p>${obrigContratada}</p>
+    <h3>7.2. Do Contratante:</h3>
+    <p>${obrigContratante}</p></div>
+
+    <div class="secao"><div class="secao-titulo">8. Das Penalidades Administrativas</div>
+    <p>${penalidades}</p>
+    <p>${municipio}, ${hoje}.</p></div>
+
+    <div class="assinatura">
+      <div class="linha"></div>
+      <p><strong>${responsavel}</strong></p>
+      <p>${cargo}</p>
+    </div>
+    <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
+    </body></html>`;
+  }
+
+  // fallback para outros tipos
+  const nomes = {PP:'Pesquisa de Preços',DO:'Dotação Orçamentária',AUTH:'Autorização do Gestor',PARECER:'Parecer Jurídico'};
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+  <h1>PREFEITURA MUNICIPAL</h1><h2>${nomes[tipo]||tipo}</h2>
+  <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
+  ${Object.entries(dados).map(([k,v]) => v ? `<div class="secao"><div class="secao-titulo">${k.replace(/_/g,' ').toUpperCase()}</div><p>${String(v)}</p></div>` : '').join('')}
+  <div class="assinatura"><div class="linha"></div><p><strong>${responsavel}</strong></p><p>${cargo}</p></div>
   <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
   </body></html>`;
 }
