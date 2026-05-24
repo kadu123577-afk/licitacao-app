@@ -2635,78 +2635,113 @@ async function gerarPDFDoc(tipo) {
 }
 
 function buildPDFHtml(tipo, dados, proc) {
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  const municipio = dados.municipio || proc.setor_requisitante || 'Nova Crixás';
-  const orgao = dados.orgao || dados.setor_requisitante || proc.setor_requisitante || '—';
-  const responsavel = dados.responsavel || dados.nome_responsavel || '—';
+  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'});
+  const municipio = dados.municipio || proc.municipio || 'Nova Crixás';
+  const orgao = dados.unidade || dados.orgao || dados.setor_requisitante || proc.setor_requisitante || '—';
+  const responsavel = dados.responsavel || '—';
   const cargo = dados.cargo || '—';
   const objeto = dados.objeto || proc.objeto || '—';
-  const justificativa = dados.justificativa || dados.justificativa_necessidade || '—';
-  const valor = dados.valor_estimado ? 'R$ ' + parseFloat(dados.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—';
-  const prazo = dados.prazo || '08';
-  const pca = dados.pca || 'Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021.';
+  const justificativa = dados.justificativa || '—';
+  const valor = dados.valor ? 'R$ ' + parseFloat(String(dados.valor).replace(/\./g,'').replace(',','.')).toLocaleString('pt-BR',{minimumFractionDigits:2}) : (dados.valor_estimado ? 'R$ ' + parseFloat(dados.valor_estimado).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—');
+  const prazo = dados.prazo || '—';
 
-  const CSS = `
-    body{font-family:'Times New Roman',serif;font-size:12pt;margin:3cm 2.5cm;color:#000;line-height:1.5;}
-    h1{font-size:13pt;text-align:center;text-transform:uppercase;font-weight:bold;margin:0 0 4px;}
-    h2{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 6px;}
-    h3{font-size:12pt;font-weight:bold;margin:18px 0 6px;}
-    .subtitle{text-align:center;font-size:11pt;margin:0 0 16px;}
-    .header-box{border:1px solid #000;padding:8px 12px;margin-bottom:16px;}
-    .header-box table{width:100%;border-collapse:collapse;}
-    .header-box td{padding:3px 6px;font-size:11pt;vertical-align:top;}
-    .header-box .lbl{font-weight:bold;}
-    .secao{margin-bottom:20px;}
-    .secao-titulo{font-weight:bold;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:10px;font-size:12pt;}
-    p{margin:6px 0;text-align:justify;}
-    table.itens{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt;}
-    table.itens th{background:#e0e0e0;border:1px solid #000;padding:4px 6px;text-align:center;font-weight:bold;}
-    table.itens td{border:1px solid #000;padding:4px 6px;vertical-align:top;}
-    table.itens td.num{text-align:center;}
-    table.itens td.qtd{text-align:center;}
-    .assinatura{margin-top:50px;text-align:center;}
-    .assinatura .linha{border-top:1px solid #000;width:280px;margin:0 auto 6px;}
-    .footer{text-align:center;font-size:9pt;margin-top:30px;border-top:1px solid #666;padding-top:6px;color:#444;}
-    .risco-table{width:100%;border-collapse:collapse;font-size:10pt;margin:10px 0;}
-    .risco-table th{background:#ddd;border:1px solid #000;padding:5px;text-align:center;font-weight:bold;}
-    .risco-table td{border:1px solid #000;padding:5px;vertical-align:top;}
-    @media print{body{margin:2cm 2cm;}}`;
+  // PCA text
+  const pcaVal = dados.pca || 'na';
+  const pcaTexto = pcaVal === 'sim'
+    ? 'A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício vigente, em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.'
+    : pcaVal === 'nao'
+    ? 'A presente contratação não consta no Plano de Contratações Anual – PCA do exercício vigente, sendo necessária sua inclusão por meio de revisão, conforme faculdade prevista na Lei nº 14.133/2021.'
+    : 'Não foi adotado o Plano de Contratações Anual – PCA para o exercício vigente, conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.';
 
-  // --- ITENS TABLE ---
-  let itensHtml = '';
+  // Parse items
+  let itensArray = [];
   try {
-    const itens = dados.itens ? (typeof dados.itens === 'string' ? JSON.parse(dados.itens) : dados.itens) : [];
-    if (itens.length > 0) {
-      itensHtml = `<table class="itens"><thead><tr>
-        <th style="width:4%">Nº</th>
-        <th style="width:46%">Nome do Produto / Serviço</th>
-        <th style="width:10%">Unid.</th>
-        <th style="width:10%">Quant.</th>
-        <th style="width:15%">V. Unitário</th>
-        <th style="width:15%">V. Total</th>
-      </tr></thead><tbody>`;
-      itens.forEach((it, i) => {
-        const vu = it.valor_unitario ? 'R$ ' + parseFloat(it.valor_unitario).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—';
-        const vt = it.valor_total ? 'R$ ' + parseFloat(it.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—';
-        itensHtml += `<tr><td class="num">${i+1}</td><td>${it.nome||it.descricao||'—'}</td><td class="qtd">${it.unidade||'—'}</td><td class="qtd">${it.quantidade||'—'}</td><td>${vu}</td><td>${vt}</td></tr>`;
-      });
-      itensHtml += '</tbody></table>';
+    if (dados.itens) {
+      itensArray = typeof dados.itens === 'string' ? JSON.parse(dados.itens) : dados.itens;
     }
   } catch(e) {}
 
+  // Build items table HTML
+  function buildItensTable(cols) {
+    if (!itensArray || itensArray.length === 0) {
+      return '<p style="text-align:justify;">Conforme relação de itens constante nos autos do processo administrativo licitatório, devidamente instruído com as especificações técnicas e quantitativos aprovados pela unidade requisitante.</p>';
+    }
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:10pt;margin:10px 0;page-break-inside:auto;">
+      <thead><tr style="background:#e8e8e8;">
+        <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:4%">Nº</th>
+        <th style="border:1px solid #000;padding:5px 4px;text-align:left;font-weight:bold;">Nome do Produto / Descrição</th>
+        <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:10%">Unid.</th>
+        <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:10%">Quant.</th>`;
+    if (cols === 'tr') {
+      html += `<th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:13%">V. Unit. (R$)</th>
+               <th style="border:1px solid #000;padding:5px 4px;text-align:center;font-weight:bold;width:13%">V. Total (R$)</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+    itensArray.forEach((it, i) => {
+      const nome = it.nome || it.descricao || it.produto || '—';
+      const unid = it.unidade || it.unid || '—';
+      const qtd = it.quantidade || it.qtd || '—';
+      html += `<tr style="page-break-inside:avoid;">
+        <td style="border:1px solid #000;padding:4px;text-align:center;">${i+1}</td>
+        <td style="border:1px solid #000;padding:4px;">${nome}</td>
+        <td style="border:1px solid #000;padding:4px;text-align:center;">${unid}</td>
+        <td style="border:1px solid #000;padding:4px;text-align:center;">${qtd}</td>`;
+      if (cols === 'tr') {
+        const vu = it.valor_unitario ? parseFloat(it.valor_unitario).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+        const vt = it.valor_total ? parseFloat(it.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+        html += `<td style="border:1px solid #000;padding:4px;text-align:right;">${vu}</td>
+                 <td style="border:1px solid #000;padding:4px;text-align:right;">${vt}</td>`;
+      }
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+    return html;
+  }
+
+  const CSS = `
+    @page { margin: 2.5cm 2cm; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #000; line-height: 1.6; margin: 0; }
+    h1 { font-size: 13pt; text-align: center; text-transform: uppercase; font-weight: bold; margin: 0 0 2px; }
+    h2 { font-size: 12pt; text-align: center; font-weight: bold; margin: 0 0 4px; }
+    .subtitle { text-align: center; font-size: 11pt; margin: 0 0 18px; }
+    .header-box { border: 1.5px solid #000; margin-bottom: 20px; }
+    .header-row { border-bottom: 1px solid #000; padding: 6px 10px; font-size: 11pt; }
+    .header-row:last-child { border-bottom: none; }
+    .header-row .lbl { font-weight: bold; }
+    .header-row-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    .header-row-grid .cell { padding: 6px 10px; font-size: 11pt; }
+    .header-row-grid .cell:first-child { border-right: 1px solid #000; }
+    .secao { margin-bottom: 22px; }
+    .secao-titulo { font-weight: bold; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 10px; font-size: 12pt; letter-spacing: 0.3px; }
+    p { margin: 0 0 8px; text-align: justify; }
+    .assinatura { margin-top: 60px; text-align: center; }
+    .assinatura .linha { border-top: 1px solid #000; width: 320px; margin: 0 auto 6px; }
+    .assinatura .nome { font-weight: bold; font-size: 12pt; }
+    .assinatura .cargo { font-size: 11pt; }
+    .footer { text-align: center; font-size: 9pt; margin-top: 40px; border-top: 1px solid #999; padding-top: 6px; color: #555; }
+    table thead tr { display: table-header-group; }
+    @media print { body { margin: 0; } .footer { position: fixed; bottom: 0; width: 100%; } }`;
+
   if (tipo === 'DFD') {
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+
     <h1>PREFEITURA MUNICIPAL</h1>
-    <h2>Documento de Formalização de Demanda</h2>
-    <div class="subtitle">Processo nº ${proc.numero_protocolo} | Aquisição de Bens e Serviços</div>
+    <h2>Documento de Formalização de Demanda – DFD</h2>
+    <div class="subtitle">Processo nº ${proc.numero_protocolo} | ${TIPO_LABELS[proc.tipo_contratacao] || 'Aquisição de Bens'}</div>
 
     <div class="header-box">
-      <table>
-        <tr><td class="lbl">Órgão:</td><td>${orgao}</td></tr>
-        <tr><td class="lbl">Setor Requisitante:</td><td>${orgao}</td></tr>
-        <tr><td class="lbl">Responsável pela Demanda:</td><td>${responsavel}</td><td class="lbl">Matrícula:</td><td>${dados.matricula||'—'}</td></tr>
-        <tr><td class="lbl">E-mail:</td><td>${dados.email||'—'}</td><td class="lbl">Telefone:</td><td>${dados.telefone||'—'}</td></tr>
-      </table>
+      <div class="header-row"><span class="lbl">Órgão: </span>${orgao}</div>
+      <div class="header-row"><span class="lbl">Setor Requisitante (Unidade/Setor/Departamento): </span>${orgao}</div>
+      <div class="header-row"><span class="lbl">Responsável pela Demanda: </span>${responsavel}&nbsp;&nbsp;&nbsp;&nbsp;<span class="lbl">Matrícula: </span>${dados.matricula || '___________'}</div>
+      <div class="header-row-grid">
+        <div class="cell"><span class="lbl">E-mail: </span>${dados.email || '—'}</div>
+        <div class="cell"><span class="lbl">Telefone: </span>${dados.telefone || '—'}</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-weight:bold;font-size:12pt;border:1px solid #000;padding:8px;margin-bottom:20px;text-transform:uppercase;letter-spacing:1px;">
+      DOCUMENTO DE FORMALIZAÇÃO DE DEMANDA – DFD
     </div>
 
     <div class="secao">
@@ -2721,7 +2756,7 @@ function buildPDFHtml(tipo, dados, proc) {
 
     <div class="secao">
       <div class="secao-titulo">3. Descrição e Quantidades</div>
-      ${itensHtml || '<p>Conforme relação constante nos autos do processo administrativo.</p>'}
+      ${buildItensTable('dfd')}
     </div>
 
     <div class="secao">
@@ -2731,50 +2766,46 @@ function buildPDFHtml(tipo, dados, proc) {
 
     <div class="secao">
       <div class="secao-titulo">5. Alinhamento ao Plano de Contratação Anual – PCA</div>
-      <p>${pca}</p>
+      <p>${pcaTexto}</p>
     </div>
 
     <div class="secao">
       <div class="secao-titulo">6. Encaminhamento</div>
-      <p>Em conformidade com a legislação que rege o tema, encaminhe-se à autoridade competente para análise de conveniência e oportunidade para a presente contratação e demais providências cabíveis.</p>
+      <p>Em conformidade com a legislação que rege o tema, especialmente a Lei nº 14.133/2021 e as normas expedidas pelo Tribunal de Contas dos Municípios do Estado de Goiás, encaminhe-se à autoridade competente para análise de conveniência e oportunidade para a presente contratação e demais providências cabíveis.</p>
       <p>${municipio}, ${hoje}.</p>
     </div>
 
     <div class="assinatura">
       <div class="linha"></div>
-      <p><strong>${responsavel}</strong></p>
-      <p>${cargo}</p>
+      <div class="nome">${responsavel}</div>
+      <div class="cargo">${cargo}</div>
     </div>
+
     <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
     </body></html>`;
   }
 
   if (tipo === 'ETP') {
     const fundamentacao = dados.fundamentacao || `A presente contratação encontra respaldo nos seguintes dispositivos legais: Lei nº 14.133/2021, especialmente: Art. 6º, inciso XXIII – definição de bens e serviços comuns; Art. 11 – princípios da legalidade, eficiência, economicidade e planejamento; Art. 18 – obrigatoriedade do Estudo Técnico Preliminar; Art. 40 – planejamento das contratações públicas; Art. 82 e seguintes – Sistema de Registro de Preços; Art. 141 – gestão e fiscalização contratual. Constituição Federal, art. 196, que estabelece a saúde como direito de todos e dever do Estado. Demais normas regulamentadoras aplicáveis ao objeto da contratação.`;
-    const requisitos = dados.requisitos || `O objeto contratado deverá: possuir registro/certificação válido(a) junto aos órgãos competentes; ser entregue/prestado em conformidade com as especificações técnicas exigidas; atender às normas técnicas brasileiras vigentes; possuir rastreabilidade e controle de qualidade; a empresa deverá comprovar regularidade fiscal, trabalhista e previdenciária.`;
-    const solucao = dados.solucao || dados.descricao_solucao || `Contratação de empresa especializada para ${objeto}, mediante processo licitatório na modalidade Pregão Eletrônico, preferencialmente via Sistema de Registro de Preços, em conformidade com a Lei nº 14.133/2021.`;
-    const resultados = dados.resultados || `Garantia de abastecimento/atendimento contínuo; redução de riscos de desabastecimento/interrupção; melhoria da qualidade dos serviços prestados à população; otimização dos recursos públicos municipais; cumprimento dos princípios constitucionais da eficiência e economicidade.`;
-    const impactos = dados.impactos || `Os impactos ambientais são considerados baixos. Deverão ser observadas as normas de descarte e destinação adequada de resíduos, embalagens e materiais correlatos, em conformidade com a legislação ambiental vigente.`;
-    const conclusao = dados.conclusao || `A contratação é indispensável, tecnicamente viável e atende ao interesse público, estando em plena conformidade com a Lei nº 14.133/2021 e demais normas aplicáveis. Recomenda-se o prosseguimento do processo licitatório.`;
-
+    const requisitos = dados.requisitos || `O objeto contratado deverá: possuir registro/certificação válido(a) junto aos órgãos competentes; ser entregue/prestado em conformidade com as especificações técnicas exigidas; atender às normas técnicas brasileiras vigentes (ABNT e demais aplicáveis); possuir rastreabilidade e controle de qualidade comprovados; a empresa contratada deverá comprovar regularidade fiscal, trabalhista e previdenciária durante toda a vigência contratual.`;
+    const solucao = dados.solucao || `Contratação de empresa especializada para ${objeto}, mediante processo licitatório na modalidade Pregão Eletrônico, preferencialmente via Sistema de Registro de Preços, nos termos da Lei nº 14.133/2021, garantindo ampla competitividade e economicidade para a Administração Pública Municipal.`;
+    const resultados = dados.resultados || `Garantia de abastecimento/atendimento contínuo e regular; redução de riscos de desabastecimento ou interrupção dos serviços essenciais; melhoria da qualidade dos serviços prestados à população do Município; otimização e racionalização dos recursos públicos municipais; cumprimento dos princípios constitucionais da eficiência, economicidade e interesse público.`;
     const riscos = [
-      {risco:'Atraso na entrega/execução', prob:'Média', impacto:'Alto', mitigacao:'Penalidades contratuais, prazo de substituição e fornecedores/prestadores alternativos'},
-      {risco:'Produto/serviço fora da especificação', prob:'Baixa', impacto:'Alto', mitigacao:'Fiscalização rigorosa, recebimento provisório e substituição imediata'},
-      {risco:'Desabastecimento/interrupção', prob:'Média', impacto:'Alto', mitigacao:'Planejamento antecipado, estoque mínimo de segurança e SRP'},
-      {risco:'Variação de preços de mercado', prob:'Média', impacto:'Médio', mitigacao:'Adoção de Sistema de Registro de Preços e pesquisa periódica'},
-      {risco:'Inexecução contratual', prob:'Baixa', impacto:'Alto', mitigacao:'Exigência de garantias, penalidades e fiscalização contratual'},
+      {risco:'Atraso na entrega/execução do objeto', prob:'Média', impacto:'Alto', mitigacao:'Cláusulas de penalidades contratuais, estipulação de prazo de substituição e cadastro de fornecedores alternativos'},
+      {risco:'Produto/serviço entregue fora das especificações', prob:'Baixa', impacto:'Alto', mitigacao:'Fiscalização rigorosa no recebimento, aceite provisório condicionado à verificação e substituição imediata'},
+      {risco:'Desabastecimento ou interrupção do fornecimento', prob:'Média', impacto:'Alto', mitigacao:'Planejamento antecipado da demanda, manutenção de estoque mínimo de segurança e adoção de SRP'},
+      {risco:'Variação de preços de mercado acima do estimado', prob:'Média', impacto:'Médio', mitigacao:'Adoção de Sistema de Registro de Preços e realização de pesquisa de preços periódica'},
+      {risco:'Inexecução total ou parcial do contrato', prob:'Baixa', impacto:'Alto', mitigacao:'Exigência de garantias contratuais, aplicação de penalidades e fiscalização contínua'},
     ];
-    const riscoHtml = `<table class="risco-table"><thead><tr><th>Risco Identificado</th><th>Probabilidade</th><th>Impacto</th><th>Medida de Mitigação</th></tr></thead><tbody>
-      ${riscos.map(r=>`<tr><td>${r.risco}</td><td style="text-align:center">${r.prob}</td><td style="text-align:center">${r.impacto}</td><td>${r.mitigacao}</td></tr>`).join('')}
-    </tbody></table>`;
+    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>ETP — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ETP — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
     <h1>PREFEITURA MUNICIPAL</h1>
     <h2>Estudo Técnico Preliminar – ETP</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
 
     <div class="secao"><div class="secao-titulo">1. Descrição da Necessidade da Contratação</div>
-    <p>${dados.necessidade || objeto}</p></div>
+    <p>${dados.necessidade || justificativa || objeto}</p></div>
 
     <div class="secao"><div class="secao-titulo">2. Fundamentação Legal</div>
     <p>${fundamentacao}</p></div>
@@ -2784,57 +2815,63 @@ function buildPDFHtml(tipo, dados, proc) {
 
     <div class="secao"><div class="secao-titulo">4. Detalhamento Técnico do Objeto</div>
     <p>${dados.detalhamento || objeto}</p>
-    ${itensHtml}</div>
+    ${buildItensTable('dfd')}</div>
 
     <div class="secao"><div class="secao-titulo">5. Estimativa das Quantidades</div>
-    <p>${dados.estimativa_quantidades || 'Baseada no histórico de consumo, sazonalidade e demanda do Município, conforme relação constante nos autos do processo administrativo.'}</p></div>
+    <p>${dados.estimativa_quantidades || 'Baseada no histórico de consumo, sazonalidade e demanda assistencial do Município, conforme relação de itens constante nos autos do processo administrativo.'}</p></div>
 
     <div class="secao"><div class="secao-titulo">6. Levantamento de Mercado</div>
-    <p>${dados.mercado || 'O mercado apresenta ampla concorrência, sendo recomendada licitação via Sistema de Registro de Preços para garantir economicidade e flexibilidade na contratação.'}</p></div>
+    <p>${dados.mercado || 'O mercado apresenta ampla concorrência entre fornecedores habilitados, sendo recomendada a realização de licitação via Sistema de Registro de Preços para garantir economicidade, flexibilidade e controle na contratação pública.'}</p></div>
 
     <div class="secao"><div class="secao-titulo">7. Estimativa do Valor da Contratação</div>
-    <p>Valor estimado: <strong>${valor}</strong>. Será definido mediante pesquisa de preços com base em banco de preços públicos, contratos similares e fornecedores do ramo, conforme IN SEGES nº 65/2021.</p></div>
+    <p>Valor estimado: <strong>${valor}</strong>. O valor será definido mediante pesquisa de preços junto a fornecedores do ramo, banco de preços públicos (BPS, PNCP) e contratos similares firmados por outros entes públicos, em conformidade com a IN SEGES nº 65/2021.</p></div>
 
     <div class="secao"><div class="secao-titulo">8. Descrição da Solução</div>
     <p>${solucao}</p></div>
 
     <div class="secao"><div class="secao-titulo">9. Justificativa do Parcelamento</div>
-    <p>${dados.parcelamento || 'O parcelamento da contratação é necessário em razão da natureza do objeto e da variabilidade de consumo, permitindo gestão financeira mais equilibrada e planejamento adequado dos recursos públicos municipais.'}</p></div>
+    <p>${dados.parcelamento || 'O parcelamento da contratação é necessário em razão da natureza do objeto e da variabilidade de consumo ao longo do exercício financeiro, permitindo gestão financeira mais equilibrada e planejamento adequado dos recursos públicos municipais, sem comprometer a regularidade do fornecimento.'}</p></div>
 
     <div class="secao"><div class="secao-titulo">10. Resultados Pretendidos</div>
     <p>${resultados}</p></div>
 
     <div class="secao"><div class="secao-titulo">11. Providências a Adotar</div>
-    <p>Realização de pesquisa de preços; elaboração do Termo de Referência; publicação do edital licitatório; fiscalização e gestão contratual nos termos da Lei nº 14.133/2021.</p></div>
+    <p>Realização de pesquisa formal de preços junto ao mercado; elaboração do Termo de Referência; publicação do edital licitatório no Portal Nacional de Contratações Públicas (PNCP); fiscalização e gestão contratual nos termos dos arts. 117 a 123 da Lei nº 14.133/2021.</p></div>
 
     <div class="secao"><div class="secao-titulo">12. Impactos Ambientais</div>
-    <p>${impactos}</p></div>
+    <p>${dados.impactos || 'Os impactos ambientais são considerados de baixa magnitude. Deverão ser observadas as normas de descarte, destinação adequada de resíduos, embalagens e materiais correlatos, em conformidade com a Política Nacional de Resíduos Sólidos (Lei nº 12.305/2010) e demais normas ambientais vigentes.'}</p></div>
 
     <div class="secao"><div class="secao-titulo">13. Mapa de Risco</div>
-    ${riscoHtml}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10pt;margin:10px 0;">
+      <thead><tr style="background:#e8e8e8;">
+        <th style="border:1px solid #000;padding:6px;text-align:left;">Risco Identificado</th>
+        <th style="border:1px solid #000;padding:6px;text-align:center;width:12%">Probabilidade</th>
+        <th style="border:1px solid #000;padding:6px;text-align:center;width:10%">Impacto</th>
+        <th style="border:1px solid #000;padding:6px;text-align:left;">Medida de Mitigação</th>
+      </tr></thead><tbody>
+      ${riscos.map(r=>`<tr><td style="border:1px solid #000;padding:5px;">${r.risco}</td><td style="border:1px solid #000;padding:5px;text-align:center;">${r.prob}</td><td style="border:1px solid #000;padding:5px;text-align:center;">${r.impacto}</td><td style="border:1px solid #000;padding:5px;">${r.mitigacao}</td></tr>`).join('')}
+      </tbody></table></div>
 
     <div class="secao"><div class="secao-titulo">14. Conclusão</div>
-    <p>${conclusao}</p>
+    <p>${dados.conclusao || 'A contratação é indispensável, tecnicamente viável e atende ao interesse público, estando em plena conformidade com a Lei nº 14.133/2021 e demais normas aplicáveis. Recomenda-se o prosseguimento do processo licitatório com a elaboração do Termo de Referência e demais documentos.'}</p>
     <p>${municipio}, ${hoje}.</p></div>
 
     <div class="assinatura">
       <div class="linha"></div>
-      <p><strong>${responsavel}</strong></p>
-      <p>${cargo}</p>
+      <div class="nome">${responsavel}</div>
+      <div class="cargo">${cargo}</div>
     </div>
     <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
     </body></html>`;
   }
 
   if (tipo === 'TR') {
-    const obrigContratada = dados.obrig_contratada || `7.1.1. Expedir Nota Fiscal dos itens com descrição, quantitativo, valor unitário e global, fazendo acompanhar das autorizações de fornecimento ou assinaturas dos responsáveis. 7.1.2. Estar à disposição da Administração sempre que solicitado. 7.1.3. Entregar o objeto em conformidade com o exigido no termo convocatório, submetendo-se à fiscalização do Município. 7.1.4. Responder por danos causados diretamente à Administração ou a terceiros, comprovada culpa ou dolo. 7.1.5. Responder pelos encargos trabalhistas, previdenciários, fiscais e comerciais resultantes da execução do contrato. 7.1.6. Arcar com todas as despesas inerentes ao objeto, tais como transporte, encargos trabalhistas, impostos e demais incidentes. 7.1.7. Aceitar, nas mesmas condições, acréscimos ou supressões de até 25% do valor total adjudicado, conforme art. 125 da Lei nº 14.133/2021.`;
-    const obrigContratante = dados.obrig_contratante || `a) Acompanhar e fiscalizar a execução do contrato; b) Permitir o livre acesso dos empregados da contratada às dependências do contratante; c) Rejeitar, no todo ou em parte, os serviços/fornecimentos em desacordo com o contrato; d) Proceder ao pagamento na forma e prazo pactuados; e) Notificar formalmente a contratada sobre irregularidades identificadas.`;
-    const penalidades = dados.penalidades || `Pela inexecução total ou parcial do contrato, a Contratada poderá sujeitar-se às seguintes penalidades: a) Advertência; b) Multa de até 10% sobre o valor do contrato; c) Suspensão temporária de participar em licitação e impedimento de contratar com a Administração Municipal por prazo não superior a 02 (dois) anos; d) Declaração de inidoneidade para licitar e contratar com a Administração Pública, enquanto perdurarem os motivos determinantes da punição, conforme art. 156 da Lei nº 14.133/2021.`;
-    const prazoEntrega = dados.prazo_entrega || '05 (cinco) dias úteis após o recebimento da Ordem de Fornecimento/Serviço';
-    const localEntrega = dados.local_entrega || 'Sede da Secretaria requisitante ou local indicado pelo gestor do contrato';
-    const pagamento = dados.pagamento || `O pagamento será realizado mediante apresentação de Nota Fiscal devidamente atestada pelo Gestor do Contrato, contendo: data de emissão, endereço completo do contratante, CNPJ, valor unitário e total, e especificação do objeto. Cada pagamento somente será efetuado após comprovação pelo contratado de que se encontra em dia com suas obrigações sociais, mediante apresentação das Certidões Negativas de INSS, FGTS, Federal, Estadual, Municipal e Trabalhista.`;
+    const obrigContratada = dados.obrig_contratada || `7.1.1. Expedir Nota Fiscal dos itens fornecidos com descrição completa, quantitativo, valor unitário e global, fazendo acompanhar das autorizações de fornecimento ou assinaturas dos responsáveis. 7.1.2. Estar à disposição da Administração sempre que solicitado, prestando todos os esclarecimentos necessários. 7.1.3. Entregar o objeto em conformidade com as especificações exigidas, submetendo-se à fiscalização do Município. 7.1.4. Responder por danos causados diretamente à Administração ou a terceiros, decorrentes de sua culpa ou dolo na execução do contrato. 7.1.5. Responder integralmente pelos encargos trabalhistas, previdenciários, fiscais e comerciais resultantes da execução contratual. 7.1.6. Arcar com todas as despesas inerentes ao objeto, incluindo transporte, embalagem, seguros e demais custos. 7.1.7. Aceitar, nas mesmas condições contratuais, acréscimos ou supressões de até 25% do valor total adjudicado, conforme art. 125 da Lei nº 14.133/2021.`;
+    const obrigContratante = dados.obrig_contratante || `a) Acompanhar, fiscalizar e avaliar a execução do contrato por meio do gestor/fiscal designado; b) Permitir o livre acesso dos representantes da contratada às dependências do contratante para tratar de assuntos pertinentes ao objeto; c) Rejeitar, no todo ou em parte, os fornecimentos ou serviços em desacordo com as especificações contratuais; d) Proceder ao pagamento na forma e no prazo pactuados, após o ateste do fiscal; e) Notificar formalmente a contratada sobre quaisquer irregularidades identificadas na execução.`;
+    const penalidades = dados.penalidades || `Pela inexecução total ou parcial do contrato, a Contratada ficará sujeita às penalidades previstas no art. 156 da Lei nº 14.133/2021: a) Advertência formal; b) Multa de até 10% sobre o valor do contrato inadimplido; c) Impedimento de licitar e contratar com a Administração Pública pelo prazo de até 03 (três) anos; d) Declaração de inidoneidade para licitar e contratar com a Administração Pública, enquanto perdurarem os motivos determinantes da punição. As penalidades serão aplicadas mediante processo administrativo, assegurado o contraditório e a ampla defesa.`;
+    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>TR — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TR — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
     <h1>PREFEITURA MUNICIPAL</h1>
     <h2>Termo de Referência</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
@@ -2846,28 +2883,28 @@ function buildPDFHtml(tipo, dados, proc) {
     <p>2.1. ${justificativa}</p></div>
 
     <div class="secao"><div class="secao-titulo">3. Do Quantitativo</div>
-    ${itensHtml || '<p>Conforme relação constante nos autos do processo administrativo.</p>'}
-    </div>
+    ${buildItensTable('tr')}</div>
 
     <div class="secao"><div class="secao-titulo">4. Do Valor Estimado</div>
     <p>4.1. O valor estimado para a presente contratação é de <strong>${valor}</strong>.</p>
-    <p>4.2. O valor unitário e total será anexado aos autos do processo administrativo após a realização das cotações prévias de preços pelo Departamento de Compras junto a empresas do ramo.</p></div>
+    <p>4.2. O valor unitário e total de cada item será anexado aos autos do processo administrativo após a realização das cotações prévias de preços pelo Departamento de Compras junto a empresas do ramo, em conformidade com a IN SEGES nº 65/2021.</p></div>
 
     <div class="secao"><div class="secao-titulo">5. Do Prazo e Forma de Entrega/Execução</div>
-    <p>5.1. O prazo para entrega/execução é de ${prazoEntrega}.</p>
-    <p>5.2. O objeto deverá ser entregue/executado em: ${localEntrega}.</p>
-    <p>5.3. O objeto será recebido provisoriamente para efeito de posterior verificação da conformidade com as especificações, e somente após aferição da qualidade e quantidade haverá o aceite definitivo.</p>
-    <p>5.4. A substituição de itens entregues com defeito ou em desacordo com as especificações deverá ser feita no prazo máximo de 03 (três) dias úteis, a contar da data do recebimento da notificação formal.</p></div>
+    <p>5.1. O prazo para entrega/execução é de ${prazo}, contados a partir do recebimento da Ordem de Fornecimento/Serviço emitida pelo setor competente.</p>
+    <p>5.2. O objeto deverá ser entregue/executado na sede da unidade requisitante ou em local indicado formalmente pelo gestor do contrato.</p>
+    <p>5.3. O objeto será recebido provisoriamente para efeito de posterior verificação da conformidade com as especificações técnicas exigidas, e somente após aferição da qualidade e quantidade haverá o aceite definitivo pelo fiscal designado.</p>
+    <p>5.4. A substituição de itens entregues com defeito, adulteração ou em desconformidade com as especificações deverá ocorrer no prazo máximo de 03 (três) dias úteis, a contar da data do recebimento da notificação formal pelo contratado.</p></div>
 
     <div class="secao"><div class="secao-titulo">6. Da Despesa Orçamentária e Forma de Pagamento</div>
-    <p>6.1. As despesas com o presente objeto serão empenhadas a cargo de Dotações Orçamentárias indicadas no termo editalício.</p>
-    <p>6.2. ${pagamento}</p>
-    <p>6.3. Para recebimento, a empresa deverá protocolar a(s) Nota(s) Fiscal(is) na Prefeitura Municipal, de segunda a sexta-feira, em horário comercial.</p></div>
+    <p>6.1. As despesas com o presente objeto serão empenhadas a cargo das Dotações Orçamentárias específicas, indicadas no instrumento convocatório.</p>
+    <p>6.2. O pagamento será realizado mediante apresentação de Nota Fiscal eletrônica devidamente atestada pelo Gestor/Fiscal do Contrato, contendo: data de emissão, endereço completo e CNPJ do contratante, valor unitário e total, e especificação completa do objeto fornecido.</p>
+    <p>6.3. Cada pagamento somente será efetuado após comprovação pelo contratado de que se encontra em dia com suas obrigações sociais, mediante apresentação das Certidões Negativas de Débitos de INSS, FGTS, Receita Federal, Estadual, Municipal e Trabalhista.</p>
+    <p>6.4. Para protocolo de Nota(s) Fiscal(is), a empresa deverá observar o horário de atendimento da Prefeitura Municipal, de segunda a sexta-feira, em horário comercial.</p></div>
 
     <div class="secao"><div class="secao-titulo">7. Das Obrigações das Partes</div>
-    <h3>7.1. Da Contratada:</h3>
+    <p><strong>7.1. Da Contratada:</strong></p>
     <p>${obrigContratada}</p>
-    <h3>7.2. Do Contratante:</h3>
+    <p><strong>7.2. Do Contratante:</strong></p>
     <p>${obrigContratante}</p></div>
 
     <div class="secao"><div class="secao-titulo">8. Das Penalidades Administrativas</div>
@@ -2876,20 +2913,21 @@ function buildPDFHtml(tipo, dados, proc) {
 
     <div class="assinatura">
       <div class="linha"></div>
-      <p><strong>${responsavel}</strong></p>
-      <p>${cargo}</p>
+      <div class="nome">${responsavel}</div>
+      <div class="cargo">${cargo}</div>
     </div>
     <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
     </body></html>`;
   }
 
-  // fallback para outros tipos
+  // Outros tipos
   const nomes = {PP:'Pesquisa de Preços',DO:'Dotação Orçamentária',AUTH:'Autorização do Gestor',PARECER:'Parecer Jurídico'};
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
   <h1>PREFEITURA MUNICIPAL</h1><h2>${nomes[tipo]||tipo}</h2>
   <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
-  ${Object.entries(dados).map(([k,v]) => v ? `<div class="secao"><div class="secao-titulo">${k.replace(/_/g,' ').toUpperCase()}</div><p>${String(v)}</p></div>` : '').join('')}
-  <div class="assinatura"><div class="linha"></div><p><strong>${responsavel}</strong></p><p>${cargo}</p></div>
+  ${Object.entries(dados).map(([k,v]) => v && typeof v === 'string' ? `<div class="secao"><div class="secao-titulo">${k.replace(/_/g,' ').toUpperCase()}</div><p>${v}</p></div>` : '').join('')}
+  <div class="assinatura"><div class="linha"></div><div class="nome">${responsavel}</div><div class="cargo">${cargo}</div></div>
   <div class="footer">Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}</div>
   </body></html>`;
 }
