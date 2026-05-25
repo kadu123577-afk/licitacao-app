@@ -2646,8 +2646,8 @@ async function abrirProcesso(id) {
   document.getElementById('proc-tipo-label').textContent = TIPO_LABELS[proc.tipo_contratacao] || '—';
   document.getElementById('proc-setor').textContent = proc.setor_requisitante || '—';
   document.getElementById('proc-valor').textContent = proc.valor_estimado ? 'R$ ' + Number(proc.valor_estimado).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
-  document.getElementById('proc-etapa-num').textContent = `${proc.etapa_atual}/${etapas.length}`;
-  document.getElementById('proc-status-badge').innerHTML = statusBadge(proc.status);
+  const _pen = document.getElementById('proc-etapa-num'); if (_pen) _pen.textContent = `${proc.etapa_atual}/${etapas.length}`;
+  const _psb = document.getElementById('proc-status-badge'); if (_psb) _psb.innerHTML = statusBadge(proc.status);
 
   // Timeline de etapas
   document.getElementById('proc-etapa-list').innerHTML = etapas.map(e => {
