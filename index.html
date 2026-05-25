@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- [INSTITUCIONAL] PDF profissional via html2pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- [INSTITUCIONAL] QR Code de validação -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root {
   --bg:      #06090F;
@@ -793,6 +797,44 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 /* confirm inline */
 .pp-confirm-row td{background:rgba(229,85,85,.08)!important;}
 .pp-confirm-btn{padding:2px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;}
+
+/* ── [ETP] ACORDEÃO ── */
+.etp-acordeao-item{border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;}
+.etp-acordeao-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--s2);transition:background .12s;user-select:none;}
+.etp-acordeao-header:hover{background:var(--s3);}
+.etp-ac-num{width:22px;height:22px;border-radius:50%;background:var(--green-l);color:var(--green);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(65,243,106,.25);}
+.etp-ac-titulo{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--text);}
+.etp-ac-chevron{font-size:11px;color:var(--muted);}
+.etp-acordeao-body{padding:14px 16px;background:var(--s1);border-top:1px solid var(--border);}
+
+/* ── [INSTITUCIONAL] SNAPSHOTS ── */
+.snapshot-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;}
+.snapshot-item:last-child{border-bottom:none;}
+.snapshot-hash{font-family:monospace;font-size:11px;color:var(--muted);background:var(--s3);padding:2px 8px;border-radius:4px;}
+.snapshot-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--purple-l);color:var(--purple);border:1px solid rgba(168,126,255,.2);}
+/* ── [INSTITUCIONAL] AUDIT LOG ── */
+.audit-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.audit-item:last-child{border-bottom:none;}
+.audit-field{font-weight:600;color:var(--text);}
+.audit-old{color:var(--red);text-decoration:line-through;word-break:break-all;}
+.audit-new{color:var(--green);word-break:break-all;}
+.audit-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);margin-top:5px;flex-shrink:0;}
+/* ── [INSTITUCIONAL] CATMAT Autocomplete ── */
+.catmat-dropdown{position:absolute;z-index:500;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-sm);max-height:220px;overflow-y:auto;min-width:300px;box-shadow:var(--shadow);}
+.catmat-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;}
+.catmat-item:hover{background:var(--s2);}
+.catmat-item:last-child{border-bottom:none;}
+.catmat-code{font-size:10px;color:var(--muted);font-family:monospace;}
+/* ── [INSTITUCIONAL] HASH FOOTER ── */
+.hash-footer-block{font-family:monospace;font-size:7pt;color:#666;border-top:1px solid #ccc;margin-top:20px;padding-top:8px;line-height:1.7;text-align:center;}
+/* ── [INSTITUCIONAL] TABS ── */
+.proc-tabs{display:flex;gap:2px;padding:0 18px;border-bottom:1px solid var(--border);background:var(--s1);}
+.proc-tab{padding:10px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;}
+.proc-tab:hover{color:var(--text);}
+.proc-tab.active{color:var(--green);border-bottom-color:var(--green);}
+/* ── [INSTITUCIONAL] BRASÃO UPLOAD ── */
+.brasao-preview{width:72px;height:72px;border-radius:8px;object-fit:contain;background:var(--s3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;overflow:hidden;}
+.brasao-preview img{width:100%;height:100%;object-fit:contain;}
 </style>
 </head>
 <body>
@@ -1047,7 +1089,15 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
               <div class="card-head">
                 <div><div class="card-title">Histórico de movimentações</div></div>
               </div>
-              <div style="padding:4px 18px;" id="proc-historico"></div>
+              <!-- [INSTITUCIONAL] Tabs: movimentações | snapshots | auditoria -->
+              <div class="proc-tabs">
+                <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">Movimentações</div>
+                <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">📸 Versões</div>
+                <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">🔍 Auditoria</div>
+              </div>
+              <div id="tab-content-mov" style="padding:4px 18px;"></div>
+              <div id="tab-content-snaps" style="display:none;padding:4px 18px;"></div>
+              <div id="tab-content-audit" style="display:none;padding:4px 18px;"></div>
             </div>
           </div>
         </div>
@@ -1156,6 +1206,10 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
       </div>
       <div class="admin-nav-item" id="apnav-processos" onclick="adminPrefTab('processos')">
         <span class="nav-ico">📋</span> Processos
+      </div>
+      <!-- [INSTITUCIONAL] Dados da prefeitura -->
+      <div class="admin-nav-item" id="apnav-institucional" onclick="abrirDadosInstitucionais()">
+        <span class="nav-ico">🏛️</span> Dados Institucionais
       </div>
     </aside>
     <main class="admin-main">
@@ -2156,38 +2210,7 @@ async function abrirProcesso(id) {
   navigate('processo');
 }
 
-function renderFormEtapa(proc, etapa, doc) {
-  const dados = doc?.dados || {};
-  let html = '';
-
-  if (etapa.n === 1) {
-    // DFD — leitura apenas se já enviado, editável se rascunho
-    html = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-      <div><div style="font-size:11px;color:var(--muted);">Unidade Requisitante</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.unidade||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--muted);">Responsável</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.responsavel||'—'} (${dados.cargo||'—'})</div></div>
-    </div>
-    <div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Objeto</div><div style="font-size:14px;font-weight:500;">${dados.objeto||'—'}</div></div>
-    <div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Justificativa da Necessidade</div><div style="font-size:13px;color:var(--text2);line-height:1.5;">${dados.justificativa||'—'}</div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-      <div><div style="font-size:11px;color:var(--muted);">Quantidade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.quantidade||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--muted);">Valor Estimado</div><div style="font-size:13px;font-weight:500;margin-top:2px;">R$ ${dados.valor||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--muted);">Prioridade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.prioridade||'—'}</div></div>
-    </div>
-    ${dados.hipotese ? `<div style="margin-top:12px;padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}`;
-  } else {
-    // Etapas ainda sem formulário completo — placeholder
-    html = `<div class="empty" style="padding:40px;">
-      <svg><use href="#ic-file"/></svg>
-      <h4>${etapa.full}</h4>
-      <p style="margin-top:8px;">Responsável: <strong>${etapa.resp}</strong></p>
-      <p style="margin-top:6px;font-size:12px;color:var(--muted);">Formulário desta etapa em desenvolvimento — Sprint 2</p>
-    </div>`;
-  }
-
-  document.getElementById('doc-body').innerHTML = html;
-  setTimeout(() => initEtapaListeners(etapa.tipo || etapa.n), 0);
-}
+// [REMOVIDO] renderFormEtapa simples substituída pela versão completa abaixo
 
 function renderHistorico(movs) {
   const el = document.getElementById('proc-historico');
@@ -2571,60 +2594,537 @@ document.addEventListener('keydown', e => {
 // ══════════════════════════════════════════════════════════
 // PARTE 2 — FORMULÁRIOS DE TODAS AS ETAPAS
 
-// Formatos de formulário por tipo de documento
-function formETP(dados, readonly) {
-  const r = readonly;
-  const v = (k) => dados[k] || '';
-  const inp = (id, ph='') => r
-    ? `<div class="fv">${v(id)||'—'}</div>`
-    : `<input type="text" id="etp-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
-  const ta = (id, ph='', rows=3, wc=0) => r
-    ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>`
-    : `<textarea id="etp-${id}" rows="${rows}" placeholder="${ph}"${wc?` data-wc="${wc}"`:''} oninput="initEtapaListeners&&initEtapaListeners()">${esc(v(id))}</textarea>`;
-  const sel = (id, opts, label='') => r
-    ? `<div class="fv">${v(id)||'—'}</div>`
-    : `<select id="etp-${id}">${opts}</select>`;
+// PARTE 2 — FORMULÁRIOS DE TODAS AS ETAPAS
 
-  return `
-${!r ? `<div style="background:var(--s2);border:1px solid rgba(65,243,106,.25);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-  <div>
-    <div style="font-size:13px;font-weight:600;color:var(--green);">✨ Preencher ETP com IA</div>
-    <div style="font-size:12px;color:var(--text2);margin-top:2px;">A IA lê o DFD deste processo e preenche todos os campos automaticamente</div>
-  </div>
-  <button class="btn btn-primary btn-sm" id="btn-preencher-etp-ia" onclick="preencherETPcomIA()">✨ Preencher tudo com IA</button>
-</div>` : ''}
-<div class="form-section-title">ETP — Estudo Técnico Preliminar · Art. 7º, II IN-009/23</div>
-<div class="form-grid">
-  <div class="form-field"><label>Área Requisitante<span class="req">*</span></label>${inp('area','Secretaria / Departamento')}</div>
-  <div class="form-field"><label>Referência ao DFD</label>${inp('ref_dfd','Nº do processo')}</div>
-</div>
-<div class="form-field"><label>Descrição da Necessidade<span class="req">*</span><span class="ref">Art. 18, I LLC</span></label>
-  ${ta('necessidade','Descreva o problema ou necessidade que origina esta contratação...',4, 80)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-necessidade','Descrição da necessidade de contratação')">✨ Sugerir com IA</button>`:''}
-</div>
-<div class="form-field"><label>Levantamento de Soluções Possíveis<span class="req">*</span><span class="ref">Art. 18, III LLC</span></label>
-  ${ta('solucoes','Liste as alternativas consideradas antes de chegar à solução escolhida...',3, 80)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-solucoes','Levantamento de soluções alternativas')">✨ Sugerir com IA</button>`:''}
-</div>
-<div class="form-field"><label>Solução Escolhida e Justificativa<span class="req">*</span><span class="ref">Art. 18, IV LLC</span></label>
-  ${ta('solucao_escolhida','Explique a solução selecionada e por que é a mais adequada...',4, 80)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-solucao_escolhida','Justificativa da solução escolhida')">✨ Sugerir com IA</button>`:''}
-</div>
-<div class="form-grid">
-  <div class="form-field"><label>Estimativa de Quantidade<span class="req">*</span><span class="ref">Art. 18, V LLC</span></label>${inp('quantidade','Ex: 50 unidades')}</div>
-  <div class="form-field"><label>Estimativa de Valor (R$)<span class="req">*</span><span class="ref">Art. 18, V LLC</span></label>${inp('valor','Ex: 15.000,00')}</div>
-</div>
-<div class="form-grid">
-  <div class="form-field"><label>Declaração de Viabilidade<span class="req">*</span><span class="ref">Art. 18, VI LLC</span></label>
-    ${sel('viabilidade','<option value="viavel">Viável — recomendo a contratação</option><option value="inviavel">Inviável — contratação não recomendada</option>')}
-  </div>
-  <div class="form-field"><label>Responsável Técnico<span class="req">*</span><span class="ref">Art. 5º, §3º IN</span></label>${inp('responsavel','Nome e registro profissional')}</div>
-</div>
-${!r?`<div style="margin-top:8px;display:flex;gap:8px;">
-  <button class="btn btn-primary" onclick="salvarDocEtapa('ETP')">💾 Salvar ETP</button>
-</div>`:''}`;
+// ══════════════════════════════════════════════════════════
+// [ETP] Herança de dados do DFD
+// ══════════════════════════════════════════════════════════
+function herdarDadosDFD() {
+  const dfdDoc = _processoAtual?.docs?.find(d => d.tipo === 'DFD');
+  if (!dfdDoc?.dados) return {};
+  const d = dfdDoc.dados;
+  let itens = [];
+  try { itens = typeof d.itens === 'string' ? JSON.parse(d.itens) : (d.itens || []); } catch(e) {}
+  return {
+    objeto: d.objeto || '',
+    justificativa: d.justificativa || '',
+    unidade: d.unidade || '',
+    responsavel: d.responsavel || '',
+    cargo: d.cargo || '',
+    valor: d.valor || '',
+    prazo: d.prazo || '',
+    prioridade: d.prioridade || '',
+    itens,
+    temDFD: true,
+  };
 }
 
+// ══════════════════════════════════════════════════════════
+// [ETP][TR] Assinatura dinâmica compartilhada
+// ══════════════════════════════════════════════════════════
+function buildAssinatura(proc, dadosOverride) {
+  const dfd = herdarDadosDFD();
+  const responsavel = dadosOverride?.responsavel || dfd.responsavel || _perfil?.nome || '_______________';
+  const cargo = dadosOverride?.cargo || dfd.cargo || _perfil?.setor || '_______________';
+  const di = (typeof getDadosInstitucionais === 'function') ? getDadosInstitucionais() : {};
+  const municipio = di.municipio || _perfil?._prefeitura?.municipio || 'Município';
+  const uf = di.uf || _perfil?._prefeitura?.uf || 'GO';
+  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  return `
+  <div style="text-align:center;margin-top:55px;page-break-inside:avoid;">
+    <p style="text-align:center;margin-bottom:36px;">${municipio}/${uf}, ${hoje}.</p>
+    <div style="border-top:1px solid #000;width:340px;margin:0 auto 5px;"></div>
+    <p style="font-weight:bold;font-size:12pt;margin:0;">${responsavel}</p>
+    <p style="font-size:11pt;margin:3px 0 0;">${cargo}</p>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// [ETP] Geração de IA por seção (inline, sem modal)
+// ══════════════════════════════════════════════════════════
+async function etpGerarSecaoIA(secId, secTitulo, btnEl) {
+  const taEl = document.getElementById('etp-sec-' + secId);
+  if (!taEl) return;
+  const dfd = herdarDadosDFD();
+  const proc = _processoAtual;
+  if (!proc) return;
+  const municipio = _perfil?._prefeitura?.municipio || 'município';
+  const cat = (typeof detectarCategoriaObjeto === 'function') ? detectarCategoriaObjeto(proc.objeto || dfd.objeto) : 'geral';
+
+  // Coleta dados já preenchidos das outras seções para contexto
+  const dadosAtuais = {};
+  ['1','2','3','4','5','6','7','8','9','10','11','12'].forEach(s => {
+    const el = document.getElementById('etp-sec-' + s);
+    if (el && el.value.trim()) dadosAtuais['sec' + s] = el.value.trim().slice(0, 200);
+  });
+
+  const prompts = {
+    '1': `Redija a seção "1. Descrição da Necessidade" do Estudo Técnico Preliminar. Objeto: "${dfd.objeto}". Secretaria: "${dfd.unidade}". Município: ${municipio}. Categoria: ${cat}. Baseie-se nesta justificativa do DFD mas reescreva em tom de "necessidade institucional": "${dfd.justificativa.slice(0,300)}". Mínimo 120 palavras. Tom formal, técnico. Cite a Lei 14.133/2021 e a IN-009/2023. Retorne APENAS o texto da seção.`,
+    '2': `Redija a seção "2. Estimativa da Quantidade" do ETP para: "${dfd.objeto}". Secretaria: ${dfd.unidade}. Município: ${municipio}. Itens do DFD: ${dfd.itens.slice(0,10).map((it,i)=>`${i+1}. ${it.descricao||it.nome||'—'} — ${it.quantidade||1} ${it.unidade||'UN'}`).join('; ')||dfd.valor}. Justifique tecnicamente a necessidade das quantidades com base no histórico de consumo e demanda. Mínimo 80 palavras. Retorne APENAS o texto.`,
+    '3': `Redija a seção "3. Levantamento de Mercado" do ETP para: "${dfd.objeto}". Município: ${municipio}. Categoria: ${cat}. Inclua: menção ao PNCP, Painel de Preços (compras.gov.br), pesquisa junto a fornecedores locais e regionais, SINAPI (se obra), Ata de Registro de Preços similares. Mínimo 100 palavras. Retorne APENAS o texto.`,
+    '4': `Redija a seção "4. Estimativa do Valor da Contratação" do ETP. Objeto: "${dfd.objeto}". Valor estimado no DFD: R$ ${dfd.valor||'—'}. Explique a metodologia de apuração do valor (pesquisa de preços, PNCP, fornecedores). Cite a IN SEGES nº 65/2021. Mínimo 80 palavras. Retorne APENAS o texto.`,
+    '5': `Redija a seção "5. Descrição da Solução" do ETP para: "${dfd.objeto}". Município: ${municipio}. Categoria: ${cat}. Descreva a solução escolhida (licitação via Pregão Eletrônico / SRP), justificando por que é a mais adequada. Mínimo 100 palavras. Retorne APENAS o texto.`,
+    '6': `Redija a seção "6. Requisitos da Contratação" do ETP para: "${dfd.objeto}". Categoria: ${cat}. Inclua: requisitos de habilitação técnica, regularidade fiscal, qualidade (ANVISA se medicamento, CREA se obra, ISO se TI), prazos mínimos de garantia e entrega. Mínimo 100 palavras. Retorne APENAS o texto.`,
+    '7': `Redija a seção "7. Fundamentação Legal" do ETP para: "${dfd.objeto}". Categoria: ${cat}. Inclua OBRIGATORIAMENTE: Art. 6º, inciso XXIII; Art. 11; Art. 18; Art. 40 da Lei nº 14.133/2021; IN-009/2023. Adicione normas específicas para categoria ${cat} (ANVISA se medicamento, RDC se saúde). Mínimo 100 palavras. Retorne APENAS o texto.`,
+    '8': `Redija a seção "8. Resultados Pretendidos" do ETP para: "${dfd.objeto}". Secretaria: ${dfd.unidade}. Município: ${municipio}. Liste os benefícios concretos para a população e para a gestão pública. Inclua: melhoria da qualidade do serviço, regularidade do fornecimento, economicidade, transparência. Mínimo 100 palavras. Retorne APENAS o texto.`,
+    '9': `Redija a seção "9. Providências para Adequação" do ETP para: "${dfd.objeto}". Inclua: pesquisa de preços a ser realizada, elaboração do TR, publicação no PNCP, designação de fiscal de contrato. Mínimo 80 palavras. Retorne APENAS o texto.`,
+    '10': `Redija a seção "10. Contratações Correlatas e Interdependentes" do ETP para: "${dfd.objeto}". Se não houver, explique que a contratação é autônoma. Mínimo 60 palavras. Retorne APENAS o texto.`,
+    '11': `Redija a seção "11. Impactos Ambientais e Sustentabilidade" do ETP para: "${dfd.objeto}". Categoria: ${cat}. Cite: Lei nº 12.305/2010 (PNRS), Decreto nº 7.746/2012, preferência por materiais recicláveis, descarte adequado. Mínimo 80 palavras. Retorne APENAS o texto.`,
+    '12': `Redija a seção "12. Posicionamento Conclusivo sobre Viabilidade" do ETP. Objeto: "${dfd.objeto}". Declare a viabilidade técnica e econômica da contratação. Cite requisitos legais atendidos. Mínimo 80 palavras. Retorne APENAS o texto.`,
+    '14': `Redija a seção "14. Conclusão" do ETP. Objeto: "${dfd.objeto}". Município: ${municipio}. Sintetize: a necessidade é real e urgente, a solução é tecnicamente viável, os requisitos legais estão atendidos (Lei 14.133/2021, IN-009/2023), recomenda-se o prosseguimento do processo licitatório. Mínimo 100 palavras. Retorne APENAS o texto.`,
+  };
+  const prompt = prompts[secId] || `Redija um texto formal e técnico para a seção "${secTitulo}" do ETP do processo: "${dfd.objeto}". Município: ${municipio}. Mínimo 80 palavras. Retorne APENAS o texto.`;
+
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Gerando...'; }
+  taEl.style.borderColor = 'var(--green)';
+
+  try {
+    const resp = await fetch('/api/ia', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ prompt, max_tokens: 600 })
+    });
+    const data = await resp.json();
+    const texto = (data.content || '').trim();
+    // Animação de digitação
+    taEl.value = '';
+    let i = 0;
+    const interval = setInterval(() => {
+      taEl.value = texto.slice(0, i);
+      i += 8;
+      etpAtualizarWC(secId);
+      etpAtualizarPreview();
+      if (i > texto.length) { taEl.value = texto; clearInterval(interval); etpAtualizarWC(secId); etpAtualizarPreview(); }
+    }, 15);
+  } catch(e) {
+    taEl.style.borderColor = 'var(--red)';
+    toast('Erro IA: ' + e.message, 'error');
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✨ Gerar com IA'; }
+    setTimeout(() => { taEl.style.borderColor = ''; }, 3000);
+  }
+}
+
+// Atualiza contador de palavras de uma seção ETP
+function etpAtualizarWC(secId) {
+  const el = document.getElementById('etp-sec-' + secId);
+  const wc = document.getElementById('etp-wc-' + secId);
+  if (!el || !wc) return;
+  const words = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
+  wc.textContent = words + ' palavras (mín. 60)';
+  wc.style.color = words >= 60 ? 'var(--green)' : 'var(--red)';
+}
+
+// Atualiza o preview ao vivo do ETP
+function etpAtualizarPreview() {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const previewEl = document.getElementById('etapa-split-preview');
+  if (!previewEl) return;
+  previewEl.innerHTML = previewETP3(proc, 'live');
+}
+
+// ══════════════════════════════════════════════════════════
+// [ETP] formETP — 14 seções em acordeão
+// ══════════════════════════════════════════════════════════
+function formETP(dados, readonly) {
+  const r = readonly;
+  const dfd = herdarDadosDFD();
+  const temDFD = dfd.temDFD;
+  const proc = _processoAtual;
+
+  // Riscos do mapa (seção 13) — vem do doc MAPA_RISCO ou de dados
+  const docMR = proc?.docs?.find(d => d.tipo === 'MAPA_RISCO');
+  const riscosData = docMR?.dados?.riscos || dados.riscos || [];
+
+  const v = k => dados[k] || '';
+
+  // Defaults inteligentes para cada seção
+  const defaults = {
+    '1': v('necessidade') || dfd.justificativa,
+    '2': v('estimativa_qtd') || (dfd.itens.length ? dfd.itens.slice(0,5).map((it,i)=>`${i+1}. ${it.descricao||it.nome||'—'}: ${it.quantidade||1} ${it.unidade||'UN'}`).join('\n') : ''),
+    '3': v('levantamento_mercado'),
+    '4': v('estimativa_valor') || (dfd.valor ? `Valor estimado: R$ ${dfd.valor}` : ''),
+    '5': v('descricao_solucao'),
+    '6': v('requisitos'),
+    '7': v('fund_legal') || 'A presente contratação encontra respaldo nos seguintes dispositivos legais:\n• Art. 6º, inciso XXIII da Lei nº 14.133/2021 — conceito de Termo de Referência;\n• Art. 11 da Lei nº 14.133/2021 — princípios das contratações;\n• Art. 18 da Lei nº 14.133/2021 — obrigatoriedade do Estudo Técnico Preliminar;\n• Art. 40 da Lei nº 14.133/2021 — planejamento das contratações;\n• Instrução Normativa SEGES nº 09/2023 — Estudo Técnico Preliminar.',
+    '8': v('resultados'),
+    '9': v('providencias'),
+    '10': v('correlatas') || 'Não foram identificadas contratações correlatas ou interdependentes que impactem o objeto da presente contratação.',
+    '11': v('impactos_ambientais'),
+    '12': v('conclusao_viabilidade'),
+    '14': v('conclusao'),
+  };
+
+  const metodologiaVal = v('metodologia_valor') || 'media';
+  const valorRef = v('valor_ref') || dfd.valor;
+  const viabilidade = v('viabilidade') || 'viavel';
+
+  const aviso = !temDFD ? `<div style="background:var(--gold-l);border:1px solid rgba(255,200,87,.3);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;">
+    ⚠️ <strong>DFD não encontrado.</strong> Preencha o DFD primeiro para importar os dados automaticamente. O formulário está disponível para edição manual.
+  </div>` : '';
+
+  // Renderiza uma seção do acordeão
+  const secao = (num, titulo, conteudoHtml, aberta = false) => {
+    const isOpen = aberta || (dados['sec'+num+'_open'] === 'true');
+    return `
+    <div class="etp-acordeao-item" id="etp-ac-${num}">
+      <div class="etp-acordeao-header" onclick="etpToggleSecao('${num}')">
+        <span class="etp-ac-num">${num}</span>
+        <span class="etp-ac-titulo">${titulo.toUpperCase()}</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <span id="etp-wc-${num}" style="font-size:10px;color:var(--muted);" onclick="event.stopPropagation()"></span>
+          <span class="etp-ac-chevron" id="etp-chev-${num}">${isOpen ? '▲' : '▼'}</span>
+        </div>
+      </div>
+      <div class="etp-acordeao-body" id="etp-body-${num}" style="display:${isOpen?'block':'none'};">
+        ${conteudoHtml}
+      </div>
+    </div>`;
+  };
+
+  const taSecao = (num, ph='') => {
+    if (r) return `<div class="fv" style="white-space:pre-wrap;min-height:60px;">${esc(defaults[num]||'—')}</div>`;
+    return `
+    <textarea id="etp-sec-${num}" rows="5" placeholder="${ph}"
+      oninput="etpAtualizarWC('${num}');etpAtualizarPreview()"
+      style="width:100%;padding:9px 12px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;resize:vertical;transition:border-color .2s;"
+    >${esc(defaults[num]||'')}</textarea>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;" id="etp-btn-ia-${num}"
+        onclick="etpGerarSecaoIA('${num}','${titulo.replace(/'/g,"\\'")}',this)">✨ Gerar com IA</button>
+      <span id="etp-wc-${num}" style="font-size:11px;color:var(--muted);"></span>
+    </div>`;
+  };
+  // helper para titulo inside secao closure
+  const makeSecao = (num, titulo, ph='', extra='') => {
+    const inner = `${taSecao(num, ph)}${extra}`;
+    return secao(num, titulo, inner, num === '1');
+  };
+
+  // Seção 4 especial: valor + metodologia
+  const sec4 = secao('4', 'Estimativa do Valor da Contratação',
+    r ? `<div class="fv">${esc(defaults['4']||'—')}</div>` : `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+      <div class="form-field">
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Valor Estimado (R$) <span class="ref">Art. 23 LLC</span></label>
+        <input type="text" id="etp-valor_ref" value="${esc(valorRef)}" placeholder="Ex: 150.000,00"
+          style="width:100%;padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;"
+          oninput="etpAtualizarPreview()">
+      </div>
+      <div class="form-field">
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Metodologia de Apuração</label>
+        <select id="etp-metodologia_valor"
+          style="width:100%;padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;"
+          oninput="etpAtualizarPreview()">
+          <option value="media" ${metodologiaVal==='media'?'selected':''}>Média de preços pesquisados</option>
+          <option value="menor" ${metodologiaVal==='menor'?'selected':''}>Menor preço encontrado</option>
+          <option value="mediana" ${metodologiaVal==='mediana'?'selected':''}>Mediana dos preços</option>
+          <option value="pncp" ${metodologiaVal==='pncp'?'selected':''}>Baseado no PNCP</option>
+          <option value="sinapi" ${metodologiaVal==='sinapi'?'selected':''}>Baseado no SINAPI</option>
+        </select>
+      </div>
+    </div>
+    <textarea id="etp-sec-4" rows="4" placeholder="Descreva a metodologia de estimativa do valor..."
+      oninput="etpAtualizarWC('4');etpAtualizarPreview()"
+      style="width:100%;padding:9px 12px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;resize:vertical;"
+    >${esc(defaults['4']||'')}</textarea>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;" id="etp-btn-ia-4"
+        onclick="etpGerarSecaoIA('4','Estimativa do Valor da Contratação',this)">✨ Gerar com IA</button>
+      <span id="etp-wc-4" style="font-size:11px;color:var(--muted);"></span>
+    </div>`
+  );
+
+  // Seção 12 especial: radio viabilidade + texto
+  const sec12 = secao('12', 'Posicionamento Conclusivo sobre Viabilidade',
+    r ? `<div class="fv">${esc(defaults['12']||'—')}</div>` : `
+    <div style="display:flex;gap:20px;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="etp-viabilidade" value="viavel" ${viabilidade==='viavel'?'checked':''} onchange="etpAtualizarPreview()"> 
+        <span style="color:var(--green);font-weight:600;">✅ Viável</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="etp-viabilidade" value="inviavel" ${viabilidade==='inviavel'?'checked':''} onchange="etpAtualizarPreview()"> 
+        <span style="color:var(--red);font-weight:600;">❌ Inviável</span>
+      </label>
+    </div>
+    <textarea id="etp-sec-12" rows="4" placeholder="Justifique a declaração de viabilidade..."
+      oninput="etpAtualizarWC('12');etpAtualizarPreview()"
+      style="width:100%;padding:9px 12px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;resize:vertical;"
+    >${esc(defaults['12']||'')}</textarea>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;" id="etp-btn-ia-12"
+        onclick="etpGerarSecaoIA('12','Posicionamento Conclusivo sobre Viabilidade',this)">✨ Gerar com IA</button>
+      <span id="etp-wc-12" style="font-size:11px;color:var(--muted);"></span>
+    </div>`
+  );
+
+  // Seção 13 — Mapa de Riscos (tabela dinâmica embutida)
+  const sec13 = secao('13', 'Mapa de Riscos',
+    `<div id="etp-mapa-riscos-wrap">${renderMapaRiscosETP(riscosData, r)}</div>
+    ${!r ? `<div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="etpAdicionarRisco()">+ Adicionar Risco</button>
+      <button class="btn btn-ghost btn-sm" onclick="prePopularRiscos()">🎯 Riscos por categoria</button>
+    </div>` : ''}`
+  );
+
+  // Seção responsável técnico (embutida antes do botão salvar)
+  const secResp = r ? `<div class="fv">${esc(v('responsavel_tecnico')||dfd.responsavel||'—')}</div>` : `
+    <div class="form-field" style="margin-top:16px;">
+      <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Responsável Técnico pela Elaboração <span class="req">*</span> <span class="ref">Art. 5º, §3º IN</span></label>
+      <input type="text" id="etp-responsavel_tecnico" value="${esc(v('responsavel_tecnico')||dfd.responsavel)}" placeholder="Nome e cargo do responsável"
+        style="width:100%;padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;">
+    </div>`;
+
+  return `
+${aviso}
+${!r ? `<div style="background:var(--s2);border:1px solid rgba(65,243,106,.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <div>
+    <div style="font-size:13px;font-weight:600;color:var(--green);">✨ ETP — 14 seções · ${!temDFD?'Preencha o DFD para herdar dados':'Dados do DFD importados ✓'}</div>
+    <div style="font-size:11px;color:var(--text2);margin-top:2px;">Cada seção tem botão IA individual · Mínimo 60 palavras por seção</div>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="etpGerarTodosComIA()">✨ Gerar tudo com IA</button>
+</div>` : ''}
+<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px;">ETP — Estudo Técnico Preliminar · Art. 18 LLC | IN-009/2023</div>
+<div id="etp-acordeao">
+${makeSecao('1','Descrição da Necessidade da Contratação','Descreva o problema ou necessidade institucional que origina esta contratação...')}
+${makeSecao('2','Estimativa da Quantidade e do Serviço','Estimativa de quantidades com base no histórico de consumo e demanda...')}
+${makeSecao('3','Levantamento de Mercado','Fontes consultadas: PNCP, Painel de Preços (compras.gov.br), fornecedores locais...')}
+${sec4}
+${makeSecao('5','Descrição da Solução','Descreva a solução técnica escolhida para atender à necessidade...')}
+${makeSecao('6','Requisitos da Contratação','Requisitos técnicos e de habilitação exigidos do fornecedor...')}
+${makeSecao('7','Fundamentação Legal','Dispositivos legais que fundamentam a contratação...')}
+${makeSecao('8','Resultados Pretendidos','Benefícios esperados para a população e para a gestão pública...')}
+${makeSecao('9','Providências para Adequação','Ações necessárias antes da licitação...')}
+${makeSecao('10','Contratações Correlatas e Interdependentes','Informe se há contratações relacionadas...')}
+${makeSecao('11','Impactos Ambientais e Sustentabilidade','Avaliação de impactos ambientais e critérios de sustentabilidade...')}
+${sec12}
+${sec13}
+${makeSecao('14','Conclusão','Síntese da análise e recomendação de prosseguimento...')}
+</div>
+${secResp}
+${!r ? `<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+  <button class="btn btn-primary" onclick="etpSalvar()">💾 Salvar ETP</button>
+  <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('ETP')">📄 Gerar PDF</button>
+</div>` : ''}`;
+}
+
+// Toggle seção acordeão ETP
+function etpToggleSecao(num) {
+  const body = document.getElementById('etp-body-' + num);
+  const chev = document.getElementById('etp-chev-' + num);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.textContent = open ? '▼' : '▲';
+  if (!open) { setTimeout(() => etpAtualizarWC(num), 50); }
+}
+
+// Gera todas as seções ETP com IA sequencialmente
+async function etpGerarTodosComIA() {
+  const secoes = ['1','2','3','4','5','6','7','8','9','10','11','12','14'];
+  toast('⏳ Gerando ETP completo... aguarde', 'info');
+  for (const s of secoes) {
+    const body = document.getElementById('etp-body-' + s);
+    if (body) body.style.display = 'block';
+    const chev = document.getElementById('etp-chev-' + s);
+    if (chev) chev.textContent = '▲';
+    const btn = document.getElementById('etp-btn-ia-' + s);
+    await etpGerarSecaoIA(s, s, btn);
+    await new Promise(r => setTimeout(r, 400));
+  }
+  toast('✅ ETP preenchido com IA — revise antes de salvar', 'success');
+}
+
+// Salvar ETP
+async function etpSalvar() {
+  const dados = {};
+  // Seções de texto
+  ['1','2','3','4','5','6','7','8','9','10','11','12','14'].forEach(s => {
+    const el = document.getElementById('etp-sec-' + s);
+    if (el) dados['sec' + s] = el.value;
+  });
+  // Campos especiais
+  const vr = document.getElementById('etp-valor_ref');
+  if (vr) dados.valor_ref = vr.value;
+  const mv = document.getElementById('etp-metodologia_valor');
+  if (mv) dados.metodologia_valor = mv.value;
+  const viab = document.querySelector('input[name="etp-viabilidade"]:checked');
+  dados.viabilidade = viab ? viab.value : 'viavel';
+  const rt = document.getElementById('etp-responsavel_tecnico');
+  if (rt) dados.responsavel_tecnico = rt.value;
+  // Compatibilidade: aliases para campos que o preview e PDF usam
+  dados.necessidade = dados.sec1 || '';
+  dados.solucao_escolhida = dados.sec5 || '';
+  dados.valor = dados.valor_ref || '';
+  dados.responsavel = dados.responsavel_tecnico || '';
+  // Riscos do mapa
+  dados.riscos = coletarRiscosETP();
+
+  await salvarDocEtapa('ETP', dados);
+}
+
+// Renderiza tabela de riscos dentro do ETP
+function renderMapaRiscosETP(riscos, readonly) {
+  if (!riscos.length) riscos = [{id: Date.now(), risco:'', categoria:'operacional', prob:'media', impacto:'medio', mitigacao:'', responsavel:''}];
+  const probs = [{v:'alta',l:'Alta'},{v:'media',l:'Média'},{v:'baixa',l:'Baixa'}];
+  const imps  = [{v:'alto',l:'Alto'},{v:'medio',l:'Médio'},{v:'baixo',l:'Baixo'}];
+  const cats  = [{v:'tecnico',l:'Técnico'},{v:'financeiro',l:'Financeiro'},{v:'legal',l:'Legal'},{v:'operacional',l:'Operacional'},{v:'ambiental',l:'Ambiental'}];
+  const nivelBadge = (p,i) => {
+    const pts={alta:3,media:2,baixa:1,alto:3,medio:2,baixo:1};
+    const n=(pts[p]||1)*(pts[i]||1);
+    if(n>=6)return'<span class="badge badge-red">ALTO</span>';
+    if(n>=3)return'<span class="badge badge-gold">MÉDIO</span>';
+    return'<span class="badge badge-green">BAIXO</span>';
+  };
+  if (readonly) {
+    return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--s3);">
+        <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);">Risco</th>
+        <th style="padding:6px;width:80px;border-bottom:1px solid var(--border);">Prob.</th>
+        <th style="padding:6px;width:80px;border-bottom:1px solid var(--border);">Impacto</th>
+        <th style="padding:6px;width:60px;border-bottom:1px solid var(--border);">Nível</th>
+        <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);">Mitigação</th>
+        <th style="padding:6px;text-align:left;border-bottom:1px solid var(--border);">Responsável</th>
+      </tr></thead><tbody>
+      ${riscos.map(r=>`<tr><td style="padding:6px 10px;border-bottom:1px solid var(--border);">${r.risco||'—'}</td>
+        <td style="padding:6px;text-align:center;border-bottom:1px solid var(--border);">${r.prob||'—'}</td>
+        <td style="padding:6px;text-align:center;border-bottom:1px solid var(--border);">${r.impacto||'—'}</td>
+        <td style="padding:6px;text-align:center;border-bottom:1px solid var(--border);">${nivelBadge(r.prob,r.impacto)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border);">${r.mitigacao||'—'}</td>
+        <td style="padding:6px;border-bottom:1px solid var(--border);">${r.responsavel||'—'}</td>
+      </tr>`).join('')}
+      </tbody></table>`;
+  }
+  return `<div id="etp-riscos-lista">
+  ${riscos.map((r,idx)=>`
+    <div class="etp-risco-row" id="etpr-${r.id}" style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;background:var(--s2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text2);">Risco #${idx+1}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span id="etpr-nivel-${r.id}">${nivelBadge(r.prob,r.impacto)}</span>
+          <button class="btn btn-danger btn-sm" style="padding:2px 8px;" onclick="etpRemoverRisco('${r.id}')">✕</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div style="grid-column:span 2;"><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Risco</label>
+          <input type="text" class="etpr-campo" data-id="${r.id}" data-f="risco" value="${esc(r.risco)}"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;" placeholder="Descreva o risco..."></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Probabilidade</label>
+          <select class="etpr-campo" data-id="${r.id}" data-f="prob" onchange="etpNivelRisco('${r.id}')"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;">
+            ${probs.map(p=>`<option value="${p.v}"${r.prob===p.v?' selected':''}>${p.l}</option>`).join('')}</select></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Impacto</label>
+          <select class="etpr-campo" data-id="${r.id}" data-f="impacto" onchange="etpNivelRisco('${r.id}')"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;">
+            ${imps.map(i=>`<option value="${i.v}"${r.impacto===i.v?' selected':''}>${i.l}</option>`).join('')}</select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Medida de Mitigação</label>
+          <textarea class="etpr-campo" data-id="${r.id}" data-f="mitigacao" rows="2"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;"
+            placeholder="Como evitar ou reduzir...">${esc(r.mitigacao)}</textarea></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Responsável</label>
+          <input type="text" class="etpr-campo" data-id="${r.id}" data-f="responsavel" value="${esc(r.responsavel)}"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;" placeholder="Setor responsável"></div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function etpNivelRisco(id) {
+  const prob   = document.querySelector(`.etpr-campo[data-id="${id}"][data-f="prob"]`)?.value || 'media';
+  const impacto = document.querySelector(`.etpr-campo[data-id="${id}"][data-f="impacto"]`)?.value || 'medio';
+  const pts = {alta:3,media:2,baixa:1,alto:3,medio:2,baixo:1};
+  const n = (pts[prob]||1)*(pts[impacto]||1);
+  const badge = n>=6 ? '<span class="badge badge-red">ALTO</span>' : n>=3 ? '<span class="badge badge-gold">MÉDIO</span>' : '<span class="badge badge-green">BAIXO</span>';
+  const el = document.getElementById('etpr-nivel-' + id);
+  if (el) el.innerHTML = badge;
+}
+
+function etpAdicionarRisco() {
+  const id = Date.now();
+  const lista = document.getElementById('etp-riscos-lista');
+  if (!lista) return;
+  const idx = lista.querySelectorAll('.etp-risco-row').length + 1;
+  const div = document.createElement('div');
+  div.innerHTML = renderMapaRiscosETP([{id, risco:'', categoria:'operacional', prob:'media', impacto:'medio', mitigacao:'', responsavel:''}], false);
+  const row = div.querySelector('.etp-risco-row');
+  if (row) { row.querySelector('.etpr-campo')?.focus && lista.appendChild(row); }
+  // Simpler fallback
+  lista.insertAdjacentHTML('beforeend', `
+    <div class="etp-risco-row" id="etpr-${id}" style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;background:var(--s2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text2);">Risco #${idx}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span id="etpr-nivel-${id}" class="badge badge-green">BAIXO</span>
+          <button class="btn btn-danger btn-sm" style="padding:2px 8px;" onclick="etpRemoverRisco('${id}')">✕</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div style="grid-column:span 2;"><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Risco</label>
+          <input type="text" class="etpr-campo" data-id="${id}" data-f="risco"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;" placeholder="Descreva o risco..."></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Probabilidade</label>
+          <select class="etpr-campo" data-id="${id}" data-f="prob" onchange="etpNivelRisco('${id}')"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;">
+            <option value="alta">Alta</option><option value="media" selected>Média</option><option value="baixa">Baixa</option></select></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Impacto</label>
+          <select class="etpr-campo" data-id="${id}" data-f="impacto" onchange="etpNivelRisco('${id}')"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;">
+            <option value="alto">Alto</option><option value="medio" selected>Médio</option><option value="baixo">Baixo</option></select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Medida de Mitigação</label>
+          <textarea class="etpr-campo" data-id="${id}" data-f="mitigacao" rows="2"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;" placeholder="Como evitar ou reduzir..."></textarea></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Responsável</label>
+          <input type="text" class="etpr-campo" data-id="${id}" data-f="responsavel"
+            style="width:100%;padding:5px 8px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;outline:none;" placeholder="Setor responsável"></div>
+      </div>
+    </div>`);
+}
+
+function etpRemoverRisco(id) {
+  document.getElementById('etpr-' + id)?.remove();
+}
+
+function coletarRiscosETP() {
+  const riscos = [];
+  document.querySelectorAll('.etp-risco-row').forEach(row => {
+    const r = { id: row.id.replace('etpr-','') };
+    row.querySelectorAll('.etpr-campo').forEach(el => { r[el.dataset.f] = el.value; });
+    if (r.risco) riscos.push(r);
+  });
+  return riscos;
+}
+
+// Override de salvarDocEtapa para aceitar dados externos do ETP
+const _salvarDocEtapaBase = salvarDocEtapa;
+async function salvarDocEtapa(tipo, dadosExternos) {
+  if (!_processoAtual) return;
+  const proc = _processoAtual;
+  const dados = dadosExternos || coletarDadosForm(tipo);
+  try {
+    const existing = proc.docs?.find(d => d.tipo === tipo);
+    if (existing) {
+      await sb.from('documentos').update({ dados, atualizado_em: new Date().toISOString(), status: 'enviado' }).eq('id', existing.id);
+    } else {
+      await sb.from('documentos').insert({ processo_id: proc.id, tipo, dados, versao: 1, status: 'enviado', criado_por: _user.id });
+    }
+    toast('Documento salvo!', 'success');
+    etapaMarcarSalvo(tipo);
+    if (typeof salvarSnapshotProcesso === 'function') salvarSnapshotProcesso(proc, tipo);
+    await abrirProcesso(proc.id);
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// [ETP] formMapaRisco — mantido para compatibilidade (aba separada)
+// ══════════════════════════════════════════════════════════
 function formMapaRisco(dados, readonly) {
   const r = readonly;
   const riscos = dados.riscos || [{ id: Date.now(), risco:'', categoria:'tecnico', prob:'media', impacto:'medio', mitigacao:'', contingencia:'', responsavel:'', alocacao:'administracao' }];
@@ -2632,7 +3132,6 @@ function formMapaRisco(dados, readonly) {
   const probs = [{v:'alta',l:'Alta'},{v:'media',l:'Média'},{v:'baixa',l:'Baixa'}];
   const imp = [{v:'alto',l:'Alto'},{v:'medio',l:'Médio'},{v:'baixo',l:'Baixo'}];
   const aloc = [{v:'administracao',l:'Administração'},{v:'contratado',l:'Contratado'},{v:'compartilhado',l:'Compartilhado'}];
-
   const nivel = (p,i) => {
     const pts = {alta:3,media:2,baixa:1,alto:3,medio:2,baixo:1};
     const n = (pts[p]||1)*(pts[i]||1);
@@ -2640,10 +3139,9 @@ function formMapaRisco(dados, readonly) {
     if(n>=3) return '<span class="badge badge-gold">MÉDIO</span>';
     return '<span class="badge badge-green">BAIXO</span>';
   };
-
   return `
 <div class="form-section-title">Mapa de Risco · Art. 7º, XV IN-009/23 | Arts. 22 e 103 LLC</div>
-<p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Identifique os riscos que podem comprometer esta contratação. Mínimo 1 risco.</p>
+<p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Identifique os riscos que podem comprometer esta contratação.</p>
 <div id="mapa-riscos-container">
 ${riscos.map((risco, idx) => `
   <div class="risco-row" id="risco-${risco.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
@@ -2670,108 +3168,483 @@ ${riscos.map((risco, idx) => `
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div class="form-field"><label>Medida Preventiva / Mitigação</label>
-        ${r?`<div class="fv">${risco.mitigacao||'—'}</div>`:`<textarea class="risco-campo" data-risco="${risco.id}" data-campo="mitigacao" rows="2" placeholder="Como evitar ou reduzir este risco...">${esc(risco.mitigacao)}</textarea>`}
+        ${r?`<div class="fv">${risco.mitigacao||'—'}</div>`:`<textarea class="risco-campo" data-risco="${risco.id}" data-campo="mitigacao" rows="2" placeholder="Como evitar...">${esc(risco.mitigacao)}</textarea>`}
       </div>
       <div class="form-field"><label>Medida de Contingência</label>
-        ${r?`<div class="fv">${risco.contingencia||'—'}</div>`:`<textarea class="risco-campo" data-risco="${risco.id}" data-campo="contingencia" rows="2" placeholder="O que fazer se o risco ocorrer...">${esc(risco.contingencia)}</textarea>`}
+        ${r?`<div class="fv">${risco.contingencia||'—'}</div>`:`<textarea class="risco-campo" data-risco="${risco.id}" data-campo="contingencia" rows="2" placeholder="O que fazer se ocorrer...">${esc(risco.contingencia)}</textarea>`}
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div class="form-field"><label>Responsável pela Mitigação</label>
-        ${r?`<div class="fv">${risco.responsavel||'—'}</div>`:`<input class="risco-campo" data-risco="${risco.id}" data-campo="responsavel" type="text" value="${esc(risco.responsavel)}" placeholder="Nome/setor responsável">`}
+        ${r?`<div class="fv">${risco.responsavel||'—'}</div>`:`<input class="risco-campo" data-risco="${risco.id}" data-campo="responsavel" type="text" value="${esc(risco.responsavel)}" placeholder="Nome/setor">`}
       </div>
       <div class="form-field"><label>Alocação do Risco<span class="ref">Art. 103 LLC</span></label>
         ${r?`<div class="fv">${risco.alocacao||'—'}</div>`:`<select class="risco-campo" data-risco="${risco.id}" data-campo="alocacao">${aloc.map(a=>`<option value="${a.v}" ${risco.alocacao===a.v?'selected':''}>${a.l}</option>`).join('')}</select>`}
       </div>
     </div>
-  </div>
-`).join('')}
+  </div>`).join('')}
 </div>
 ${!r?`<div style="display:flex;gap:8px;margin-top:4px;">
   <button class="btn btn-secondary" onclick="adicionarRisco()">+ Adicionar Risco</button>
+  <button class="btn btn-ghost btn-sm" onclick="prePopularRiscos()">🎯 Riscos por categoria</button>
   <button class="btn btn-primary" onclick="salvarDocEtapa('MAPA_RISCO')">💾 Salvar Mapa de Risco</button>
 </div>`:''}`;
 }
 
-function formTR(dados, readonly, tipo) {
+// ══════════════════════════════════════════════════════════
+// [TR] formTR — 11 seções com tabela de quantitativos
+// ══════════════════════════════════════════════════════════
+function formTR(dados, readonly, tipoContratacao) {
   const r = readonly;
-  const v = (k) => dados[k] || '';
-  const inp = (id, ph='') => r ? `<div class="fv">${v(id)||'—'}</div>` : `<input type="text" id="tr-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
-  const ta = (id, ph='', rows=3, wc=0) => r ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>` : `<textarea id="tr-${id}" rows="${rows}" placeholder="${ph}"${wc?` data-wc="${wc}"`:''} oninput="initEtapaListeners&&initEtapaListeners()">${esc(v(id))}</textarea>`;
-  const sel = (id, opts) => r ? `<div class="fv">${v(id)||'—'}</div>` : `<select id="tr-${id}">${opts}</select>`;
+  const dfd = herdarDadosDFD();
+  const temDFD = dfd.temDFD;
+  const v = k => dados[k] || '';
+
+  // Padrões da 14.133
+  const OBRIG_CONTRATADA_DEFAULT = `7.1.1. Expedir Nota Fiscal dos itens fornecidos com descrição completa, quantitativo, valor unitário e global, fazendo acompanhar das autorizações de fornecimento ou das assinaturas dos responsáveis pelo recebimento.
+7.1.2. Estar à disposição da Administração sempre que solicitado, prestando todos os esclarecimentos necessários ao bom cumprimento do contrato.
+7.1.3. Entregar o objeto em conformidade com as especificações técnicas exigidas no Termo de Referência, submetendo-se à fiscalização da Contratante.
+7.1.4. Responder por danos causados diretamente à Administração ou a terceiros, decorrentes de sua culpa ou dolo na execução do contrato.
+7.1.5. Responder integralmente pelos encargos trabalhistas, previdenciários, fiscais e comerciais resultantes da execução contratual.
+7.1.6. Arcar com todas as despesas inerentes ao fornecimento, incluindo fretes, embalagens, seguros e demais custos de entrega.
+7.1.7. Aceitar, nas mesmas condições contratuais, acréscimos ou supressões de até 25% do valor total adjudicado, conforme art. 125 da Lei nº 14.133/2021.`;
+
+  const OBRIG_CONTRATANTE_DEFAULT = `8.1.1. Acompanhar, fiscalizar e avaliar a execução do contrato por meio do servidor designado como gestor/fiscal de contrato.
+8.1.2. Efetuar o pagamento à Contratada na forma e no prazo pactuados neste instrumento, após o regular ateste do fiscal.
+8.1.3. Permitir o livre acesso dos representantes da Contratada às suas dependências para tratar de assuntos pertinentes ao objeto contratual.
+8.1.4. Fornecer todas as informações e esclarecimentos necessários para o cumprimento do objeto contratual.
+8.1.5. Rejeitar, no todo ou em parte, os fornecimentos executados em desacordo com as especificações estabelecidas neste Termo de Referência.
+8.1.6. Aplicar as sanções administrativas cabíveis, quando verificado o descumprimento das cláusulas contratuais.`;
+
+  const SANCOES_DEFAULT = `Em caso de inexecução total ou parcial do contrato, a Contratada ficará sujeita às penalidades previstas nos arts. 155 a 163 da Lei nº 14.133/2021:
+a) Advertência formal, por faltas leves;
+b) Multa de até 10% (dez por cento) sobre o valor do contrato inadimplido;
+c) Impedimento de licitar e contratar com a Administração Pública pelo prazo de até 3 (três) anos;
+d) Declaração de inidoneidade para licitar ou contratar com a Administração Pública, enquanto perdurarem os motivos determinantes da punição.
+As penalidades serão aplicadas mediante processo administrativo, assegurado o contraditório e a ampla defesa.`;
+
+  const obrigContratada = v('obrig_contratada') || OBRIG_CONTRATADA_DEFAULT;
+  const obrigContratante = v('obrig_contratante') || OBRIG_CONTRATANTE_DEFAULT;
+  const sancoes = v('sancoes') || SANCOES_DEFAULT;
+
+  // Itens herdados do DFD ou do TR salvo
+  let itens = [];
+  try {
+    if (dados.itens && dados.itens !== '[]') {
+      itens = typeof dados.itens === 'string' ? JSON.parse(dados.itens) : dados.itens;
+    }
+  } catch(e) {}
+  if (!itens.length && dfd.itens?.length) itens = dfd.itens.map(it => ({...it, valor_unitario: it.valor_unitario || '', valor_total: ''}));
+
+  const fmtBRL = n => {
+    const num = parseFloat(String(n||0).replace(/\./g,'').replace(',','.'));
+    return num > 0 ? num.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+  };
+  const calcTotal = () => itens.reduce((s,it) => {
+    const vu = parseFloat(String(it.valor_unitario||0).replace(/\./g,'').replace(',','.'));
+    const qt = parseFloat(it.quantidade||1);
+    return s + (vu*qt);
+  }, 0);
+
+  const modalidadeOpts = `
+    <option value="">Selecione...</option>
+    <option value="pregao_eletronico" ${v('modalidade')==='pregao_eletronico'?'selected':''}>Pregão Eletrônico</option>
+    <option value="pregao_presencial" ${v('modalidade')==='pregao_presencial'?'selected':''}>Pregão Presencial</option>
+    <option value="concorrencia" ${v('modalidade')==='concorrencia'?'selected':''}>Concorrência</option>
+    <option value="dispensa" ${v('modalidade')==='dispensa'?'selected':''}>Dispensa — Art. 75 LLC</option>
+    <option value="inexigibilidade" ${v('modalidade')==='inexigibilidade'?'selected':''}>Inexigibilidade — Art. 74 LLC</option>`;
+
+  const criterioOpts = `
+    <option value="menor_preco" ${v('criterio')==='menor_preco'?'selected':''}>Menor Preço</option>
+    <option value="maior_desconto" ${v('criterio')==='maior_desconto'?'selected':''}>Maior Desconto</option>
+    <option value="melhor_tecnica" ${v('criterio')==='melhor_tecnica'?'selected':''}>Melhor Técnica e Preço</option>`;
+
+  const dispOpts = `
+    <option value="aberto" ${v('modo_disputa')==='aberto'?'selected':''}>Aberto</option>
+    <option value="fechado" ${v('modo_disputa')==='fechado'?'selected':''}>Fechado</option>
+    <option value="misto" ${v('modo_disputa')==='misto'?'selected':''}>Misto (Aberto e Fechado)</option>`;
+
+  const garantiaOpts = `
+    <option value="nao" ${v('garantia')==='nao'?'selected':''}>Não exigida</option>
+    <option value="2" ${v('garantia')==='2'?'selected':''}>Sim — 2% do valor</option>
+    <option value="5" ${v('garantia')==='5'?'selected':''}>Sim — 5% do valor</option>
+    <option value="10" ${v('garantia')==='10'?'selected':''}>Sim — 10% do valor</option>`;
+
+  const lc123Opts = `
+    <option value="sim" ${v('lc123')==='sim'||(v('lc123')==='')  ?'selected':''}>Sim — aplica benefícios ME/EPP</option>
+    <option value="nao" ${v('lc123')==='nao'?'selected':''}>Não se aplica</option>`;
+
+  const pagamentoOpts = `
+    <option value="por_entrega" ${v('forma_pagamento')==='por_entrega'?'selected':''}>Por entrega / nota fiscal</option>
+    <option value="mensal" ${v('forma_pagamento')==='mensal'?'selected':''}>Mensal</option>
+    <option value="parcela_unica" ${v('forma_pagamento')==='parcela_unica'?'selected':''}>Parcela única</option>
+    <option value="parcelado" ${v('forma_pagamento')==='parcelado'?'selected':''}>Parcelado</option>`;
+
+  const prazoUnidOpts = `
+    <option value="dias_corridos" ${v('prazo_unidade')==='dias_corridos'?'selected':''}>Dias corridos</option>
+    <option value="dias_uteis" ${v('prazo_unidade')==='dias_uteis'?'selected':''}>Dias úteis</option>`;
+
+  const inp = (id, ph='', val='') => r
+    ? `<div class="fv">${esc(val||v(id)||'—')}</div>`
+    : `<input type="text" id="tr-${id}" value="${esc(val||v(id))}" placeholder="${ph}"
+        style="width:100%;padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;"
+        oninput="trAtualizarPreview()">`;
+
+  const ta = (id, ph='', rows=4, val='') => r
+    ? `<div class="fv" style="white-space:pre-wrap;min-height:50px;">${esc(val||v(id)||'—')}</div>`
+    : `<textarea id="tr-${id}" rows="${rows}" placeholder="${ph}"
+        style="width:100%;padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;resize:vertical;"
+        oninput="trAtualizarPreview()">${esc(val||v(id))}</textarea>`;
+
+  const sel = (id, optsHtml) => r
+    ? `<div class="fv">${esc(v(id)||'—')}</div>`
+    : `<select id="tr-${id}" style="width:100%;padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;" onchange="trAtualizarPreview()">${optsHtml}</select>`;
+
+  const iaBtn = (trId, label) => !r ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;margin-top:6px;" onclick="trGerarSecaoIA('${trId}','${label}',this)">✨ Gerar com IA</button>` : '';
+
+  // Tabela de itens/quantitativos
+  const tabelaItens = () => {
+    if (r) {
+      if (!itens.length) return '<div class="fv">Nenhum item cadastrado</div>';
+      const total = calcTotal();
+      return `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:8px 0;">
+        <thead><tr style="background:var(--s3);">
+          <th style="padding:6px;border:1px solid var(--border);text-align:center;width:4%">Nº</th>
+          <th style="padding:6px;border:1px solid var(--border);text-align:left;">Descrição</th>
+          <th style="padding:6px;border:1px solid var(--border);text-align:center;width:8%">Unid.</th>
+          <th style="padding:6px;border:1px solid var(--border);text-align:center;width:8%">Qtd.</th>
+          <th style="padding:6px;border:1px solid var(--border);text-align:right;width:12%">Vl. Unit.</th>
+          <th style="padding:6px;border:1px solid var(--border);text-align:right;width:12%">Vl. Total</th>
+        </tr></thead><tbody>
+        ${itens.map((it,i)=>{
+          const vu=parseFloat(String(it.valor_unitario||0).replace(/\./g,'').replace(',','.'));
+          const qt=parseFloat(it.quantidade||1);
+          const vt=vu*qt;
+          return `<tr><td style="padding:5px 6px;border:1px solid var(--border);text-align:center;">${i+1}</td>
+            <td style="padding:5px 6px;border:1px solid var(--border);">${it.descricao||it.nome||'—'}</td>
+            <td style="padding:5px 6px;border:1px solid var(--border);text-align:center;">${it.unidade||'UN'}</td>
+            <td style="padding:5px 6px;border:1px solid var(--border);text-align:center;">${qt.toLocaleString('pt-BR')}</td>
+            <td style="padding:5px 6px;border:1px solid var(--border);text-align:right;">${vu>0?'R$ '+fmtBRL(vu):'—'}</td>
+            <td style="padding:5px 6px;border:1px solid var(--border);text-align:right;">${vt>0?'R$ '+fmtBRL(vt):'—'}</td>
+          </tr>`;
+        }).join('')}
+        </tbody><tfoot><tr style="background:var(--s3);font-weight:700;">
+          <td colspan="5" style="padding:6px 10px;border:1px solid var(--border);text-align:right;">VALOR TOTAL DO PROCESSO:</td>
+          <td style="padding:6px 10px;border:1px solid var(--border);text-align:right;color:var(--green);">R$ ${fmtBRL(total)}</td>
+        </tr></tfoot>
+      </table>`;
+    }
+    // Modo edição
+    return `
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="trSincronizarDFD()">🔄 Sincronizar com DFD</button>
+      <button class="btn btn-ghost btn-sm" onclick="trAdicionarItem()">+ Adicionar item</button>
+    </div>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;" id="tr-itens-table">
+      <thead><tr style="background:var(--s3);">
+        <th style="padding:6px;border:1px solid var(--border);text-align:center;width:4%">Nº</th>
+        <th style="padding:6px;border:1px solid var(--border);text-align:left;">Descrição</th>
+        <th style="padding:6px;border:1px solid var(--border);text-align:center;width:8%">Unid.</th>
+        <th style="padding:6px;border:1px solid var(--border);text-align:center;width:8%">Qtd.</th>
+        <th style="padding:6px;border:1px solid var(--border);text-align:right;width:13%">Vl. Unit. (R$)</th>
+        <th style="padding:6px;border:1px solid var(--border);text-align:right;width:13%">Vl. Total</th>
+        <th style="padding:6px;border:1px solid var(--border);width:50px;text-align:center;">Del.</th>
+      </tr></thead>
+      <tbody id="tr-itens-tbody">
+        ${trRenderItensRows(itens)}
+      </tbody>
+      <tfoot><tr style="background:var(--s3);">
+        <td colspan="5" style="padding:6px 10px;border:1px solid var(--border);text-align:right;font-weight:700;">VALOR TOTAL:</td>
+        <td style="padding:6px 10px;border:1px solid var(--border);text-align:right;font-weight:700;color:var(--green);" id="tr-total-geral">R$ ${fmtBRL(calcTotal())}</td>
+        <td style="border:1px solid var(--border);"></td>
+      </tr></tfoot>
+    </table></div>`;
+  };
 
   return `
-${!r ? `<div style="background:var(--s2);border:1px solid rgba(26,184,255,.25);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+${!temDFD ? `<div style="background:var(--gold-l);border:1px solid rgba(255,200,87,.3);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;">⚠️ <strong>DFD não encontrado.</strong> Preencha o DFD para importar os itens automaticamente.</div>` : ''}
+${!r ? `<div style="background:var(--s2);border:1px solid rgba(26,184,255,.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
   <div>
-    <div style="font-size:13px;font-weight:600;color:var(--blue);">✨ Preencher TR com IA</div>
-    <div style="font-size:12px;color:var(--text2);margin-top:2px;">A IA usa os dados do DFD e ETP já salvos para gerar o Termo de Referência completo</div>
+    <div style="font-size:13px;font-weight:600;color:var(--blue);">📄 TR — Termo de Referência · 11 seções</div>
+    <div style="font-size:11px;color:var(--text2);margin-top:2px;">${temDFD?'✓ Dados do DFD importados':'Preenchimento manual'} · Tabela de quantitativos editável</div>
   </div>
-  <button class="btn btn-secondary btn-sm" id="btn-preencher-tr-ia" onclick="preencherTRcomIA()" style="border-color:rgba(26,184,255,.4);color:var(--blue);">✨ Preencher tudo com IA</button>
+  <button class="btn btn-secondary btn-sm" style="color:var(--blue);border-color:rgba(26,184,255,.4);" onclick="preencherTRcomIA()">✨ Preencher com IA</button>
 </div>` : ''}
-<div class="form-section-title">Termo de Referência · Art. 7º, III IN-009/23 | Art. 6º, XXIII LLC</div>
-<div class="form-field"><label>Objeto da Contratação<span class="req">*</span><span class="ref">Art. 6º, XXIII LLC</span></label>${inp('objeto','Ex: Aquisição de materiais de limpeza para uso nas dependências municipais')}</div>
-<div class="form-field"><label>Fundamentação da Necessidade<span class="req">*</span><span class="ref">Art. 6º, XXIII, b LLC</span></label>
-  ${ta('fundamentacao','Fundamentação da necessidade, com referência ao ETP...',3, 80)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-fundamentacao','Fundamentação da necessidade de contratação')">✨ Sugerir com IA</button>`:''}
+
+<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:12px;">TERMO DE REFERÊNCIA · Art. 6º, XXIII LLC | IN-009/2023</div>
+
+<!-- 1. Objeto -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">1. Objeto da Contratação <span class="req">*</span> <span class="ref">Art. 6º, XXIII LLC</span></label>
+  ${inp('objeto','Descrição do objeto a ser contratado...', v('objeto')||dfd.objeto)}
 </div>
-<div class="form-field"><label>Descrição Detalhada do Objeto<span class="req">*</span><span class="ref">Art. 41, I LLC</span></label>
-  ${ta('descricao','Descreva detalhadamente o objeto, incluindo especificações técnicas obrigatórias...',5, 50)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-descricao','Descrição técnica detalhada do objeto')">✨ Sugerir com IA</button>`:''}
+
+<!-- 2. Justificativa -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">2. Justificativa da Contratação <span class="req">*</span> <span class="ref">Art. 6º, XXIII, b LLC</span></label>
+  ${ta('justificativa','A aquisição parcelada proporciona gestão financeira equilibrada, evitando estocagem excessiva e garantindo o fornecimento contínuo...', 4, v('justificativa')||dfd.justificativa)}
+  ${iaBtn('justificativa', 'Justificativa do TR')}
 </div>
-<div class="form-grid">
-  <div class="form-field"><label>Quantidade Total<span class="req">*</span><span class="ref">Art. 40, §1º LLC</span></label>${inp('quantidade','Ex: 100')}</div>
-  <div class="form-field"><label>Unidade de Medida<span class="req">*</span></label>${inp('unidade','Ex: unidade, kg, m², serviço')}</div>
+
+<!-- 3. Quantitativos -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">3. Tabela de Quantitativos <span class="req">*</span> <span class="ref">Art. 40, §1º LLC</span></label>
+  ${tabelaItens()}
 </div>
-<div class="form-grid">
-  <div class="form-field"><label>Valor Estimado Total (R$)<span class="req">*</span><span class="ref">Art. 23 LLC</span></label>${inp('valor','Ex: 25.000,00')}</div>
-  <div class="form-field"><label>Modalidade de Licitação Sugerida<span class="req">*</span><span class="ref">Art. 28 LLC</span></label>
-    ${sel('modalidade','<option value="">Selecione...</option><option value="pregao_eletronico">Pregão Eletrônico</option><option value="pregao_presencial">Pregão Presencial</option><option value="concorrencia">Concorrência</option><option value="dispensa">Dispensa — Art. 75 LLC</option>')}
+
+<!-- 4. Especificações técnicas -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">4. Especificações Técnicas <span class="ref">Art. 41, I LLC</span></label>
+  ${ta('especificacoes','Descreva as especificações técnicas obrigatórias por item ou de forma geral...', 4)}
+  ${iaBtn('especificacoes', 'Especificações Técnicas')}
+</div>
+
+<!-- 5. Prazo de entrega -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">5. Prazo e Local de Entrega/Execução <span class="req">*</span></label>
+  <div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:10px;margin-bottom:8px;">
+    ${r ? `<div class="fv">${esc(v('prazo_dias')||'—')}</div>` : `<input type="number" id="tr-prazo_dias" value="${esc(v('prazo_dias'))}" min="1" placeholder="Ex: 15"
+        style="padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;" oninput="trAtualizarPreview()">`}
+    ${sel('prazo_unidade', prazoUnidOpts)}
+    ${inp('local_entrega','Ex: Almoxarifado Central — Rua X, nº Y')}
   </div>
 </div>
-<div class="form-grid">
-  <div class="form-field"><label>Critério de Julgamento<span class="req">*</span><span class="ref">Art. 33 LLC</span></label>
-    ${sel('criterio','<option value="menor_preco">Menor Preço</option><option value="maior_desconto">Maior Desconto</option><option value="melhor_tecnica">Melhor Técnica e Preço</option>')}
+
+<!-- 6. Forma de pagamento -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">6. Forma de Pagamento <span class="req">*</span> <span class="ref">Art. 18, VII LLC</span></label>
+  <div style="display:grid;grid-template-columns:1fr 120px;gap:10px;margin-bottom:8px;">
+    ${sel('forma_pagamento', pagamentoOpts)}
+    ${r ? `<div class="fv">${esc(v('prazo_pagamento')||'—')} dias</div>` : `<input type="number" id="tr-prazo_pagamento" value="${esc(v('prazo_pagamento')||'30')}" min="1" placeholder="30"
+        style="padding:8px 11px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:13px;outline:none;" oninput="trAtualizarPreview()">`}
   </div>
-  <div class="form-field"><label>Modo de Disputa<span class="req">*</span><span class="ref">Art. 56 LLC</span></label>
-    ${sel('modo_disputa','<option value="aberto">Aberto</option><option value="fechado">Fechado</option><option value="misto">Misto (Aberto e Fechado)</option>')}
-  </div>
+  ${ta('condicoes_pagamento','Condições específicas de pagamento, parcelamento, retenções...', 2)}
 </div>
-<div class="form-field"><label>Prazo de Entrega / Execução<span class="req">*</span></label>${inp('prazo','Ex: 15 dias úteis após emissão da Ordem de Fornecimento')}</div>
-<div class="form-field"><label>Local de Entrega / Execução<span class="req">*</span></label>${inp('local','Ex: Almoxarifado Central — Rua X, nº Y')}</div>
-<div class="form-field"><label>Condições de Pagamento<span class="req">*</span><span class="ref">Art. 18, VII LLC</span></label>
-  ${ta('pagamento','Ex: Mediante apresentação de Nota Fiscal, pagamento em até 30 dias...',2, 50)}
+
+<!-- 7. Obrigações da Contratada -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">7. Obrigações da Contratada <span class="req">*</span> <span class="ref">Art. 41 LLC</span></label>
+  ${ta('obrig_contratada','', 6, obrigContratada)}
+  ${iaBtn('obrig_contratada', 'Obrigações da Contratada')}
 </div>
-<div class="form-field"><label>Obrigações da Contratante<span class="req">*</span><span class="ref">Art. 41 LLC</span></label>
-  ${ta('obrig_contratante','Descreva as obrigações da prefeitura no contrato...',3, 50)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-obrig_contratante','Obrigações da Administração Pública contratante')">✨ Sugerir com IA</button>`:''}
+
+<!-- 8. Obrigações do Contratante -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">8. Obrigações do Contratante <span class="req">*</span> <span class="ref">Art. 41 LLC</span></label>
+  ${ta('obrig_contratante','', 5, obrigContratante)}
+  ${iaBtn('obrig_contratante', 'Obrigações do Contratante')}
 </div>
-<div class="form-field"><label>Obrigações da Contratada<span class="req">*</span><span class="ref">Art. 41 LLC</span></label>
-  ${ta('obrig_contratada','Descreva as obrigações da empresa contratada...',3, 50)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-obrig_contratada','Obrigações da empresa contratada')">✨ Sugerir com IA</button>`:''}
-</div>
-<div class="form-field"><label>Critério de Recebimento<span class="req">*</span><span class="ref">Art. 18, VIII LLC</span></label>
-  ${ta('recebimento','Ex: Provisório — em até 5 dias; Definitivo — em até 30 dias após verificação de conformidade',2)}
-</div>
-<div class="form-field"><label>Penalidades<span class="req">*</span><span class="ref">Arts. 155-163 LLC</span></label>
-  ${ta('penalidades','Ex: Advertência; Multa de X% sobre o valor do contrato; Impedimento de contratar...',3, 50)}
-  ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-penalidades','Penalidades administrativas para descumprimento contratual')">✨ Sugerir com IA</button>`:''}
-</div>
-<div class="form-grid">
-  <div class="form-field"><label>Garantia Contratual Exigida?<span class="ref">Arts. 96-102 LLC</span></label>
-    ${sel('garantia','<option value="nao">Não exigida</option><option value="2">Sim — 2% do valor</option><option value="5">Sim — 5% do valor</option><option value="10">Sim — 10% do valor</option>')}
-  </div>
-  <div class="form-field"><label>Aplica LC 123/2006 (ME/EPP)?<span class="req">*</span></label>
-    ${sel('lc123','<option value="sim">Sim — aplica benefícios ME/EPP</option><option value="nao">Não se aplica</option>')}
+
+<!-- 9. Fiscalização -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">9. Fiscalização do Contrato <span class="ref">Arts. 117-123 LLC</span></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    ${inp('fiscal_nome','Nome do fiscal designado', v('fiscal_nome')||dfd.responsavel)}
+    ${inp('fiscal_cargo','Cargo do fiscal', v('fiscal_cargo')||dfd.cargo)}
   </div>
 </div>
-<div class="form-field"><label>Dotação Orçamentária<span class="ref">Preenchida pela Contabilidade</span></label>
-  <input type="text" id="tr-dotacao" value="${esc(v('dotacao'))}" placeholder="A ser preenchida pelo setor de Contabilidade" ${r?'readonly':''}>
+
+<!-- 10. Sanções Administrativas -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">10. Sanções Administrativas <span class="ref">Arts. 155-163 LLC</span></label>
+  ${ta('sancoes','', 5, sancoes)}
 </div>
-<div class="form-field"><label>Responsável Técnico (Elaboração)<span class="req">*</span><span class="ref">Art. 5º, §3º IN</span></label>${inp('responsavel','Nome e cargo do responsável')}</div>
-${!r?`<div style="margin-top:8px;display:flex;gap:8px;">
+
+<!-- 11. Dotação Orçamentária -->
+<div class="form-field">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);">11. Dotação Orçamentária <span class="ref">Art. 7º LLC</span></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px;">
+    ${inp('dotacao_unidade','Unidade orçamentária')}
+    ${inp('dotacao_funcao','Função')}
+    ${inp('dotacao_subfuncao','Subfunção')}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px;">
+    ${inp('dotacao_programa','Programa')}
+    ${inp('dotacao_acao','Ação')}
+    ${inp('dotacao_natureza','Natureza da despesa')}
+  </div>
+  ${inp('dotacao_fonte','Fonte de recursos')}
+</div>
+
+<!-- Modalidade / Critério -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+  <div class="form-field">
+    <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;">Modalidade Sugerida <span class="req">*</span></label>
+    ${sel('modalidade', modalidadeOpts)}
+  </div>
+  <div class="form-field">
+    <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;">Critério de Julgamento <span class="req">*</span></label>
+    ${sel('criterio', criterioOpts)}
+  </div>
+  <div class="form-field">
+    <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;">Modo de Disputa</label>
+    ${sel('modo_disputa', dispOpts)}
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+  <div class="form-field">
+    <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;">Garantia Contratual <span class="ref">Arts. 96-102 LLC</span></label>
+    ${sel('garantia', garantiaOpts)}
+  </div>
+  <div class="form-field">
+    <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;">Aplica LC 123/2006 (ME/EPP)?</label>
+    ${sel('lc123', lc123Opts)}
+  </div>
+</div>
+
+<!-- Responsável -->
+<div class="form-field">
+  <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;">Responsável Técnico (Elaboração) <span class="req">*</span></label>
+  ${inp('responsavel','Nome e cargo do responsável', v('responsavel')||dfd.responsavel)}
+</div>
+
+${!r ? `<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
   <button class="btn btn-primary" onclick="salvarDocEtapa('TR')">💾 Salvar Termo de Referência</button>
-</div>`:''}`;
+  <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('TR')">📄 Gerar PDF</button>
+</div>` : ''}`;
 }
+
+// ── [TR] Renderiza linhas da tabela de itens ──
+function trRenderItensRows(itens) {
+  if (!itens.length) return `<tr id="tr-item-empty"><td colspan="7" style="padding:12px;text-align:center;color:var(--muted);font-size:12px;">Nenhum item. Clique em "Sincronizar com DFD" ou "+ Adicionar item".</td></tr>`;
+  return itens.map((it, i) => {
+    const vu = parseFloat(String(it.valor_unitario||0).replace(/\./g,'').replace(',','.'));
+    const qt = parseFloat(it.quantidade||1);
+    const vt = vu * qt;
+    const fmtBRL = n => n > 0 ? n.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+    return `<tr id="tr-item-${i}" data-idx="${i}">
+      <td style="padding:3px 5px;border:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted);">${i+1}</td>
+      <td style="padding:2px;border:1px solid var(--border);">
+        <input type="text" value="${esc(it.descricao||it.nome||'')}" placeholder="Descrição..."
+          style="width:100%;padding:4px 6px;background:transparent;border:none;color:var(--text);font-size:12px;outline:none;"
+          oninput="trEditItem(${i},'descricao',this.value)"></td>
+      <td style="padding:2px;border:1px solid var(--border);">
+        <input type="text" value="${esc(it.unidade||'UN')}"
+          style="width:100%;padding:4px 6px;background:transparent;border:none;color:var(--text);font-size:12px;outline:none;text-align:center;text-transform:uppercase;"
+          oninput="trEditItem(${i},'unidade',this.value)"></td>
+      <td style="padding:2px;border:1px solid var(--border);">
+        <input type="number" value="${qt}" min="0.001" step="any"
+          style="width:100%;padding:4px 6px;background:transparent;border:none;color:var(--text);font-size:12px;outline:none;text-align:center;"
+          oninput="trEditItem(${i},'quantidade',parseFloat(this.value)||1)"></td>
+      <td style="padding:2px;border:1px solid var(--border);">
+        <input type="number" value="${vu||''}" min="0" step="0.01" placeholder="0,00"
+          style="width:100%;padding:4px 6px;background:transparent;border:none;color:var(--text);font-size:12px;outline:none;text-align:right;"
+          oninput="trEditItem(${i},'valor_unitario',parseFloat(this.value)||0)"></td>
+      <td style="padding:4px 6px;border:1px solid var(--border);text-align:right;font-size:12px;color:var(--text2);" id="tr-vt-${i}">${vt>0?'R$ '+fmtBRL(vt):'—'}</td>
+      <td style="padding:2px;border:1px solid var(--border);text-align:center;">
+        <button onclick="trRemoverItem(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 4px;">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Estado dos itens do TR
+let _trItens = [];
+
+function trEditItem(idx, campo, valor) {
+  if (!_trItens[idx]) return;
+  _trItens[idx][campo] = valor;
+  const vu = parseFloat(String(_trItens[idx].valor_unitario||0));
+  const qt = parseFloat(_trItens[idx].quantidade||1);
+  const vt = vu * qt;
+  const fmtBRL = n => n > 0 ? n.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+  const vtEl = document.getElementById('tr-vt-' + idx);
+  if (vtEl) vtEl.textContent = vt > 0 ? 'R$ ' + fmtBRL(vt) : '—';
+  // Recalcular total geral
+  const total = _trItens.reduce((s,it)=>{
+    const v=parseFloat(String(it.valor_unitario||0)); const q=parseFloat(it.quantidade||1); return s+v*q;
+  },0);
+  const totalEl = document.getElementById('tr-total-geral');
+  if (totalEl) totalEl.textContent = total > 0 ? 'R$ ' + fmtBRL(total) : '—';
+  trAtualizarPreview();
+}
+
+function trRemoverItem(idx) {
+  _trItens.splice(idx, 1);
+  document.getElementById('tr-itens-tbody').innerHTML = trRenderItensRows(_trItens);
+  trAtualizarPreview();
+}
+
+function trAdicionarItem() {
+  _trItens.push({descricao:'', unidade:'UN', quantidade:1, valor_unitario:0});
+  document.getElementById('tr-itens-tbody').innerHTML = trRenderItensRows(_trItens);
+  const rows = document.querySelectorAll('#tr-itens-tbody tr');
+  rows[rows.length-1]?.querySelector('input')?.focus();
+}
+
+function trSincronizarDFD() {
+  const dfd = herdarDadosDFD();
+  if (!dfd.itens?.length) { toast('DFD sem itens para sincronizar', 'error'); return; }
+  _trItens = dfd.itens.map(it => ({...it, valor_unitario: it.valor_unitario||0}));
+  document.getElementById('tr-itens-tbody').innerHTML = trRenderItensRows(_trItens);
+  toast('✅ Itens sincronizados do DFD', 'success');
+  trAtualizarPreview();
+}
+
+// Atualiza preview ao vivo do TR
+function trAtualizarPreview() {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const previewEl = document.getElementById('etapa-split-preview');
+  if (!previewEl) return;
+  // Constrói preview rápido do TR atual
+  const dfd = herdarDadosDFD();
+  const { municipio, hoje } = (typeof _prefHeader === 'function') ? _prefHeader() : {municipio:'Município', hoje: new Date().toLocaleDateString('pt-BR')};
+  const get = id => document.getElementById('tr-'+id)?.value || '';
+  const objeto = get('objeto') || dfd.objeto || '—';
+  const just = get('justificativa') || '—';
+  const prazo = (get('prazo_dias') || '—') + ' ' + (get('prazo_unidade')==='dias_uteis'?'dias úteis':'dias corridos');
+  const local = get('local_entrega') || '—';
+  const totalItens = _trItens.reduce((s,it)=>s+parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1),0);
+  const fmtBRL = n => n > 0 ? 'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  previewEl.innerHTML = `${(typeof _spHeader==='function')?_spHeader('Termo de Referência', proc):''}
+  <div class="sp-doc-title">TERMO DE REFERÊNCIA</div>
+  <div class="sp-proc">Processo nº ${proc.numero_protocolo||'—'}</div>
+  <div class="sp-secao"><div class="sp-secao-titulo">1. Do Objeto</div>
+    <div class="sp-body">${objeto}</div></div>
+  <div class="sp-secao"><div class="sp-secao-titulo">2. Da Justificativa</div>
+    <div class="sp-body">${just.slice(0,300)}${just.length>300?'…':''}</div></div>
+  <div class="sp-secao"><div class="sp-secao-titulo">3. Dos Quantitativos</div>
+    ${_trItens.length ? `<div style="font-size:9.5pt;"><strong>${_trItens.length} item(s)</strong> · Total: <strong style="color:green;">${fmtBRL(totalItens)}</strong></div>` : '<div style="color:#aaa;font-size:9.5pt;">Sem itens</div>'}
+  </div>
+  <div class="sp-chips">
+    <div class="sp-chip"><b>Prazo</b> ${prazo}</div>
+    <div class="sp-chip"><b>Local</b> ${local.slice(0,25)||'—'}</div>
+    <div class="sp-chip"><b>Valor Total</b> ${fmtBRL(totalItens)}</div>
+    <div class="sp-chip"><b>Modalidade</b> ${({'pregao_eletronico':'Pregão Eletr.','pregao_presencial':'Pregão Pres.','concorrencia':'Concorrência','dispensa':'Dispensa'}[get('modalidade')])||'—'}</div>
+  </div>`;
+}
+
+// [TR] Gerar seção com IA
+async function trGerarSecaoIA(campo, label, btnEl) {
+  const proc = _processoAtual;
+  const dfd = herdarDadosDFD();
+  const municipio = _perfil?._prefeitura?.municipio || 'município';
+  const objeto = document.getElementById('tr-objeto')?.value || dfd.objeto || '';
+  const prompts = {
+    justificativa: `Redija a justificativa do Termo de Referência para: "${objeto}". Município: ${municipio}. Use tom de execução: foque em como "a aquisição parcelada proporciona gestão financeira equilibrada, evitando estocagem excessiva e garantindo fornecimento contínuo". Cite a Lei 14.133/2021. Mínimo 120 palavras. Retorne APENAS o texto.`,
+    especificacoes: `Redija as especificações técnicas do Termo de Referência para: "${objeto}". Liste requisitos mínimos de qualidade, procedência, certificações e padrões técnicos. Mínimo 100 palavras. Retorne APENAS o texto.`,
+    obrig_contratada: `Redija as obrigações da contratada no TR para: "${objeto}". Use numeração 7.1.1, 7.1.2... Inclua obrigatoriamente: entrega conforme especificação, nota fiscal, encargos trabalhistas, responsabilidade civil, aceite de acréscimos de 25% (art. 125 LLC). Mínimo 150 palavras. Retorne APENAS o texto.`,
+    obrig_contratante: `Redija as obrigações do contratante (Prefeitura) no TR para: "${objeto}". Use numeração 8.1.1, 8.1.2... Inclua: fiscalização, pagamento, informações, sanções. Mínimo 100 palavras. Retorne APENAS o texto.`,
+  };
+  const prompt = prompts[campo] || `Redija texto formal para o campo "${label}" do TR para: "${objeto}". Município: ${municipio}. Mínimo 80 palavras. Retorne APENAS o texto.`;
+  const el = document.getElementById('tr-' + campo);
+  if (!el) return;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳...'; }
+  try {
+    const resp = await fetch('/api/ia', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt, max_tokens: 600}) });
+    const data = await resp.json();
+    const texto = (data.content||'').trim();
+    let i = 0;
+    const interval = setInterval(() => {
+      el.value = texto.slice(0, i); i += 10; trAtualizarPreview();
+      if (i > texto.length) { el.value = texto; clearInterval(interval); trAtualizarPreview(); }
+    }, 12);
+  } catch(e) { toast('Erro IA: ' + e.message, 'error'); }
+  finally { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✨ Gerar com IA'; } }
+}
+
 
 function formPP(dados, readonly) {
   const r = readonly;
@@ -3406,33 +4279,32 @@ function switchTab3(tab) {
     const el = document.getElementById('tab-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
-}
-
-// ── SALVAR DOCUMENTO DE ETAPA ──
-async function salvarDocEtapa(tipo) {
-  if (!_processoAtual) return;
-  const proc = _processoAtual;
-  const dados = coletarDadosForm(tipo);
-
-  try {
-    const existing = proc.docs?.find(d => d.tipo === tipo);
-    if (existing) {
-      await sb.from('documentos').update({
-        dados, atualizado_em: new Date().toISOString(), status: 'enviado'
-      }).eq('id', existing.id);
-    } else {
-      await sb.from('documentos').insert({
-        processo_id: proc.id, tipo, dados, versao: 1,
-        status: 'enviado', criado_por: _user.id,
-      });
-    }
-    toast('Documento salvo com sucesso!', 'success');
-    etapaMarcarSalvo(tipo);
-    await abrirProcesso(proc.id);
-  } catch(e) {
-    toast('Erro ao salvar: ' + e.message, 'error');
+  // [ETP] Inicializar contadores de palavras ao abrir aba ETP
+  if (tab === 'etp') {
+    setTimeout(() => {
+      ['1','2','3','4','5','6','7','8','9','10','11','12','14'].forEach(s => etpAtualizarWC(s));
+    }, 50);
+  }
+  // [TR] Inicializar _trItens ao abrir aba TR
+  if (tab === 'tr') {
+    setTimeout(() => {
+      if (!_trItens.length) {
+        const trDoc = _processoAtual?.docs?.find(d => d.tipo === 'TR');
+        if (trDoc?.dados?.itens) {
+          try { _trItens = typeof trDoc.dados.itens === 'string' ? JSON.parse(trDoc.dados.itens) : trDoc.dados.itens; }
+          catch(e) {}
+        }
+        if (!_trItens.length) {
+          const dfd = herdarDadosDFD();
+          if (dfd.itens?.length) _trItens = dfd.itens.map(it => ({...it, valor_unitario: it.valor_unitario || 0}));
+        }
+      }
+    }, 50);
   }
 }
+
+// ── SALVAR DOCUMENTO DE ETAPA — substituído pela versão em formETP/formTR acima ──
+// salvarDocEtapa agora aceita dadosExternos para o ETP e TR
 
 function coletarDadosForm(tipo) {
   const dados = {};
@@ -3440,6 +4312,21 @@ function coletarDadosForm(tipo) {
     ['area','ref_dfd','necessidade','fundamentacao','requisitos','solucoes',
      'solucao_escolhida','descricao_solucao','quantidade','valor','viabilidade','responsavel']
       .forEach(k => { const el = document.getElementById('etp-'+k); if(el) dados[k] = el.value; });
+    // [ETP] Coletar seções do acordeão
+    ['1','2','3','4','5','6','7','8','9','10','11','12','14'].forEach(s => {
+      const el = document.getElementById('etp-sec-'+s); if(el) dados['sec'+s] = el.value;
+    });
+    const vr = document.getElementById('etp-valor_ref'); if(vr) dados.valor_ref = vr.value;
+    const mv = document.getElementById('etp-metodologia_valor'); if(mv) dados.metodologia_valor = mv.value;
+    const viab = document.querySelector('input[name="etp-viabilidade"]:checked');
+    dados.viabilidade = viab ? viab.value : 'viavel';
+    const rt = document.getElementById('etp-responsavel_tecnico'); if(rt) dados.responsavel_tecnico = rt.value;
+    dados.riscos = coletarRiscosETP();
+    // aliases para compatibilidade com preview/PDF
+    dados.necessidade = dados.sec1 || dados.necessidade || '';
+    dados.solucao_escolhida = dados.sec5 || dados.solucao_escolhida || '';
+    dados.valor = dados.valor_ref || dados.valor || '';
+    dados.responsavel = dados.responsavel_tecnico || dados.responsavel || '';
   } else if (tipo === 'MAPA_RISCO') {
     const riscos = [];
     document.querySelectorAll('.risco-row').forEach(row => {
@@ -3450,10 +4337,18 @@ function coletarDadosForm(tipo) {
     });
     dados.riscos = riscos;
   } else if (tipo === 'TR') {
-    ['objeto','fundamentacao','descricao','quantidade','unidade','valor','modalidade','criterio',
-     'modo_disputa','prazo','local','pagamento','obrig_contratante','obrig_contratada',
-     'recebimento','penalidades','garantia','lc123','dotacao','responsavel']
+    // [TR] Campos novos
+    ['objeto','justificativa','especificacoes','prazo_dias','prazo_unidade','local_entrega',
+     'forma_pagamento','prazo_pagamento','condicoes_pagamento','obrig_contratada','obrig_contratante',
+     'fiscal_nome','fiscal_cargo','sancoes','dotacao_unidade','dotacao_funcao','dotacao_subfuncao',
+     'dotacao_programa','dotacao_acao','dotacao_natureza','dotacao_fonte',
+     'modalidade','criterio','modo_disputa','garantia','lc123','responsavel',
+     // compatibilidade legada
+     'fundamentacao','descricao','quantidade','unidade','valor','prazo','local','pagamento',
+     'recebimento','penalidades','dotacao']
       .forEach(k => { const el = document.getElementById('tr-'+k); if(el) dados[k] = el.value; });
+    // Itens da tabela
+    dados.itens = JSON.stringify(_trItens || []);
   } else if (tipo === 'PP') {
     ['item','quantidade','unidade','metodologia','valor_referencia','responsavel']
       .forEach(k => { const el = document.getElementById('pp-'+k); if(el) dados[k] = el.value; });
@@ -5163,36 +6058,57 @@ function previewProtocolo(dados, proc) {
   <div class="sp-assinatura"><div class="linha"></div><div class="nome">${dados.servidor_recebeu||'Servidor Responsável'}</div><div class="cargo-text">Setor de Protocolo</div></div>`;
 }
 
-// ── Etapa 3: ETP + TR (preview combinado) ────────────────
-function previewETP3(proc) {
+// ── Etapa 3: ETP + TR (preview combinado atualizado) ────────────────
+function previewETP3(proc, mode) {
   const dfdDoc = proc?.docs?.find(d => d.tipo === 'DFD');
   const etpDoc = proc?.docs?.find(d => d.tipo === 'ETP');
   const trDoc  = proc?.docs?.find(d => d.tipo === 'TR');
   const dfd = dfdDoc?.dados || {};
   const etp = etpDoc?.dados || {};
   const tr  = trDoc?.dados  || {};
-  return `${_spHeader('Estudo Técnico Preliminar + Termo de Referência', proc)}
-  <div class="sp-secao">
-    <div class="sp-secao-titulo">ETP — Necessidade</div>
-    <div class="sp-body">${etp.necessidade || dfd.justificativa || '<em style="color:#aaa">Preencha o ETP para visualizar</em>'}</div>
+  const getLive = id => { if(mode==='live'){ const el=document.getElementById('etp-sec-'+id); return el?el.value:''; } return ''; };
+  const necessidade = getLive('1') || etp.sec1 || etp.necessidade || dfd.justificativa || '';
+  const solucao     = getLive('5') || etp.sec5 || etp.solucao_escolhida || '';
+  const fundLegal   = getLive('7') || etp.sec7 || etp.fund_legal || '';
+  const resultados  = getLive('8') || etp.sec8 || etp.resultados || '';
+  const viabilidade = (() => { if(mode==='live'){ const el=document.querySelector('input[name="etp-viabilidade"]:checked'); return el?el.value:(etp.viabilidade||'viavel'); } return etp.viabilidade||'viavel'; })();
+  const valorRef    = (() => { if(mode==='live'){ const el=document.getElementById('etp-valor_ref'); return el?el.value:''; } return ''; })() || etp.valor_ref || etp.valor || dfd.valor || '';
+  const trObjeto    = (() => { if(mode==='live'){ const el=document.getElementById('tr-objeto'); return el?el.value:''; } return ''; })() || tr.objeto || dfd.objeto || '';
+  const riscos = etp.riscos || [];
+  const { municipio } = _prefHeader();
+  const di = (typeof getDadosInstitucionais==='function') ? getDadosInstitucionais() : {};
+  const brasaoHtml = di.brasao ? `<img src="${di.brasao}" style="width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;">` : '';
+  const trunc = (s,n) => s ? (s.slice(0,n) + (s.length>n?'\u2026':'')) : '<em style="color:#aaa">\u2014</em>';
+  return `
+  <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
+    ${brasaoHtml}<div style="font-weight:bold;font-size:11pt;text-transform:uppercase;">${di.nome||'Prefeitura Municipal de '+municipio}</div>
+    ${di.cnpj?`<div style="font-size:9pt;color:#555;">CNPJ: ${di.cnpj}</div>`:''}
   </div>
-  <div class="sp-secao">
-    <div class="sp-secao-titulo">ETP — Solução Escolhida</div>
-    <div class="sp-body">${etp.solucao_escolhida || '<em style="color:#aaa">—</em>'}</div>
-  </div>
-  <div class="sp-secao">
-    <div class="sp-secao-titulo">TR — Objeto</div>
-    <div class="sp-body">${tr.objeto || dfd.objeto || '<em style="color:#aaa">Preencha o TR para visualizar</em>'}</div>
-  </div>
-  ${tr.prazo?`<div class="sp-secao"><div class="sp-secao-titulo">TR — Prazo e Local</div><div class="sp-body"><b>Prazo:</b> ${tr.prazo}<br><b>Local:</b> ${tr.local||'—'}</div></div>`:''}
+  <div class="sp-doc-title">ESTUDO TÉCNICO PRELIMINAR</div>
+  <div class="sp-proc">Processo n\u00ba ${proc?.numero_protocolo||'\u2014'}</div>
+  <div class="sp-secao"><div class="sp-secao-titulo">1. Descri\u00e7\u00e3o da Necessidade</div>
+    <div class="sp-body">${trunc(necessidade,380)}</div></div>
+  <div class="sp-secao"><div class="sp-secao-titulo">5. Descri\u00e7\u00e3o da Solu\u00e7\u00e3o</div>
+    <div class="sp-body">${trunc(solucao,280)}</div></div>
+  ${fundLegal?`<div class="sp-secao"><div class="sp-secao-titulo">7. Fundamenta\u00e7\u00e3o Legal</div><div class="sp-body">${trunc(fundLegal,250)}</div></div>`:''}
+  ${resultados?`<div class="sp-secao"><div class="sp-secao-titulo">8. Resultados Pretendidos</div><div class="sp-body">${trunc(resultados,200)}</div></div>`:''}
+  ${riscos.length?`<div class="sp-secao"><div class="sp-secao-titulo">13. Mapa de Riscos (${riscos.length})</div>
+    <table style="width:100%;font-size:8.5pt;border-collapse:collapse;"><thead><tr style="background:#e8e8e8;">
+      <th style="padding:3px 5px;border:1px solid #aaa;text-align:left;">Risco</th>
+      <th style="padding:3px 5px;border:1px solid #aaa;width:60px;text-align:center;">Prob.</th>
+      <th style="padding:3px 5px;border:1px solid #aaa;width:60px;text-align:center;">Impacto</th>
+    </tr></thead><tbody>
+    ${riscos.slice(0,4).map(r=>`<tr><td style="padding:3px 5px;border:1px solid #ccc;">${r.risco||'\u2014'}</td>
+      <td style="padding:3px 5px;border:1px solid #ccc;text-align:center;">${r.prob||'\u2014'}</td>
+      <td style="padding:3px 5px;border:1px solid #ccc;text-align:center;">${r.impacto||'\u2014'}</td></tr>`).join('')}
+    </tbody></table></div>`:''}
   <div class="sp-chips">
-    <div class="sp-chip"><b>Valor ETP</b> R$ ${etp.valor||dfd.valor||'—'}</div>
-    <div class="sp-chip"><b>Modalidade</b> ${({pregao_eletronico:'Pregão Eletr.',concorrencia:'Concorrência',dispensa:'Dispensa'}[tr.modalidade])||tr.modalidade||'—'}</div>
-    <div class="sp-chip"><b>Critério</b> ${({menor_preco:'Menor Preço',maior_desconto:'Maior Desconto'}[tr.criterio])||tr.criterio||'—'}</div>
-    <div class="sp-chip"><b>Viabilidade</b> ${etp.viabilidade==='viavel'?'✅ Viável':'⚠️ —'}</div>
+    <div class="sp-chip"><b>Valor Est.</b> R$ ${valorRef||'\u2014'}</div>
+    <div class="sp-chip"><b>Viabilidade</b> ${viabilidade==='viavel'?'\u2705 Vi\u00e1vel':'\u274c Invi\u00e1vel'}</div>
+    <div class="sp-chip"><b>TR Objeto</b> ${trObjeto.slice(0,25)||'\u2014'}</div>
+    <div class="sp-chip"><b>Modalidade</b> ${({pregao_eletronico:'Preg\u00e3o Eletr.',concorrencia:'Concorr\u00eancia',dispensa:'Dispensa'}[tr.modalidade])||'\u2014'}</div>
   </div>`;
 }
-
 // ── Etapa 4: Pesquisa de Preços ───────────────────────────
 function previewPP(dados, proc) {
   const { municipio, hoje } = _prefHeader();
@@ -5732,6 +6648,864 @@ function ppDrop(e, toId) {
 function recalcularMedia() { ppRecalcular(); }
 
 
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 1 — SNAPSHOT IMUTÁVEL (SHA-256)
+// ══════════════════════════════════════════════════════════
+
+// Gera hash SHA-256 de uma string, retorna hex truncado formatado
+async function gerarHashSHA256(texto) {
+  const enc = new TextEncoder();
+  const buffer = await crypto.subtle.digest('SHA-256', enc.encode(texto));
+  const array = Array.from(new Uint8Array(buffer));
+  return array.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+// Formata hash para exibição (grupos de 4 separados por -)
+function formatarHash(hash) {
+  return hash.match(/.{1,4}/g)?.join('-') || hash;
+}
+
+// Salva snapshot imutável do processo antes de avançar etapa ou gerar documento
+async function salvarSnapshotProcesso(proc, documentType) {
+  if (!proc) return null;
+  try {
+    const snapshotJson = JSON.stringify({
+      processo: proc,
+      usuario: { id: _user?.id, nome: _perfil?.nome },
+      timestamp: new Date().toISOString(),
+      document_type: documentType
+    });
+    const hash = await gerarHashSHA256(snapshotJson);
+
+    // Buscar versão atual para incrementar
+    const { data: snapExist } = await sb.from('process_snapshots')
+      .select('version')
+      .eq('process_id', proc.id)
+      .eq('document_type', documentType)
+      .order('version', { ascending: false })
+      .limit(1);
+    const version = (snapExist?.[0]?.version || 0) + 1;
+
+    const { data, error } = await sb.from('process_snapshots').insert({
+      process_id: proc.id,
+      document_type: documentType,
+      version,
+      snapshot_json: snapshotJson,
+      snapshot_hash: hash,
+      generated_by: _user?.id,
+      generated_at: new Date().toISOString()
+    }).select().single();
+
+    if (error) {
+      // Tabela pode não existir — loga instrução SQL no console
+      console.warn('[INSTITUCIONAL] Tabela process_snapshots não encontrada. Execute no Supabase:');
+      console.info(`CREATE TABLE IF NOT EXISTS process_snapshots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  process_id uuid REFERENCES processos(id) ON DELETE CASCADE,
+  document_type text NOT NULL,
+  version integer DEFAULT 1,
+  snapshot_json text,
+  snapshot_hash text,
+  generated_by uuid,
+  generated_at timestamptz DEFAULT now()
+);`);
+      return { hash, version, error: true };
+    }
+    return { hash, version, data };
+  } catch(e) {
+    console.error('[INSTITUCIONAL] Erro ao salvar snapshot:', e);
+    return null;
+  }
+}
+
+// Carrega e renderiza lista de snapshots na aba "Versões"
+async function carregarSnapshots(procId) {
+  const cont = document.getElementById('tab-content-snaps');
+  if (!cont) return;
+  cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);">Carregando versões...</div>`;
+  try {
+    const { data, error } = await sb.from('process_snapshots')
+      .select('*')
+      .eq('process_id', procId)
+      .order('generated_at', { ascending: false });
+    if (error || !data?.length) {
+      cont.innerHTML = `<div class="empty" style="padding:30px;"><h4>Nenhum snapshot registrado</h4><p>Snapshots são criados ao avançar etapas ou gerar documentos.</p></div>`;
+      return;
+    }
+    cont.innerHTML = data.map(s => `
+      <div class="snapshot-item">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="snapshot-badge">${s.document_type} v${s.version}</span>
+            <span style="font-size:12px;color:var(--text2);">${new Date(s.generated_at).toLocaleString('pt-BR')}</span>
+          </div>
+          <div class="snapshot-hash" title="${s.snapshot_hash}">${formatarHash(s.snapshot_hash).slice(0,24)}…</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="verSnapshot(${JSON.stringify(s).replace(/"/g,'&quot;')})">👁 Ver versão</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--red);font-size:12px;">Erro ao carregar snapshots: ${e.message}</div>`;
+  }
+}
+
+// Abre modal com snapshot readonly
+function verSnapshot(snap) {
+  if (typeof snap === 'string') snap = JSON.parse(snap.replace(/&quot;/g, '"'));
+  document.getElementById('modal-snap-titulo').textContent = `📸 ${snap.document_type} — Versão ${snap.version}`;
+  document.getElementById('modal-snap-desc').textContent = `Snapshot imutável · registrado em ${new Date(snap.generated_at).toLocaleString('pt-BR')}`;
+  document.getElementById('modal-snap-hash').textContent = formatarHash(snap.snapshot_hash);
+  document.getElementById('modal-snap-tipo').textContent = snap.document_type;
+  document.getElementById('modal-snap-versao').textContent = `v${snap.version}`;
+  document.getElementById('modal-snap-data').textContent = new Date(snap.generated_at).toLocaleString('pt-BR');
+  try {
+    const parsed = JSON.parse(snap.snapshot_json);
+    document.getElementById('modal-snap-json').textContent = JSON.stringify(parsed, null, 2);
+  } catch(e) {
+    document.getElementById('modal-snap-json').textContent = snap.snapshot_json || '(vazio)';
+  }
+  window._hashAtual = snap.snapshot_hash;
+  document.getElementById('modal-snapshot').classList.add('show');
+}
+
+function copiarHashAtual() {
+  if (window._hashAtual) {
+    navigator.clipboard.writeText(window._hashAtual).then(() => toast('Hash copiado!', 'success'));
+  }
+}
+
+// Alterna entre as tabs do processo
+function switchProcTab(tab) {
+  ['mov','snaps','audit'].forEach(t => {
+    document.getElementById('tab-' + t)?.classList.toggle('active', t === tab);
+    const cont = document.getElementById('tab-content-' + t);
+    if (cont) cont.style.display = t === tab ? '' : 'none';
+  });
+  const proc = _processoAtual;
+  if (!proc) return;
+  if (tab === 'snaps') carregarSnapshots(proc.id);
+  if (tab === 'audit') carregarAuditLog(proc.id);
+}
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 2 — PDF PROFISSIONAL (html2pdf.js)
+// ══════════════════════════════════════════════════════════
+
+async function gerarPDFProfissional(tipo, dados, proc) {
+  // Gera snapshot antes
+  const snap = await salvarSnapshotProcesso(proc, tipo);
+  const hash = snap?.hash || '';
+  const versao = snap?.version || 1;
+
+  const htmlContent = buildPDFHtml(tipo, dados, proc, hash, versao);
+  const pref = _perfil?._prefeitura || {};
+  const municipio = pref.municipio || (pref.nome || '').replace(/Prefeitura (Municipal de |de )/i,'').trim() || 'município';
+
+  // Cria elemento temporário
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;';
+  container.innerHTML = htmlContent;
+  document.body.appendChild(container);
+
+  toast('⏳ Gerando PDF profissional...', 'info');
+
+  const nomeArq = `${tipo}_${(proc.numero_protocolo || 'doc').replace('/','_')}.pdf`;
+
+  try {
+    await html2pdf().set({
+      margin: [20, 15, 25, 15],
+      filename: nomeArq,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css'] }
+    }).from(container).save();
+    toast('✅ PDF ' + nomeArq + ' gerado!', 'success');
+  } catch(e) {
+    toast('Erro ao gerar PDF: ' + e.message, 'error');
+    console.error('[INSTITUCIONAL] PDF error:', e);
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+// Override gerarPDFDoc para usar html2pdf quando disponível
+const _gerarPDFDocOriginal = window.gerarPDFDoc;
+window.gerarPDFDoc = async function(tipo) {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const doc = proc.docs?.find(d => d.tipo === tipo);
+  const dados = doc?.dados || {};
+
+  if (typeof html2pdf !== 'undefined') {
+    await gerarPDFProfissional(tipo, dados, proc);
+  } else if (tipo === 'DFD') {
+    await gerarDOCX(tipo, dados, proc);
+  } else {
+    toast('Gerando documento...', 'info');
+    const html = buildPDFHtml(tipo, dados, proc);
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 800);
+  }
+};
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 4 — CABEÇALHO INSTITUCIONAL REAL
+// ══════════════════════════════════════════════════════════
+
+// Abre o modal de dados institucionais carregando dados existentes
+async function abrirDadosInstitucionais() {
+  const pref = _perfil?._prefeitura;
+  if (!pref) { toast('Nenhuma prefeitura vinculada', 'error'); return; }
+  // Carregar dados extras do Supabase se existir
+  try {
+    const { data } = await sb.from('prefeituras').select('*').eq('id', pref.id).single();
+    if (data) {
+      document.getElementById('inst-prefeito').value = data.prefeito || '';
+      document.getElementById('inst-secretario').value = data.secretario || '';
+      document.getElementById('inst-endereco').value = data.endereco || '';
+      document.getElementById('inst-cep').value = data.cep || '';
+      document.getElementById('inst-telefone').value = data.telefone || '';
+      document.getElementById('inst-email').value = data.email_institucional || '';
+      // Brasão
+      if (data.brasao_base64) {
+        const el = document.getElementById('brasao-preview-el');
+        el.innerHTML = `<img src="${data.brasao_base64}" style="width:100%;height:100%;object-fit:contain;">`;
+      }
+    }
+  } catch(e) {}
+  document.getElementById('modal-dados-inst').classList.add('show');
+}
+
+// Carrega imagem do brasão como base64
+function carregarBrasao(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64 = e.target.result;
+    window._brasaoBase64 = base64;
+    const el = document.getElementById('brasao-preview-el');
+    el.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:contain;">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Salva dados institucionais no Supabase
+async function salvarDadosInstitucionais() {
+  const pref = _perfil?._prefeitura;
+  if (!pref) return;
+  const updates = {
+    prefeito: document.getElementById('inst-prefeito').value.trim(),
+    secretario: document.getElementById('inst-secretario').value.trim(),
+    endereco: document.getElementById('inst-endereco').value.trim(),
+    cep: document.getElementById('inst-cep').value.trim(),
+    telefone: document.getElementById('inst-telefone').value.trim(),
+    email_institucional: document.getElementById('inst-email').value.trim(),
+  };
+  if (window._brasaoBase64) updates.brasao_base64 = window._brasaoBase64;
+
+  try {
+    const { error } = await sb.from('prefeituras').update(updates).eq('id', pref.id);
+    if (error) throw error;
+    // Atualiza perfil local
+    Object.assign(_perfil._prefeitura, updates);
+    const ok = document.getElementById('inst-ok');
+    ok.textContent = '✅ Dados salvos com sucesso!';
+    ok.style.display = 'block';
+    setTimeout(() => { ok.style.display = 'none'; fecharModal('modal-dados-inst'); }, 2000);
+    toast('Dados institucionais atualizados!', 'success');
+  } catch(e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+// Retorna dados institucionais formatados para o cabeçalho dos documentos
+function getDadosInstitucionais() {
+  const pref = _perfil?._prefeitura || {};
+  const municipio = pref.municipio || (pref.nome || '').replace(/Prefeitura (Municipal de |de )/i, '').trim() || 'Município';
+  return {
+    nome: pref.nome || `Prefeitura Municipal de ${municipio}`,
+    municipio,
+    uf: pref.uf || 'GO',
+    cnpj: pref.cnpj || '',
+    endereco: pref.endereco || '',
+    cep: pref.cep || '',
+    telefone: pref.telefone || '',
+    email: pref.email_institucional || '',
+    prefeito: pref.prefeito || '',
+    secretario: pref.secretario || '',
+    brasao: pref.brasao_base64 || null,
+  };
+}
+
+// Gera bloco HTML do cabeçalho institucional para PDFs
+function buildCabecalhoInstitucional(di) {
+  const brasaoHtml = di.brasao
+    ? `<img src="${di.brasao}" style="width:55px;height:55px;object-fit:contain;vertical-align:middle;margin-right:12px;">`
+    : `<div style="width:55px;height:55px;background:#f0f0f0;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;font-size:24px;margin-right:12px;vertical-align:middle;">🏛️</div>`;
+  return `
+  <div style="display:table;width:100%;border-bottom:2.5px solid #000;padding-bottom:10px;margin-bottom:14px;">
+    <div style="display:table-cell;vertical-align:middle;width:70px;">${brasaoHtml}</div>
+    <div style="display:table-cell;vertical-align:middle;text-align:center;">
+      <div style="font-family:Times New Roman,serif;font-size:13.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">${di.nome}</div>
+      <div style="font-size:10pt;margin-top:2px;">${di.cnpj ? 'CNPJ: ' + di.cnpj + ' · ' : ''}${di.municipio}/${di.uf}</div>
+      ${di.endereco ? `<div style="font-size:9.5pt;color:#444;">${di.endereco}${di.cep ? ' — CEP ' + di.cep : ''}</div>` : ''}
+      ${di.telefone || di.email ? `<div style="font-size:9.5pt;color:#444;">${di.telefone ? 'Tel.: ' + di.telefone : ''}${di.telefone && di.email ? ' · ' : ''}${di.email || ''}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 3 — HASH VISÍVEL NO DOCUMENTO
+// PRIORIDADE 5 — QR CODE DE VALIDAÇÃO
+// ══════════════════════════════════════════════════════════
+
+// Gera HTML do rodapé com hash e QR code embutido (como URI de dados)
+function buildRodapeIntegridade(hash, versao, proc, tipo) {
+  if (!hash) return '';
+  const hashFormatado = formatarHash(hash);
+  const url = `https://licite.ai/validar/${hash.toLowerCase()}`;
+  const hoje = new Date().toLocaleString('pt-BR');
+  // QR code será gerado via JS depois do render; usamos placeholder com ID
+  const qrId = 'qr-' + hash.slice(0, 8);
+  return `
+  <div class="hash-footer-block" id="hash-footer-${hash.slice(0,8)}">
+    ─────────────────────────────── INTEGRIDADE DO DOCUMENTO ───────────────────────────────<br>
+    Hash SHA-256: ${hashFormatado}<br>
+    Gerado em: ${hoje} · Versão: v${versao} · Processo: ${proc?.numero_protocolo || '—'} · Tipo: ${tipo}<br>
+    Autenticidade verificável em: ${url}<br>
+    <div id="${qrId}" style="display:inline-block;margin-top:6px;"></div>
+  </div>`;
+}
+
+// Gera QR codes em elementos placeholder após render
+function gerarQRCodes() {
+  document.querySelectorAll('[id^="qr-"]').forEach(el => {
+    if (el.querySelector('canvas') || el.querySelector('img')) return; // já gerado
+    const hash = el.id.replace('qr-', '');
+    const url = `https://licite.ai/validar/${hash}`;
+    try {
+      new QRCode(el, {
+        text: url,
+        width: 72,
+        height: 72,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e) { /* QRCode lib não carregada */ }
+  });
+}
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 6 — AUDITORIA MÍNIMA
+// ══════════════════════════════════════════════════════════
+
+// Registra uma linha no audit_log
+async function registrarAudit(procId, campo, valorAntigo, valorNovo, acao = 'edicao') {
+  try {
+    await sb.from('audit_logs').insert({
+      process_id: procId,
+      user_id: _user?.id,
+      user_name: _perfil?.nome || _user?.email || '?',
+      action: acao,
+      field_changed: campo,
+      old_value: String(valorAntigo || ''),
+      new_value: String(valorNovo || ''),
+      created_at: new Date().toISOString()
+    });
+  } catch(e) {
+    console.warn('[INSTITUCIONAL] audit_logs não disponível. SQL:');
+    console.info(`CREATE TABLE IF NOT EXISTS audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  process_id uuid REFERENCES processos(id) ON DELETE CASCADE,
+  user_id uuid,
+  user_name text,
+  action text,
+  field_changed text,
+  old_value text,
+  new_value text,
+  created_at timestamptz DEFAULT now(),
+  ip_address text
+);`);
+  }
+}
+
+// Carrega e renderiza log de auditoria
+async function carregarAuditLog(procId) {
+  const cont = document.getElementById('tab-content-audit');
+  if (!cont) return;
+  cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);">Carregando auditoria...</div>`;
+  try {
+    const { data, error } = await sb.from('audit_logs')
+      .select('*')
+      .eq('process_id', procId)
+      .order('created_at', { ascending: false });
+    if (error || !data?.length) {
+      cont.innerHTML = `<div class="empty" style="padding:30px;"><h4>Nenhum registro de auditoria</h4><p>Alterações em campos críticos serão registradas aqui.</p></div>`;
+      return;
+    }
+    cont.innerHTML = `<div style="padding:8px 0;">` + data.map(a => `
+      <div class="audit-item">
+        <div class="audit-dot"></div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="audit-field">${a.field_changed || a.action}</span>
+            <span style="font-size:11px;color:var(--muted);">${new Date(a.created_at).toLocaleString('pt-BR')}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">Por: ${a.user_name || '—'}</div>
+          ${a.old_value ? `<div style="margin-top:4px;"><span class="audit-old">${a.old_value.slice(0,80)}${a.old_value.length>80?'…':''}</span> → <span class="audit-new">${(a.new_value||'').slice(0,80)}${(a.new_value||'').length>80?'…':''}</span></div>` : ''}
+        </div>
+      </div>
+    `).join('') + `</div>`;
+  } catch(e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--red);font-size:12px;">Tabela de auditoria ainda não criada. Execute o SQL no console.</div>`;
+  }
+}
+
+// Compara campos críticos antes e depois do salvar documento
+async function auditarAlteracoesDoc(procId, tipo, dadosAntigos, dadosNovos) {
+  const CAMPOS_CRITICOS = {
+    DFD: ['objeto', 'valor', 'justificativa', 'quantidade'],
+    ETP: ['necessidade', 'valor', 'viabilidade'],
+    TR: ['objeto', 'valor', 'modalidade', 'criterio'],
+    PP: ['valor_referencia', 'metodologia'],
+    MAPA_RISCO: [],
+  };
+  const campos = CAMPOS_CRITICOS[tipo] || [];
+  for (const campo of campos) {
+    const antigo = String(dadosAntigos?.[campo] || '');
+    const novo = String(dadosNovos?.[campo] || '');
+    if (antigo !== novo) {
+      await registrarAudit(procId, `${tipo}.${campo}`, antigo, novo);
+    }
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 7 — CATMAT/CATSER (Autocomplete)
+// ══════════════════════════════════════════════════════════
+
+const CATMAT_DATASET = [
+  // Medicamentos
+  {catmat:'5350000',nome:'Dipirona 500mg/mL 2mL',unidade:'AMP',desc:'Dipirona sódica solução injetável'},
+  {catmat:'5350010',nome:'Amoxicilina 500mg',unidade:'CPS',desc:'Amoxicilina cápsula'},
+  {catmat:'5350020',nome:'Paracetamol 750mg',unidade:'CPS',desc:'Paracetamol comprimido'},
+  {catmat:'5350030',nome:'Ibuprofeno 600mg',unidade:'CPS',desc:'Ibuprofeno comprimido revestido'},
+  {catmat:'5350040',nome:'Soro Fisiológico 500mL',unidade:'FR',desc:'Cloreto de sódio 0,9% frasco'},
+  {catmat:'5350050',nome:'Omeprazol 20mg',unidade:'CPS',desc:'Omeprazol cápsula'},
+  {catmat:'5350060',nome:'Metformin 850mg',unidade:'CPS',desc:'Metformina cloridrato comprimido'},
+  {catmat:'5350070',nome:'Enalapril 10mg',unidade:'CPS',desc:'Enalapril maleato comprimido'},
+  {catmat:'5350080',nome:'Losartana 50mg',unidade:'CPS',desc:'Losartana potássica comprimido'},
+  {catmat:'5350090',nome:'Azitromicina 500mg',unidade:'CPS',desc:'Azitromicina comprimido'},
+  // Material escritório
+  {catmat:'7510010',nome:'Papel A4 75g/m²',unidade:'RS',desc:'Resma papel sulfite A4 500 folhas'},
+  {catmat:'7510020',nome:'Caneta Esferográfica Azul',unidade:'UN',desc:'Caneta esferográfica ponta média'},
+  {catmat:'7510030',nome:'Caneta Esferográfica Preta',unidade:'UN',desc:'Caneta esferográfica ponta média'},
+  {catmat:'7510040',nome:'Lápis Preto nº 2',unidade:'UN',desc:'Lápis grafite HB nº 2'},
+  {catmat:'7510050',nome:'Borracha Escolar',unidade:'UN',desc:'Borracha branca plástica'},
+  {catmat:'7510060',nome:'Grampeador 26/6',unidade:'UN',desc:'Grampeador metálico capacidade 50 folhas'},
+  {catmat:'7510070',nome:'Grampo 26/6 cx 5000',unidade:'CX',desc:'Grampo galvanizado caixa 5000un'},
+  {catmat:'7510080',nome:'Pasta Suspensa',unidade:'UN',desc:'Pasta arquivo suspensa kraft'},
+  {catmat:'7510090',nome:'Envelope A4 branco',unidade:'CX',desc:'Envelope carta 114x229mm caixa 50un'},
+  {catmat:'7510100',nome:'Toner HP LaserJet',unidade:'UN',desc:'Cartucho toner compatível HP'},
+  {catmat:'7510110',nome:'Toner Samsung',unidade:'UN',desc:'Cartucho toner compatível Samsung'},
+  {catmat:'7510120',nome:'Clip galvanizado nº 2 cx',unidade:'CX',desc:'Clips galvanizados nº 2 caixa 100un'},
+  {catmat:'7510130',nome:'Post-it 76x76mm',unidade:'BL',desc:'Bloco de recado adesivo 100 folhas'},
+  {catmat:'7510140',nome:'Fita adesiva 45mm×45m',unidade:'RL',desc:'Fita adesiva transparente grande'},
+  {catmat:'7510150',nome:'Tesoura escolar',unidade:'UN',desc:'Tesoura inox 21cm'},
+  // Material limpeza
+  {catmat:'7930010',nome:'Sabão em pó 1kg',unidade:'KG',desc:'Sabão em pó multiuso'},
+  {catmat:'7930020',nome:'Desinfetante 2L',unidade:'FR',desc:'Desinfetante líquido pinho'},
+  {catmat:'7930030',nome:'Água sanitária 1L',unidade:'FR',desc:'Hipoclorito de sódio 2,5%'},
+  {catmat:'7930040',nome:'Detergente líquido 500mL',unidade:'FR',desc:'Detergente neutro concentrado'},
+  {catmat:'7930050',nome:'Sabonete líquido 800mL',unidade:'FR',desc:'Sabonete líquido perolado'},
+  {catmat:'7930060',nome:'Álcool 70% 1L',unidade:'FR',desc:'Álcool etílico hidratado 70% INPM'},
+  {catmat:'7930070',nome:'Álcool Gel 500g',unidade:'FR',desc:'Álcool gel antisséptico 70%'},
+  {catmat:'7930080',nome:'Papel higiênico folha dupla',unidade:'FD',desc:'Papel higiênico folha dupla 4 rolos'},
+  {catmat:'7930090',nome:'Papel toalha 2 rolos',unidade:'PC',desc:'Papel toalha folha dupla'},
+  {catmat:'7930100',nome:'Pano de chão',unidade:'UN',desc:'Pano de chão multiuso 60x80cm'},
+  {catmat:'7930110',nome:'Vassoura 40cm',unidade:'UN',desc:'Vassoura piaçava cabo longo'},
+  {catmat:'7930120',nome:'Rodo 40cm',unidade:'UN',desc:'Rodo plástico com cabo alumínio'},
+  {catmat:'7930130',nome:'Balde plástico 10L',unidade:'UN',desc:'Balde plástico reforçado com alça'},
+  {catmat:'7930140',nome:'Luva borracha G',unidade:'PC',desc:'Luva de borracha tamanho G'},
+  {catmat:'7930150',nome:'Saco de lixo 100L preto',unidade:'RL',desc:'Saco de lixo capacidade 100L rolo 10un'},
+  {catmat:'7930160',nome:'Saco de lixo 30L preto',unidade:'RL',desc:'Saco de lixo capacidade 30L rolo 15un'},
+  // Combustível
+  {catmat:'9130010',nome:'Gasolina Comum',unidade:'LT',desc:'Gasolina tipo C'},
+  {catmat:'9130020',nome:'Etanol Hidratado',unidade:'LT',desc:'Álcool etílico hidratado carburante'},
+  {catmat:'9130030',nome:'Óleo Diesel S-10',unidade:'LT',desc:'Óleo diesel S-10 (baixo teor enxofre)'},
+  {catmat:'9130040',nome:'Óleo Diesel S-500',unidade:'LT',desc:'Óleo diesel S-500'},
+  {catmat:'9130050',nome:'Óleo lubrificante 20W50',unidade:'LT',desc:'Óleo de motor mineral 20W50'},
+  // TI / Informática
+  {catmat:'7021010',nome:'Computador Desktop',unidade:'UN',desc:'Microcomputador completo com monitor'},
+  {catmat:'7021020',nome:'Notebook',unidade:'UN',desc:'Computador portátil'},
+  {catmat:'7021030',nome:'Impressora Laser Mono',unidade:'UN',desc:'Impressora laser monocromática'},
+  {catmat:'7021040',nome:'Impressora Laser Color',unidade:'UN',desc:'Impressora laser colorida'},
+  {catmat:'7021050',nome:'Mouse óptico USB',unidade:'UN',desc:'Mouse óptico sem fio USB'},
+  {catmat:'7021060',nome:'Teclado ABNT2 USB',unidade:'UN',desc:'Teclado ABNT2 padrão USB'},
+  {catmat:'7021070',nome:'Pen Drive 32GB',unidade:'UN',desc:'Memória USB Flash 32GB'},
+  {catmat:'7021080',nome:'HD Externo 1TB',unidade:'UN',desc:'Disco rígido externo USB 3.0 1TB'},
+  {catmat:'7021090',nome:'Switch 8 Portas',unidade:'UN',desc:'Switch Fast Ethernet 8 portas'},
+  {catmat:'7021100',nome:'Cabo de Rede Cat5e 305m',unidade:'CX',desc:'Cabo par trançado Cat5e caixa 305m'},
+  {catmat:'7021110',nome:'Nobreak 1kVA',unidade:'UN',desc:'Nobreak/UPS 1000VA bivolt'},
+  {catmat:'7021120',nome:'Tablet Android',unidade:'UN',desc:'Tablet 10 polegadas'},
+  {catmat:'7021130',nome:'Webcam Full HD',unidade:'UN',desc:'Câmera web HD 1080p USB'},
+  // Serviços TI (CATSER)
+  {catmat:'S7220010',nome:'Serviço de TI — Manutenção de computadores',unidade:'SV',desc:'Manutenção preventiva e corretiva de equipamentos'},
+  {catmat:'S7220020',nome:'Serviço de TI — Desenvolvimento de sistemas',unidade:'SV',desc:'Desenvolvimento e implantação de software'},
+  {catmat:'S7220030',nome:'Serviço de TI — Suporte técnico',unidade:'MES',desc:'Suporte técnico presencial e remoto mensal'},
+  {catmat:'S7220040',nome:'Serviço de TI — Infraestrutura de rede',unidade:'SV',desc:'Instalação e configuração de infraestrutura'},
+  // Serviços limpeza/conservação (CATSER)
+  {catmat:'S7400010',nome:'Serviço de Limpeza e Conservação',unidade:'MES',desc:'Serviços de limpeza predial continuados'},
+  {catmat:'S7400020',nome:'Serviço de Vigilância Armada',unidade:'MES',desc:'Vigilância patrimonial armada 24h'},
+  {catmat:'S7400030',nome:'Serviço de Recepção',unidade:'MES',desc:'Serviços de recepção e portaria'},
+  // Alimentos
+  {catmat:'8960010',nome:'Merenda Escolar — Gêneros alimentícios',unidade:'KG',desc:'Gêneros alimentícios para merenda escolar'},
+  {catmat:'8960020',nome:'Arroz tipo 1 — 5kg',unidade:'SC',desc:'Arroz agulhinha tipo 1 pacote 5kg'},
+  {catmat:'8960030',nome:'Feijão Carioca — 1kg',unidade:'PC',desc:'Feijão carioca tipo 1 pacote 1kg'},
+  {catmat:'8960040',nome:'Açúcar cristal 1kg',unidade:'PC',desc:'Açúcar cristal pacote 1kg'},
+  {catmat:'8960050',nome:'Óleo de soja 900mL',unidade:'FR',desc:'Óleo de soja refinado garrafa 900mL'},
+  {catmat:'8960060',nome:'Macarrão espaguete 500g',unidade:'PC',desc:'Macarrão sêmola espaguete'},
+  {catmat:'8960070',nome:'Fubá 1kg',unidade:'PC',desc:'Fubá de milho pacote 1kg'},
+  // Uniformes
+  {catmat:'8405010',nome:'Camiseta polo',unidade:'UN',desc:'Camiseta polo manga curta personalizada'},
+  {catmat:'8405020',nome:'Calça social masculina',unidade:'UN',desc:'Calça social masculina'},
+  {catmat:'8405030',nome:'Sapato social',unidade:'PAR',desc:'Sapato social couro'},
+  // Material construção
+  {catmat:'5510010',nome:'Cimento Portland CP II 50kg',unidade:'SC',desc:'Cimento Portland composto saco 50kg'},
+  {catmat:'5510020',nome:'Areia média m³',unidade:'M3',desc:'Areia média lavada'},
+  {catmat:'5510030',nome:'Brita nº 1 m³',unidade:'M3',desc:'Brita graduada nº 1'},
+  {catmat:'5510040',nome:'Tijolo 6 furos',unidade:'MI',desc:'Tijolo cerâmico 6 furos milheiro'},
+  {catmat:'5510050',nome:'Vergalhão CA-50 10mm',unidade:'KG',desc:'Aço CA-50 bitola 10mm'},
+  // Serviços gerais (CATSER)
+  {catmat:'S9900010',nome:'Serviço de Transporte Escolar',unidade:'MES',desc:'Transporte escolar rural e urbano'},
+  {catmat:'S9900020',nome:'Serviço de Impressão e Reprografia',unidade:'MES',desc:'Serviços de impressão e cópia'},
+  {catmat:'S9900030',nome:'Serviço de Telefonia Fixa',unidade:'MES',desc:'Serviços de telecomunicações fixos'},
+  {catmat:'S9900040',nome:'Serviço de Internet',unidade:'MES',desc:'Acesso à internet banda larga'},
+  {catmat:'S9900050',nome:'Serviço de Energia Elétrica',unidade:'MES',desc:'Fornecimento de energia elétrica'},
+  {catmat:'S9900060',nome:'Locação de Veículo',unidade:'MES',desc:'Locação de veículos sem motorista'},
+  {catmat:'S9900070',nome:'Serviço Médico',unidade:'SV',desc:'Serviços de atenção à saúde'},
+  {catmat:'S9900080',nome:'Publicação em Diário Oficial',unidade:'SV',desc:'Publicação de atos oficiais'},
+];
+
+// Inicializa autocomplete CATMAT em um campo
+function initCatmatAutocomplete(inputEl, onSelect) {
+  if (!inputEl) return;
+  let dropdown = null;
+
+  inputEl.addEventListener('input', function() {
+    const q = this.value.trim().toLowerCase();
+    fecharCatmatDropdown();
+    if (q.length < 3) return;
+
+    const matches = CATMAT_DATASET.filter(item =>
+      item.nome.toLowerCase().includes(q) ||
+      item.desc.toLowerCase().includes(q) ||
+      item.catmat.toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (!matches.length) return;
+
+    dropdown = document.createElement('div');
+    dropdown.className = 'catmat-dropdown';
+    const rect = inputEl.getBoundingClientRect();
+    dropdown.style.cssText = `position:fixed;top:${rect.bottom+2}px;left:${rect.left}px;width:${Math.max(rect.width, 300)}px;z-index:9999;`;
+    dropdown.innerHTML = matches.map(item => `
+      <div class="catmat-item" data-catmat="${item.catmat}" data-nome="${item.nome.replace(/"/g,'&quot;')}" data-unid="${item.unidade}">
+        <div style="font-weight:500;">${item.nome}</div>
+        <div class="catmat-code">CATMAT: ${item.catmat} · ${item.unidade}</div>
+      </div>
+    `).join('');
+    dropdown.querySelectorAll('.catmat-item').forEach(el => {
+      el.addEventListener('click', function() {
+        const nome = this.dataset.nome;
+        const catmat = this.dataset.catmat;
+        const unid = this.dataset.unid;
+        inputEl.value = nome;
+        fecharCatmatDropdown();
+        if (onSelect) onSelect({ nome, catmat, unidade: unid });
+      });
+    });
+    document.body.appendChild(dropdown);
+
+    // Fechar ao clicar fora
+    setTimeout(() => {
+      document.addEventListener('click', fecharCatmatDropdown, { once: true });
+    }, 100);
+  });
+}
+
+function fecharCatmatDropdown() {
+  document.querySelectorAll('.catmat-dropdown').forEach(d => d.remove());
+}
+
+// Hook: inicializa CATMAT nos campos de descrição de itens quando aparecerem
+function initCatmatNosCampos() {
+  document.querySelectorAll('#item-dfd-desc, input[placeholder*="Descrição..."], input[placeholder*="Descrição do Item"]').forEach(el => {
+    if (el.dataset.catmatInit) return;
+    el.dataset.catmatInit = '1';
+    initCatmatAutocomplete(el, ({ nome, catmat, unidade }) => {
+      // Tenta preencher campos de unidade próximos
+      const formField = el.closest('.form-field, .modal-body, tr');
+      if (formField) {
+        const unidEl = formField.querySelector('select[id*="unid"], input[id*="unid"]');
+        if (unidEl) unidEl.value = unidade;
+      }
+    });
+  });
+}
+
+// Observa DOM para inicializar CATMAT em campos novos
+const _catmatObserver = new MutationObserver(() => initCatmatNosCampos());
+_catmatObserver.observe(document.body, { childList: true, subtree: true });
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] PRIORIDADE 8 — MATRIZ DE RISCO CONTEXTUAL
+// ══════════════════════════════════════════════════════════
+
+const RISCOS_POR_CATEGORIA = {
+  medicamento: [
+    {id:Date.now()+1, risco:'Desabastecimento de medicamentos essenciais', categoria:'operacional', prob:'media', impacto:'alto', mitigacao:'Manter estoque mínimo de segurança de 30 dias; cadastrar fornecedores alternativos no SRP', contingencia:'Compra emergencial por dispensa de licitação (art. 75, III); redistribuição entre unidades', responsavel:'Secretaria de Saúde / Almoxarifado', alocacao:'administracao'},
+    {id:Date.now()+2, risco:'Entrega de medicamento com especificação divergente', categoria:'tecnico', prob:'baixa', impacto:'alto', mitigacao:'Exigir laudo de qualidade e registro ANVISA; inspeção no recebimento', contingencia:'Recusa do produto e notificação ao fornecedor; substituição imediata', responsavel:'Farmacêutico responsável', alocacao:'contratado'},
+    {id:Date.now()+3, risco:'Vencimento de prazo de validade em estoque', categoria:'operacional', prob:'media', impacto:'medio', mitigacao:'Controle FEFO (First Expired, First Out); sistema de alertas de vencimento', contingencia:'Descarte controlado conforme RDC 222/2018; redistribuição antes do vencimento', responsavel:'Almoxarifado de Saúde', alocacao:'administracao'},
+    {id:Date.now()+4, risco:'Variação de preço acima do estimado', categoria:'financeiro', prob:'alta', impacto:'medio', mitigacao:'Utilizar SRP com cláusula de revisão; pesquisa em múltiplas fontes (BPS, PNCP)', contingencia:'Revisão do contrato (art. 124 LLC); nova pesquisa de preços', responsavel:'Setor de Compras', alocacao:'compartilhado'},
+  ],
+  obra: [
+    {id:Date.now()+1, risco:'Atraso na execução da obra', categoria:'operacional', prob:'alta', impacto:'alto', mitigacao:'Cronograma físico-financeiro detalhado; fiscalização semanal; cláusulas de penalidade', contingencia:'Aplicar multas contratuais; acionar garantia; rescisão se necessário', responsavel:'Engenheiro fiscal da Administração', alocacao:'contratado'},
+    {id:Date.now()+2, risco:'Acréscimo de valor por alterações de projeto', categoria:'financeiro', prob:'media', impacto:'alto', mitigacao:'Projeto executivo completo antes da licitação; levantamento preciso de quantitativos', contingencia:'Aditivo contratual fundamentado (art. 125 LLC) limitado a 25%', responsavel:'Secretaria de Obras', alocacao:'compartilhado'},
+    {id:Date.now()+3, risco:'Falha estrutural ou vício oculto', categoria:'tecnico', prob:'baixa', impacto:'alto', mitigacao:'Exigir ART/RRT do responsável técnico; laudo de recebimento; garantia quinquenal', contingencia:'Acionamento da garantia; responsabilização civil e criminal do responsável técnico', responsavel:'Engenheiro responsável da empresa', alocacao:'contratado'},
+    {id:Date.now()+4, risco:'Acidente de trabalho no canteiro', categoria:'operacional', prob:'media', impacto:'alto', mitigacao:'Exigir PPRA, PCMSO, uso de EPIs; fiscalização de segurança do trabalho', contingencia:'Paralisação imediata; sindicância administrativa; acionamento do seguro', responsavel:'Empresa contratada — SESMT', alocacao:'contratado'},
+  ],
+  software: [
+    {id:Date.now()+1, risco:'Indisponibilidade do sistema (downtime)', categoria:'tecnico', prob:'media', impacto:'alto', mitigacao:'SLA mínimo 99,5%; monitoramento 24h; backup diário automatizado', contingencia:'Acionamento de ambiente de contingência; compensação por SLA não cumprido', responsavel:'Empresa de TI', alocacao:'contratado'},
+    {id:Date.now()+2, risco:'Vazamento ou perda de dados (LGPD)', categoria:'legal', prob:'baixa', impacto:'alto', mitigacao:'Criptografia em repouso e em trânsito; autenticação multifator; DPO designado', contingencia:'Notificação à ANPD em 72h; plano de resposta a incidentes; auditoria forense', responsavel:'DPO / Setor de TI', alocacao:'compartilhado'},
+    {id:Date.now()+3, risco:'Descontinuação do suporte pelo fornecedor', categoria:'operacional', prob:'baixa', impacto:'alto', mitigacao:'Cláusula de escrow de código-fonte; exigir documentação técnica completa', contingencia:'Contratação emergencial de suporte alternativo; migração de plataforma', responsavel:'Setor de TI', alocacao:'administracao'},
+    {id:Date.now()+4, risco:'Não conformidade com requisitos legais', categoria:'legal', prob:'media', impacto:'medio', mitigacao:'Homologação prévia; testes de aceitação; parecer jurídico', contingencia:'Adequação pelo fornecedor sem ônus; penalidades contratuais', responsavel:'Juridico / TI', alocacao:'compartilhado'},
+  ],
+  limpeza: [
+    {id:Date.now()+1, risco:'Rotatividade excessiva de funcionários', categoria:'operacional', prob:'alta', impacto:'medio', mitigacao:'Exigir CTPS assinada; fiscalizar cumprimento de obrigações trabalhistas', contingencia:'Notificação formal; desconto proporcional; rescisão contratual', responsavel:'Fiscalização do contrato', alocacao:'contratado'},
+    {id:Date.now()+2, risco:'Acidente com produto químico', categoria:'operacional', prob:'baixa', impacto:'alto', mitigacao:'Exigir FISPQ dos produtos; treinamento de uso; EPIs obrigatórios', contingencia:'Assistência médica imediata; comunicação de acidente; CAT', responsavel:'Empresa contratada', alocacao:'contratado'},
+    {id:Date.now()+3, risco:'Utilização de produtos não autorizados', categoria:'tecnico', prob:'baixa', impacto:'medio', mitigacao:'Especificar produtos no TR; exigir laudos de qualidade; inspeção surpresa', contingencia:'Substituição imediata; advertência; multa contratual', responsavel:'Fiscal de contrato', alocacao:'compartilhado'},
+  ],
+  combustivel: [
+    {id:Date.now()+1, risco:'Adulteração de combustível', categoria:'tecnico', prob:'baixa', impacto:'alto', mitigacao:'Exigir laudos ANP; inspeção por amostragem; registro de abastecimento com placa', contingencia:'Suspensão do fornecedor; análise amostral; rescisão', responsavel:'Responsável pela frota', alocacao:'contratado'},
+    {id:Date.now()+2, risco:'Variação de preço acima do estimado', categoria:'financeiro', prob:'alta', impacto:'alto', mitigacao:'Adotar preço máximo ANP regional; cláusula de reequilíbrio; SRP mensal', contingencia:'Revisão do preço de referência; nova pesquisa no painel ANP', responsavel:'Setor de Compras', alocacao:'compartilhado'},
+    {id:Date.now()+3, risco:'Falta de combustível no mercado', categoria:'operacional', prob:'baixa', impacto:'alto', mitigacao:'Cadastrar múltiplos fornecedores; manter reserva estratégica de 7 dias', contingencia:'Acionamento de fornecedor emergencial; dispensa de licitação', responsavel:'Setor de Frota', alocacao:'administracao'},
+  ],
+  generico: [
+    {id:Date.now()+1, risco:'Inexecução total ou parcial do contrato', categoria:'operacional', prob:'media', impacto:'alto', mitigacao:'Fiscalização sistemática; relatórios periódicos; registro de ocorrências', contingencia:'Aplicação de penalidades (art. 156 LLC); rescisão; nova contratação', responsavel:'Gestor do contrato', alocacao:'contratado'},
+    {id:Date.now()+2, risco:'Variação de preços de mercado', categoria:'financeiro', prob:'media', impacto:'medio', mitigacao:'Pesquisa de preços em múltiplas fontes; SRP com preço máximo definido', contingencia:'Revisão contratual; nova pesquisa; repactuação fundamentada', responsavel:'Setor de Compras', alocacao:'compartilhado'},
+    {id:Date.now()+3, risco:'Habilitação indevida de empresa inapta', categoria:'legal', prob:'baixa', impacto:'alto', mitigacao:'Verificação rigorosa de documentação; consulta CEIS/CNEP antes da assinatura', contingencia:'Anulação do ato; sindicância administrativa; responsabilização do pregoeiro', responsavel:'Comissão de Licitação', alocacao:'administracao'},
+    {id:Date.now()+4, risco:'Impugnação ao edital / recurso administrativo', categoria:'legal', prob:'media', impacto:'medio', mitigacao:'Edital tecnicamente robusto; revisão jurídica prévia; fundamentação sólida', contingencia:'Resposta fundamentada em prazo legal; reformulação se necessário', responsavel:'Setor Jurídico', alocacao:'administracao'},
+  ],
+};
+
+// Detecta categoria pelo texto do objeto
+function detectarCategoriaObjeto(objeto) {
+  const o = (objeto || '').toLowerCase();
+  if (/medicament|farmac|hospital|saude|anvisa|remedio|ampola|comprimido|injet/.test(o)) return 'medicamento';
+  if (/obra|constru|reforma|paviment|engenharia|sinapi|sicro|planta|projeto/.test(o)) return 'obra';
+  if (/software|sistem|tecnologia|ti\b|aplicat|plataforma|cloud|dados|rede|servidor/.test(o)) return 'software';
+  if (/limpeza|conserv|higieniz|varr|lavag|zeladoria/.test(o)) return 'limpeza';
+  if (/combustivel|gasolina|diesel|etanol|abastecimento|frota/.test(o)) return 'combustivel';
+  return 'generico';
+}
+
+// Pré-popula mapa de risco com riscos contextuais
+function prePopularRiscos() {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const objeto = proc.objeto || proc.docs?.find(d=>d.tipo==='DFD')?.dados?.objeto || '';
+  const cat = detectarCategoriaObjeto(objeto);
+  const riscos = (RISCOS_POR_CATEGORIA[cat] || RISCOS_POR_CATEGORIA.generico).map((r,i) => ({
+    ...r, id: Date.now() + i
+  }));
+
+  // Injeta nos dados do formulário de mapa de risco
+  const container = document.getElementById('mapa-riscos-container');
+  if (!container) { toast('Abra a aba Mapa de Risco primeiro', 'info'); return; }
+
+  // Re-renderiza o formMapaRisco com novos riscos
+  const readonly = false;
+  const newHtml = riscos.map((risco, idx) => {
+    const cats = [{v:'tecnico',l:'Técnico'},{v:'financeiro',l:'Financeiro'},{v:'legal',l:'Legal'},{v:'operacional',l:'Operacional'},{v:'ambiental',l:'Ambiental'}];
+    const probs = [{v:'alta',l:'Alta'},{v:'media',l:'Média'},{v:'baixa',l:'Baixa'}];
+    const imp = [{v:'alto',l:'Alto'},{v:'medio',l:'Médio'},{v:'baixo',l:'Baixo'}];
+    const aloc = [{v:'administracao',l:'Administração'},{v:'contratado',l:'Contratado'},{v:'compartilhado',l:'Compartilhado'}];
+    const pts = {alta:3,media:2,baixa:1,alto:3,medio:2,baixo:1};
+    const n = (pts[risco.prob]||1)*(pts[risco.impacto]||1);
+    const nivel = n>=6 ? '<span class="badge badge-red">ALTO</span>' : n>=3 ? '<span class="badge badge-gold">MÉDIO</span>' : '<span class="badge badge-green">BAIXO</span>';
+    return `
+    <div class="risco-row" id="risco-${risco.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:600;color:var(--text2);">Risco #${idx+1} — ${cat.charAt(0).toUpperCase()+cat.slice(1)}</span>
+        <div style="display:flex;align-items:center;gap:8px;">${nivel}<button class="btn btn-danger btn-sm" onclick="removerRisco('${risco.id}')">✕</button></div>
+      </div>
+      <div class="form-field"><label>Identificação do Risco<span class="req">*</span></label>
+        <input type="text" class="risco-campo" data-risco="${risco.id}" data-campo="risco" value="${esc(risco.risco)}" placeholder="Descreva o risco...">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div class="form-field"><label>Categoria</label>
+          <select class="risco-campo" data-risco="${risco.id}" data-campo="categoria">${cats.map(c=>`<option value="${c.v}" ${risco.categoria===c.v?'selected':''}>${c.l}</option>`).join('')}</select>
+        </div>
+        <div class="form-field"><label>Probabilidade</label>
+          <select class="risco-campo" data-risco="${risco.id}" data-campo="prob" onchange="atualizarNivelRisco('${risco.id}')">${probs.map(p=>`<option value="${p.v}" ${risco.prob===p.v?'selected':''}>${p.l}</option>`).join('')}</select>
+        </div>
+        <div class="form-field"><label>Impacto</label>
+          <select class="risco-campo" data-risco="${risco.id}" data-campo="impacto" onchange="atualizarNivelRisco('${risco.id}')">${imp.map(i=>`<option value="${i.v}" ${risco.impacto===i.v?'selected':''}>${i.l}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-field"><label>Medida Preventiva / Mitigação</label>
+          <textarea class="risco-campo" data-risco="${risco.id}" data-campo="mitigacao" rows="2">${esc(risco.mitigacao)}</textarea>
+        </div>
+        <div class="form-field"><label>Medida de Contingência</label>
+          <textarea class="risco-campo" data-risco="${risco.id}" data-campo="contingencia" rows="2">${esc(risco.contingencia)}</textarea>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-field"><label>Responsável pela Mitigação</label>
+          <input class="risco-campo" data-risco="${risco.id}" data-campo="responsavel" type="text" value="${esc(risco.responsavel)}">
+        </div>
+        <div class="form-field"><label>Alocação do Risco</label>
+          <select class="risco-campo" data-risco="${risco.id}" data-campo="alocacao">${aloc.map(a=>`<option value="${a.v}" ${risco.alocacao===a.v?'selected':''}>${a.l}</option>`).join('')}</select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  container.innerHTML = newHtml;
+  toast(`✅ ${riscos.length} riscos pré-populados para categoria "${cat}"`, 'success');
+}
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] OVERRIDE: buildPDFHtml com cabeçalho real,
+// hash de integridade e QR Code
+// ══════════════════════════════════════════════════════════
+const _buildPDFHtmlOriginal = buildPDFHtml;
+window.buildPDFHtml = function(tipo, dados, proc, hash, versao) {
+  // Chama a função original
+  let html = _buildPDFHtmlOriginal(tipo, dados, proc);
+  const di = getDadosInstitucionais();
+
+  // Substitui o cabeçalho simples pelo cabeçalho institucional completo
+  const cabecalhoInst = buildCabecalhoInstitucional(di);
+
+  // Substitui a primeira linha do H1 de PREFEITURA no HTML
+  html = html.replace(/<h1>PREFEITURA MUNICIPAL DE [^<]*<\/h1>/i,
+    `<div style="margin-bottom:0">${cabecalhoInst}</div>`);
+
+  // Injeta bloco de integridade antes de </body>
+  if (hash) {
+    const rodape = buildRodapeIntegridade(hash, versao || 1, proc, tipo);
+    html = html.replace('</body>', rodape + '\n</body>');
+  }
+  return html;
+};
+
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] OVERRIDE: confirmarAcao com snapshot
+// ══════════════════════════════════════════════════════════
+const _confirmarAcaoOriginal = window.confirmarAcao;
+window.confirmarAcao = async function() {
+  // Salvar snapshot antes de avançar
+  const proc = _processoAtual || (_acaoAtual && _processos.find(p => p.id === _acaoAtual.procId));
+  if (proc && _acaoAtual) {
+    const etapas = ETAPAS[proc.tipo_contratacao] || ETAPAS.aquisicao_bens;
+    const etapaAtual = etapas.find(e => e.n === proc.etapa_atual);
+    if (etapaAtual) {
+      await salvarSnapshotProcesso(proc, etapaAtual.nome || `ETAPA_${proc.etapa_atual}`);
+      // Registrar no audit log
+      await registrarAudit(proc.id, 'etapa', String(proc.etapa_atual), String(_acaoAtual.tipo === 'avancar' ? proc.etapa_atual + 1 : proc.etapa_atual - 1), _acaoAtual.tipo);
+    }
+  }
+  return _confirmarAcaoOriginal.call(this);
+};
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] OVERRIDE: salvarDocEtapa com auditoria
+// ══════════════════════════════════════════════════════════
+const _salvarDocEtapaOriginal = window.salvarDocEtapa;
+window.salvarDocEtapa = async function(tipo, dadosExternos) {
+  const proc = _processoAtual;
+  if (proc) {
+    // Captura dados anteriores para diff
+    const docAnterior = proc.docs?.find(d => d.tipo === tipo);
+    const dadosAntigos = docAnterior?.dados || {};
+
+    // Chama original (passando dadosExternos para ETP/TR)
+    await _salvarDocEtapaOriginal.call(this, tipo, dadosExternos);
+
+    // Captura dados novos via função coletarDadosForm se disponível
+    try {
+      const dadosNovos = dadosExternos || (typeof coletarDadosForm === 'function' ? coletarDadosForm(tipo) : {});
+      await auditarAlteracoesDoc(proc.id, tipo, dadosAntigos, dadosNovos);
+    } catch(e) {}
+
+    // Salva snapshot do documento
+    await salvarSnapshotProcesso(proc, tipo);
+  } else {
+    return _salvarDocEtapaOriginal.call(this, tipo, dadosExternos);
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] OVERRIDE: renderHistorico para usar nova tab
+// ══════════════════════════════════════════════════════════
+const _renderHistoricoOriginal = window.renderHistorico;
+window.renderHistorico = function(movs) {
+  // Redireciona para tab-content-mov em vez de proc-historico
+  const proc_hist = document.getElementById('proc-historico');
+  if (proc_hist) proc_hist.remove(); // remove legado se existir
+  const cont = document.getElementById('tab-content-mov');
+  if (!cont) return _renderHistoricoOriginal.call(this, movs);
+
+  const cores = { avanco:'var(--green)', devolucao:'var(--red)', aprovacao:'var(--green)', rejeicao:'var(--red)', criacao:'var(--blue)' };
+  if (!movs.length) {
+    cont.innerHTML = `<div style="padding:20px 0;text-align:center;color:var(--muted);font-size:13px;">Nenhuma movimentação ainda</div>`;
+    return;
+  }
+  cont.innerHTML = movs.slice().reverse().map(m => `
+    <div class="hist-item">
+      <div class="hist-dot" style="background:${cores[m.acao]||'var(--text2)'}"></div>
+      <div class="hist-content">
+        <div class="hist-acao">${labelAcao(m)}</div>
+        <div class="hist-meta">${m.usuarios?.nome || '—'} · ${formatData(m.criado_em)}${m.observacao ? ` · "${m.observacao}"` : ''}</div>
+      </div>
+    </div>`).join('');
+};
+
+// ══════════════════════════════════════════════════════════
+// [INSTITUCIONAL] Adiciona botão "Personalizar riscos" e
+// "Pré-popular com IA contextual" ao formMapaRisco
+// ══════════════════════════════════════════════════════════
+const _formMapaRiscoOriginal = window.formMapaRisco;
+window.formMapaRisco = function(dados, readonly) {
+  const html = _formMapaRiscoOriginal.call(this, dados, readonly);
+  if (readonly) return html;
+  // Injeta botão de pré-popular
+  return html.replace(
+    `<button class="btn btn-secondary" onclick="adicionarRisco()">+ Adicionar Risco</button>`,
+    `<button class="btn btn-secondary" onclick="adicionarRisco()">+ Adicionar Risco</button>
+     <button class="btn btn-ghost btn-sm" onclick="prePopularRiscos()" title="Pré-popular com riscos contextuais da categoria detectada">🎯 Riscos por categoria</button>`
+  );
+};
+
+// Helper de escape — usa a função existente no arquivo
+
+
+
 </script>
 
 <!-- ══ MODAL: IMPORTAR ITENS DFD ══ -->
@@ -5835,6 +7609,100 @@ function recalcularMedia() { ppRecalcular(); }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-item-dfd')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarItemDFD()">Salvar Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ [INSTITUCIONAL] MODAL: VER SNAPSHOT (VERSÃO IMUTÁVEL) ══ -->
+<div class="modal-overlay" id="modal-snapshot">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div>
+        <h3 id="modal-snap-titulo">📸 Versão do Documento</h3>
+        <p id="modal-snap-desc">Snapshot imutável registrado no sistema</p>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modal-snapshot')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Hash SHA-256 de Integridade</div>
+        <div id="modal-snap-hash" style="font-family:monospace;font-size:12px;color:var(--purple);word-break:break-all;"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:120px;background:var(--s2);border-radius:6px;padding:10px 12px;">
+          <div style="font-size:11px;color:var(--muted);">Tipo</div>
+          <div style="font-size:13px;font-weight:600;margin-top:2px;" id="modal-snap-tipo"></div>
+        </div>
+        <div style="flex:1;min-width:120px;background:var(--s2);border-radius:6px;padding:10px 12px;">
+          <div style="font-size:11px;color:var(--muted);">Versão</div>
+          <div style="font-size:13px;font-weight:600;margin-top:2px;" id="modal-snap-versao"></div>
+        </div>
+        <div style="flex:2;min-width:200px;background:var(--s2);border-radius:6px;padding:10px 12px;">
+          <div style="font-size:11px;color:var(--muted);">Registrado em</div>
+          <div style="font-size:13px;font-weight:600;margin-top:2px;" id="modal-snap-data"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Dados do snapshot (somente leitura)</div>
+      <div id="modal-snap-json" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;max-height:300px;overflow-y:auto;white-space:pre-wrap;color:var(--text2);"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-snapshot')">Fechar</button>
+      <button class="btn btn-secondary" onclick="copiarHashAtual()">📋 Copiar hash</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ [INSTITUCIONAL] MODAL: CAMPOS INSTITUCIONAIS DA PREFEITURA ══ -->
+<div class="modal-overlay" id="modal-dados-inst">
+  <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header">
+      <div><h3>🏛️ Dados Institucionais</h3><p>Cabeçalho de todos os documentos gerados</p></div>
+      <button class="modal-close" onclick="fecharModal('modal-dados-inst')"><svg width="16" height="16"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+        <div class="brasao-preview" id="brasao-preview-el" onclick="document.getElementById('brasao-upload').click()">🏛️</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Brasão / Logotipo</div>
+          <div style="font-size:12px;color:var(--text2);">Clique para fazer upload · PNG ou SVG recomendado</div>
+          <input type="file" id="brasao-upload" accept="image/*" style="display:none" onchange="carregarBrasao(this)">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Nome do Prefeito</label>
+          <input type="text" id="inst-prefeito" placeholder="Ex: João da Silva">
+        </div>
+        <div class="form-field">
+          <label>Nome do Secretário Responsável</label>
+          <input type="text" id="inst-secretario" placeholder="Ex: Maria Souza">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Endereço Completo</label>
+        <input type="text" id="inst-endereco" placeholder="Praça Três Poderes, nº 1, Centro">
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>CEP</label>
+          <input type="text" id="inst-cep" placeholder="00000-000">
+        </div>
+        <div class="form-field">
+          <label>Telefone Institucional</label>
+          <input type="text" id="inst-telefone" placeholder="(00) 3333-0000">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>E-mail Institucional</label>
+        <input type="email" id="inst-email" placeholder="compras@prefeitura.gov.br">
+      </div>
+      <div id="inst-ok" style="display:none;color:var(--green);font-size:12px;margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-dados-inst')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarDadosInstitucionais()">💾 Salvar dados institucionais</button>
     </div>
   </div>
 </div>
