@@ -3754,22 +3754,23 @@ async function salvarPrefeitura() {
 
   // ── Criar admin se formulário preenchido ──
   if (criarAdmin && adminEmail) {
-    const { data: authData, error: authError } = await sb.auth.signUp({
-      email: adminEmail, password: adminSenha
+    const { data: rpcData, error: authError } = await sb.rpc('criar_usuario_auth', {
+      p_email:         adminEmail,
+      p_senha:         adminSenha,
+      p_nome:          adminNome,
+      p_perfil:        'admin',
+      p_setor:         'Administração',
+      p_prefeitura_id: prefId
     });
+    // Fix role to admin after creation
+    if (rpcData?.success || (typeof rpcData === 'string' && JSON.parse(rpcData)?.success)) {
+      const uid = (typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData)?.id;
+      if (uid) await sb.from('usuarios').update({ role: 'admin' }).eq('id', uid);
+    }
     if (authError) {
       erroEl.textContent = 'Prefeitura criada, mas erro ao criar admin: ' + authError.message;
       erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = '💾 Salvar e Criar Admin';
       carregarPrefeiturasSA(); return;
-    }
-    const uid = authData?.user?.id;
-    if (uid) {
-      await sb.from('usuarios').insert({
-        id: uid, nome: adminNome, email: adminEmail,
-        perfil: 'admin', role: 'admin',
-        prefeitura_id: prefId,
-        setor: 'Administração', ativo: true
-      });
     }
     // Mostrar credenciais
     const credEl = document.getElementById('pref-admin-credenciais');
@@ -3867,35 +3868,54 @@ function abrirModalNovoUsuario() {
 }
 
 async function salvarNovoUsuario() {
-  const nome  = document.getElementById('nu-nome').value.trim();
-  const email = document.getElementById('nu-email').value.trim();
-  const senha = document.getElementById('nu-senha').value;
+  const nome   = document.getElementById('nu-nome').value.trim();
+  const email  = document.getElementById('nu-email').value.trim();
+  const senha  = document.getElementById('nu-senha').value;
   const perfil = document.getElementById('nu-perfil').value;
-  const setor = document.getElementById('nu-setor').value.trim();
+  const setor  = document.getElementById('nu-setor').value.trim();
   const erroEl = document.getElementById('nu-erro');
   const okEl   = document.getElementById('nu-ok');
   const btn    = document.getElementById('btn-salvar-usuario');
   erroEl.style.display = 'none'; okEl.style.display = 'none';
-  if (!nome || !email || !senha) { erroEl.textContent = 'Nome, e-mail e senha são obrigatórios.'; erroEl.style.display = 'block'; return; }
-  if (senha.length < 8) { erroEl.textContent = 'A senha deve ter ao menos 8 caracteres.'; erroEl.style.display = 'block'; return; }
-  btn.disabled = true; btn.textContent = 'Criando...';
-  // Create auth user
-  const { data: authData, error: authError } = await sb.auth.admin
-    ? await sb.auth.admin.createUser({ email, password: senha, email_confirm: true })
-    : await sb.auth.signUp({ email, password: senha });
-  if (authError) { erroEl.textContent = 'Erro Auth: ' + authError.message; erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Criar usuário'; return; }
-  const uid = authData?.user?.id;
-  if (uid) {
-    await sb.from('usuarios').insert({
-      id: uid, nome, email, perfil, setor,
-      prefeitura_id: _perfil?.prefeitura_id,
-      role: perfil === 'admin' ? 'admin' : 'usuario',
-      ativo: true
-    });
+
+  if (!nome || !email || !senha) {
+    erroEl.textContent = 'Nome, e-mail e senha são obrigatórios.';
+    erroEl.style.display = 'block'; return;
   }
+  if (senha.length < 6) {
+    erroEl.textContent = 'A senha deve ter ao menos 6 caracteres.';
+    erroEl.style.display = 'block'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Criando...';
+
+  // Usa a função PostgreSQL que cria o usuário no Auth + tabela usuarios
+  const { data, error } = await sb.rpc('criar_usuario_auth', {
+    p_email:         email,
+    p_senha:         senha,
+    p_nome:          nome,
+    p_perfil:        perfil,
+    p_setor:         setor || perfil,
+    p_prefeitura_id: _perfil?.prefeitura_id
+  });
+
   btn.disabled = false; btn.textContent = 'Criar usuário';
-  okEl.textContent = 'Usuário criado! Credenciais: ' + email + ' / ' + senha;
+
+  if (error) {
+    erroEl.textContent = 'Erro: ' + error.message;
+    erroEl.style.display = 'block'; return;
+  }
+
+  const resultado = typeof data === 'string' ? JSON.parse(data) : data;
+
+  if (!resultado?.success) {
+    erroEl.textContent = 'Erro: ' + (resultado?.error || 'Falha ao criar usuário');
+    erroEl.style.display = 'block'; return;
+  }
+
+  okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha;
   okEl.style.display = 'block';
+  toast('Usuário criado com sucesso!', 'success');
   carregarUsuariosAdmin();
 }
 
