@@ -2993,31 +2993,36 @@ function renderFormEtapa(proc, etapa, doc) {
   let html = '';
 
   if (etapa.n === 1) {
-    // DFD — visualização
-    html = renderDFDView(dados);
-  } else if (etapa.n === 2) {
-    html = formProtocolo(dados, readonly, proc);
+    html = renderDFDView(dados); // já chama ativarSplitLayout()
+    document.getElementById('doc-body').innerHTML = html;
+    return;
+  }
+
+  // Todas as outras etapas: ativar split e envolver com preview
+  ativarSplitLayout();
+
+  if (etapa.n === 2) {
+    html = wrapComPreview(formProtocolo(dados, readonly, proc), previewProtocolo(dados, proc));
   } else if (etapa.n === 3 && !['dispensa','inexigibilidade'].includes(proc.tipo_contratacao)) {
-    // ETP + Mapa de Risco + TR (formulário em abas)
-    html = renderEtapa3(proc, dados, doc, readonly);
+    html = wrapComPreview(renderEtapa3(proc, dados, doc, readonly), previewETP3(proc));
   } else if (etapa.n === 4 || (etapa.n === 3 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
-    html = formPP(dados, readonly);
+    html = wrapComPreview(formPP(dados, readonly), previewPP(dados, proc));
   } else if (etapa.n === 5 || (etapa.n === 4 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
-    html = formDotacao(dados, readonly);
+    html = wrapComPreview(formDotacao(dados, readonly), previewDotacao(dados, proc));
   } else if (etapa.n === 6 || (etapa.n === 5 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
-    html = formAutorizacao(dados, readonly);
+    html = wrapComPreview(formAutorizacao(dados, readonly), previewAutorizacao(dados, proc));
   } else if (etapa.n === 8 || (etapa.n === 6 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
-    html = formParecer(dados, readonly);
+    html = wrapComPreview(formParecer(dados, readonly), previewParecer(dados, proc));
   } else {
-    html = `<div class="empty" style="padding:40px;">
-      <svg><use href="#ic-file"/></svg>
-      <h4>${etapa.full}</h4>
-      <p style="margin-top:8px;">Responsável: <strong>${etapa.resp}</strong></p>
-      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">
+    const etapaEmBranco = `<div style="padding:24px;">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">${etapa.full}</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:20px;">Responsável: <strong style="color:var(--text);">${etapa.resp}</strong></p>
+      <div style="display:flex;gap:8px;">
         <button class="btn btn-secondary" onclick="prepararAcao('devolver','${proc.id}')">↩ Devolver</button>
         <button class="btn btn-primary" onclick="prepararAcao('avancar','${proc.id}')">Avançar ▶</button>
       </div>
     </div>`;
+    html = wrapComPreview(etapaEmBranco, previewPlaceholder(etapa, proc));
   }
   document.getElementById('doc-body').innerHTML = html;
 }
@@ -3071,12 +3076,7 @@ function renderDFDView(dados) {
   const prio  = dados.prioridade || '';
   const prioLabel = {alta:'Alta — Urgente', media:'Média — Normal', baixa:'Baixa — Planejamento'}[prio] || prio;
 
-  // Modo split: compactar header e colapsar sidebar
-  document.querySelector('.proc-layout')?.classList.add('split-active');
-  document.querySelector('#page-processo')?.classList.add('split-header-compact');
-  // Colapsar sidebar automaticamente ao entrar no split
-  const toggleBtn = document.getElementById('sidebar-toggle-btn');
-  if (toggleBtn) toggleBtn.textContent = '›';
+  ativarSplitLayout();
 
   return `<div class="split-view">
 
@@ -5009,6 +5009,199 @@ function autoPreencherMunicipio() {
   if (derivado) municipioEl.value = derivado;
 }
 
+
+
+// ── Ativa layout split: sidebar colapsa, título compacto ──
+function ativarSplitLayout() {
+  document.querySelector('.proc-layout')?.classList.add('split-active');
+  document.querySelector('#page-processo')?.classList.add('split-header-compact');
+  document.querySelector('.doc-area')?.classList.add('split-mode');
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (btn) btn.textContent = '›';
+}
+
+// ── Envolve qualquer form em split view ──
+function wrapComPreview(formHtml, previewHtml) {
+  return `<div class="split-view">
+  <div class="split-editor" style="padding:0;display:flex;flex-direction:column;">
+    <div style="flex:1;overflow-y:auto;padding:16px 18px 28px;">${formHtml}</div>
+  </div>
+  <div class="split-preview" id="etapa-split-preview-outer">
+    <div class="split-preview-label">Pré-visualização do documento</div>
+    <div class="split-paper" id="etapa-split-preview">${previewHtml}</div>
+  </div>
+</div>`;
+}
+
+// ── Helpers de preview ────────────────────────────────────
+function _prefHeader() {
+  const municipio = _perfil?._prefeitura?.municipio ||
+    (_perfil?._prefeitura?.nome||'').replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'município';
+  const cnpj = _perfil?._prefeitura?.cnpj || '';
+  const uf   = _perfil?._prefeitura?.uf || 'GO';
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  return { municipio, cnpj, uf, hoje };
+}
+function _spHeader(titulo, proc) {
+  const { municipio, cnpj, uf } = _prefHeader();
+  return `<div class="sp-header">
+    <h1>Prefeitura Municipal de ${municipio}</h1>
+    ${cnpj?`<div class="sp-sub">CNPJ: ${cnpj} · ${municipio}/${uf}</div>`:''}
+  </div>
+  <div class="sp-doc-title">${titulo}</div>
+  <div class="sp-proc">Processo nº ${proc?.numero_protocolo||'—'}</div>`;
+}
+
+// ── Etapa 2: Protocolo ────────────────────────────────────
+function previewProtocolo(dados, proc) {
+  const { municipio, hoje } = _prefHeader();
+  return `${_spHeader('Comprovante de Protocolo', proc)}
+  <div class="sp-meta">
+    <div class="sp-meta-row"><b>Nº no Livro:</b> ${dados.num_livro||'—'}</div>
+    <div class="sp-meta-row"><b>Data de Entrada:</b> ${dados.data_entrada ? new Date(dados.data_entrada+'T12:00').toLocaleDateString('pt-BR') : '—'}</div>
+    <div class="sp-meta-row"><b>Recebido por:</b> ${dados.servidor_recebeu||'—'}</div>
+    <div class="sp-meta-row"><b>Setor de Destino:</b> ${dados.setor_destino||'—'}</div>
+  </div>
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Processo Protocolado</div>
+    <div class="sp-body"><b>Objeto:</b> ${proc?.objeto||'—'}</div>
+    ${dados.observacao?`<div class="sp-body"><b>Observações:</b> ${dados.observacao}</div>`:''}
+  </div>
+  <div class="sp-body" style="margin-top:12px;">${municipio}, ${hoje}.</div>
+  <div class="sp-assinatura"><div class="linha"></div><div class="nome">${dados.servidor_recebeu||'Servidor Responsável'}</div><div class="cargo-text">Setor de Protocolo</div></div>`;
+}
+
+// ── Etapa 3: ETP + TR (preview combinado) ────────────────
+function previewETP3(proc) {
+  const dfdDoc = proc?.docs?.find(d => d.tipo === 'DFD');
+  const etpDoc = proc?.docs?.find(d => d.tipo === 'ETP');
+  const trDoc  = proc?.docs?.find(d => d.tipo === 'TR');
+  const dfd = dfdDoc?.dados || {};
+  const etp = etpDoc?.dados || {};
+  const tr  = trDoc?.dados  || {};
+  return `${_spHeader('Estudo Técnico Preliminar + Termo de Referência', proc)}
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">ETP — Necessidade</div>
+    <div class="sp-body">${etp.necessidade || dfd.justificativa || '<em style="color:#aaa">Preencha o ETP para visualizar</em>'}</div>
+  </div>
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">ETP — Solução Escolhida</div>
+    <div class="sp-body">${etp.solucao_escolhida || '<em style="color:#aaa">—</em>'}</div>
+  </div>
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">TR — Objeto</div>
+    <div class="sp-body">${tr.objeto || dfd.objeto || '<em style="color:#aaa">Preencha o TR para visualizar</em>'}</div>
+  </div>
+  ${tr.prazo?`<div class="sp-secao"><div class="sp-secao-titulo">TR — Prazo e Local</div><div class="sp-body"><b>Prazo:</b> ${tr.prazo}<br><b>Local:</b> ${tr.local||'—'}</div></div>`:''}
+  <div class="sp-chips">
+    <div class="sp-chip"><b>Valor ETP</b> R$ ${etp.valor||dfd.valor||'—'}</div>
+    <div class="sp-chip"><b>Modalidade</b> ${({pregao_eletronico:'Pregão Eletr.',concorrencia:'Concorrência',dispensa:'Dispensa'}[tr.modalidade])||tr.modalidade||'—'}</div>
+    <div class="sp-chip"><b>Critério</b> ${({menor_preco:'Menor Preço',maior_desconto:'Maior Desconto'}[tr.criterio])||tr.criterio||'—'}</div>
+    <div class="sp-chip"><b>Viabilidade</b> ${etp.viabilidade==='viavel'?'✅ Viável':'⚠️ —'}</div>
+  </div>`;
+}
+
+// ── Etapa 4: Pesquisa de Preços ───────────────────────────
+function previewPP(dados, proc) {
+  const { municipio, hoje } = _prefHeader();
+  const fontes = dados.fontes || [];
+  return `${_spHeader('Pesquisa de Preços', proc)}
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Item Pesquisado</div>
+    <div class="sp-body">${dados.item || proc?.objeto || '—'}</div>
+  </div>
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Fontes Consultadas</div>
+    ${fontes.length ? fontes.map((f,i) => `<div class="sp-body" style="margin-bottom:4px;"><b>${i+1}.</b> ${f.identificacao||f.tipo||'—'} — R$ ${f.valor||'—'} <span style="color:#666;font-size:9pt;">(${f.data||'—'})</span></div>`).join('') : '<div class="sp-body" style="color:#aaa;">Preencha as fontes para visualizar</div>'}
+  </div>
+  <div class="sp-chips">
+    <div class="sp-chip"><b>Valor Ref.</b> R$ ${dados.valor_referencia||'—'}</div>
+    <div class="sp-chip"><b>Metodologia</b> ${{media:'Média',mediana:'Mediana',menor:'Menor Preço'}[dados.metodologia]||'—'}</div>
+    <div class="sp-chip"><b>Fontes</b> ${fontes.length||'0'}</div>
+    <div class="sp-chip"><b>Responsável</b> ${dados.responsavel||'—'}</div>
+  </div>
+  <div class="sp-body" style="margin-top:12px;">${municipio}, ${hoje}.</div>`;
+}
+
+// ── Etapa 5: Dotação Orçamentária ─────────────────────────
+function previewDotacao(dados, proc) {
+  const { municipio, hoje } = _prefHeader();
+  return `${_spHeader('Nota de Dotação Orçamentária', proc)}
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Classificação Orçamentária</div>
+    <div class="sp-meta">
+      <div class="sp-meta-row"><b>Unidade Gestora:</b> ${dados.unidade_gestora||'—'}</div>
+      <div class="sp-meta-row"><b>Função / Subfunção:</b> ${dados.funcao||'—'} / ${dados.subfuncao||'—'}</div>
+      <div class="sp-meta-row"><b>Programa / Ação:</b> ${dados.programa||'—'} / ${dados.acao||'—'}</div>
+      <div class="sp-meta-row"><b>Natureza da Despesa:</b> ${dados.natureza||'—'}</div>
+      <div class="sp-meta-row"><b>Fonte de Recurso:</b> ${dados.fonte||'—'}</div>
+    </div>
+  </div>
+  <div class="sp-chips">
+    <div class="sp-chip"><b>Saldo Disp.</b> R$ ${dados.saldo_disponivel||'—'}</div>
+    <div class="sp-chip"><b>Reserva</b> R$ ${dados.reserva||'—'}</div>
+    <div class="sp-chip"><b>Autorizado</b> R$ ${dados.valor_autorizado||'—'}</div>
+    <div class="sp-chip"><b>Exercício</b> ${dados.exercicio||new Date().getFullYear()}</div>
+  </div>
+  ${dados.decl_contador?`<div class="sp-secao"><div class="sp-secao-titulo">Declaração do Contador</div><div class="sp-body">${dados.decl_contador.slice(0,200)}${dados.decl_contador.length>200?'…':''}</div><div class="sp-body" style="font-size:9.5pt;"><b>CRC:</b> ${dados.crc_contador||'—'}</div></div>`:'<div class="sp-body" style="color:#aaa;margin-top:12px;">Preencha os dados para visualizar o documento</div>'}
+  <div class="sp-body" style="margin-top:12px;">${municipio}, ${hoje}.</div>`;
+}
+
+// ── Etapa 6: Autorização ──────────────────────────────────
+function previewAutorizacao(dados, proc) {
+  const { municipio, hoje } = _prefHeader();
+  const decIcon = {autorizado:'✅',autorizado_ressalvas:'⚠️',rejeitado:'❌'}[dados.decisao]||'○';
+  const decLabel = {autorizado:'AUTORIZADO',autorizado_ressalvas:'AUTORIZADO COM RESSALVAS',rejeitado:'REJEITADO'}[dados.decisao]||'Aguardando decisão';
+  return `${_spHeader('Despacho de Autorização', proc)}
+  <div style="text-align:center;font-size:14pt;font-weight:bold;border:2px solid ${dados.decisao==='autorizado'?'#2a7a2a':dados.decisao==='rejeitado'?'#7a2a2a':'#7a6a2a'};padding:10px;margin:12px 0;color:${dados.decisao==='autorizado'?'#1a5a1a':dados.decisao==='rejeitado'?'#5a1a1a':'#5a4a1a'};">
+    ${decIcon} ${decLabel}
+  </div>
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Despacho</div>
+    <div class="sp-body">${dados.despacho||'<em style="color:#aaa">Preencha o despacho para visualizar</em>'}</div>
+  </div>
+  ${dados.ressalvas?`<div class="sp-secao"><div class="sp-secao-titulo">Ressalvas</div><div class="sp-body">${dados.ressalvas}</div></div>`:''}
+  <div class="sp-body" style="margin-top:12px;">${municipio}, ${hoje}.</div>
+  <div class="sp-assinatura"><div class="linha"></div><div class="nome">${dados.gestor||'—'}</div><div class="cargo-text">Autoridade Competente</div></div>`;
+}
+
+// ── Etapa 8: Parecer Jurídico ─────────────────────────────
+function previewParecer(dados, proc) {
+  const { municipio, hoje } = _prefHeader();
+  const concIcon = {favoravel:'✅',favoravel_ressalvas:'⚠️',desfavoravel:'❌'}[dados.conclusao]||'○';
+  const concLabel = {favoravel:'FAVORÁVEL',favoravel_ressalvas:'FAVORÁVEL COM RESSALVAS',desfavoravel:'DESFAVORÁVEL'}[dados.conclusao]||'Aguardando conclusão';
+  return `${_spHeader('Parecer Jurídico', proc)}
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Análise do DFD</div>
+    <div class="sp-body">${dados.analise_dfd ? dados.analise_dfd.slice(0,300)+(dados.analise_dfd.length>300?'…':'') : '<em style="color:#aaa">—</em>'}</div>
+  </div>
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">Análise do ETP e TR</div>
+    <div class="sp-body">${dados.analise_etp_tr ? dados.analise_etp_tr.slice(0,250)+(dados.analise_etp_tr.length>250?'…':'') : '<em style="color:#aaa">—</em>'}</div>
+  </div>
+  <div style="text-align:center;font-size:13pt;font-weight:bold;border:1.5px solid ${dados.conclusao==='favoravel'?'#2a7a2a':dados.conclusao==='desfavoravel'?'#7a2a2a':'#7a6a2a'};padding:8px;margin:14px 0;color:${dados.conclusao==='favoravel'?'#1a5a1a':dados.conclusao==='desfavoravel'?'#5a1a1a':'#5a4a1a'};">
+    ${concIcon} ${concLabel}
+  </div>
+  <div class="sp-body" style="margin-top:12px;">${municipio}, ${hoje}.</div>
+  <div class="sp-assinatura"><div class="linha"></div><div class="nome">${dados.responsavel||'—'}</div><div class="cargo-text">${dados.oab ? 'OAB: '+dados.oab : 'Responsável Jurídico'}</div></div>`;
+}
+
+// ── Placeholder para etapas 7, 9, 10 ─────────────────────
+function previewPlaceholder(etapa, proc) {
+  const { municipio, hoje } = _prefHeader();
+  const icons = {7:'📋',9:'📄',10:'📢'};
+  return `${_spHeader(etapa.full, proc)}
+  <div style="text-align:center;padding:40px 20px;">
+    <div style="font-size:36px;margin-bottom:12px;">${icons[etapa.n]||'📄'}</div>
+    <div style="font-size:11pt;font-weight:bold;color:#555;margin-bottom:8px;">${etapa.full}</div>
+    <div style="font-size:10pt;color:#888;">Responsável: ${etapa.resp}</div>
+    <div style="margin-top:20px;padding:12px;border:1px solid #ddd;border-radius:4px;font-size:9.5pt;color:#666;">
+      Processo: ${proc?.numero_protocolo||'—'}<br>
+      Objeto: ${proc?.objeto||'—'}
+    </div>
+  </div>
+  <div class="sp-body" style="margin-top:12px;text-align:center;color:#888;font-size:9.5pt;">${municipio}, ${hoje}.</div>`;
+}
 
 // Toggle da sidebar no modo split
 function toggleSidebar() {
