@@ -765,48 +765,34 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 @media(max-width:1100px){.split-view{grid-template-columns:1fr;height:auto;}}
 @media(max-width:900px){.proc-layout.split-active{grid-template-columns:1fr;}}
 
-/* ── TABELA DE ITENS NO SPLIT VIEW ── */
-.sv-itens-table{width:100%;border-collapse:collapse;font-size:12px;}
-.sv-itens-table th{padding:5px 6px;background:var(--s3);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;}
-.sv-itens-table td{padding:2px 3px;border-bottom:1px solid var(--border);vertical-align:middle;}
-.sv-itens-table tr:hover td{background:rgba(255,255,255,.03);}
-.sv-itens-table .drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:0 4px;user-select:none;}
-.sv-itens-table .drag-handle:active{cursor:grabbing;}
-.sv-itens-table tr.drag-over{border-top:2px solid var(--green);}
-.sv-cell-input{
-  width:100%;background:transparent;border:none;
-  color:var(--text);font-size:12px;padding:3px 5px;
-  border-radius:3px;outline:none;font-family:var(--font-body);
-}
-.sv-cell-input:focus{background:var(--s3);border:1px solid var(--green);}
-.sv-cell-input[type=number]{text-align:center;}
-.sv-itens-footer{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:6px 8px;background:var(--s2);border-top:1px solid var(--border);
-  font-size:11px;color:var(--text2);border-radius:0 0 6px 6px;
-}
-.sv-total-valor{
-  font-size:14px;font-weight:700;color:var(--green);
-  font-family:var(--font-display);
-}
-.sv-unsaved-dot{
-  display:inline-block;width:7px;height:7px;
-  border-radius:50%;background:#f90;margin-right:4px;
-  animation:pulse-dot 1.2s infinite;
-}
-@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
-.word-counter{font-size:10px;margin-top:3px;padding:2px 0;}
-.word-counter.ok{color:var(--green);}
-.word-counter.warn{color:#e55;}
-/* Preview tabela de itens */
-.sp-itens-table{width:100%;border-collapse:collapse;font-size:9.5pt;margin:8px 0;}
-.sp-itens-table th{background:#333;color:#fff;padding:4px 6px;text-align:left;font-size:8.5pt;text-transform:uppercase;}
-.sp-itens-table th:last-child,.sp-itens-table td:last-child{text-align:right;}
-.sp-itens-table th:nth-child(3),.sp-itens-table td:nth-child(3),
-.sp-itens-table th:nth-child(4),.sp-itens-table td:nth-child(4){text-align:center;}
-.sp-itens-table td{padding:3px 6px;border-bottom:1px solid #ddd;}
-.sp-itens-table tr:nth-child(even) td{background:#f9f9f9;}
-.sp-itens-table .sp-total-row td{font-weight:bold;background:#f0f0f0;border-top:2px solid #333;}
+/* ── GRUPO 1: unsaved indicator, word counter, pp inline ── */
+.etapa-unsaved-dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#f90;margin-right:4px;vertical-align:middle;
+  animation:pulse-dot 1.2s infinite;}
+.etapa-word-counter{font-size:10px;margin-top:3px;padding:2px 0;display:block;}
+.etapa-word-counter.ok{color:var(--green);}
+.etapa-word-counter.warn{color:#e55;}
+/* PP inline table */
+.pp-table-wrap{overflow-x:auto;margin-bottom:10px;}
+.pp-inline-table{width:100%;border-collapse:collapse;font-size:12px;}
+.pp-inline-table th{background:var(--s3);padding:5px 6px;font-size:10px;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;
+  border-bottom:1px solid var(--border);}
+.pp-inline-table td{padding:2px 3px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.pp-inline-table tr:hover td{background:rgba(255,255,255,.03);}
+.pp-inline-table .drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:0 4px;user-select:none;}
+.pp-cell-input{width:100%;background:transparent;border:none;color:var(--text);
+  font-size:12px;padding:3px 5px;border-radius:3px;outline:none;font-family:var(--font-body);}
+.pp-cell-input:focus{background:var(--s3);border:1px solid var(--green);}
+.pp-stats-bar{display:flex;gap:20px;background:var(--green-l);
+  border:1px solid rgba(65,243,106,.2);border-radius:var(--r);
+  padding:12px 16px;margin:10px 0;}
+.pp-stat-item .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.pp-stat-item .val{font-size:18px;font-weight:700;color:var(--text);}
+.pp-stat-item .val.green{color:var(--green);}
+/* confirm inline */
+.pp-confirm-row td{background:rgba(229,85,85,.08)!important;}
+.pp-confirm-btn{padding:2px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -2200,6 +2186,7 @@ function renderFormEtapa(proc, etapa, doc) {
   }
 
   document.getElementById('doc-body').innerHTML = html;
+  setTimeout(() => initEtapaListeners(etapa.tipo || etapa.n), 0);
 }
 
 function renderHistorico(movs) {
@@ -2591,9 +2578,9 @@ function formETP(dados, readonly) {
   const inp = (id, ph='') => r
     ? `<div class="fv">${v(id)||'—'}</div>`
     : `<input type="text" id="etp-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
-  const ta = (id, ph='', rows=3) => r
+  const ta = (id, ph='', rows=3, wc=0) => r
     ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>`
-    : `<textarea id="etp-${id}" rows="${rows}" placeholder="${ph}">${esc(v(id))}</textarea>`;
+    : `<textarea id="etp-${id}" rows="${rows}" placeholder="${ph}"${wc?` data-wc="${wc}"`:''} oninput="initEtapaListeners&&initEtapaListeners()">${esc(v(id))}</textarea>`;
   const sel = (id, opts, label='') => r
     ? `<div class="fv">${v(id)||'—'}</div>`
     : `<select id="etp-${id}">${opts}</select>`;
@@ -2612,15 +2599,15 @@ ${!r ? `<div style="background:var(--s2);border:1px solid rgba(65,243,106,.25);b
   <div class="form-field"><label>Referência ao DFD</label>${inp('ref_dfd','Nº do processo')}</div>
 </div>
 <div class="form-field"><label>Descrição da Necessidade<span class="req">*</span><span class="ref">Art. 18, I LLC</span></label>
-  ${ta('necessidade','Descreva o problema ou necessidade que origina esta contratação...',4)}
+  ${ta('necessidade','Descreva o problema ou necessidade que origina esta contratação...',4, 80)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-necessidade','Descrição da necessidade de contratação')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-field"><label>Levantamento de Soluções Possíveis<span class="req">*</span><span class="ref">Art. 18, III LLC</span></label>
-  ${ta('solucoes','Liste as alternativas consideradas antes de chegar à solução escolhida...',3)}
+  ${ta('solucoes','Liste as alternativas consideradas antes de chegar à solução escolhida...',3, 80)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-solucoes','Levantamento de soluções alternativas')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-field"><label>Solução Escolhida e Justificativa<span class="req">*</span><span class="ref">Art. 18, IV LLC</span></label>
-  ${ta('solucao_escolhida','Explique a solução selecionada e por que é a mais adequada...',4)}
+  ${ta('solucao_escolhida','Explique a solução selecionada e por que é a mais adequada...',4, 80)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('etp-solucao_escolhida','Justificativa da solução escolhida')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-grid">
@@ -2710,7 +2697,7 @@ function formTR(dados, readonly, tipo) {
   const r = readonly;
   const v = (k) => dados[k] || '';
   const inp = (id, ph='') => r ? `<div class="fv">${v(id)||'—'}</div>` : `<input type="text" id="tr-${id}" value="${esc(v(id))}" placeholder="${ph}">`;
-  const ta = (id, ph='', rows=3) => r ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>` : `<textarea id="tr-${id}" rows="${rows}" placeholder="${ph}">${esc(v(id))}</textarea>`;
+  const ta = (id, ph='', rows=3, wc=0) => r ? `<div class="fv" style="white-space:pre-wrap;">${v(id)||'—'}</div>` : `<textarea id="tr-${id}" rows="${rows}" placeholder="${ph}"${wc?` data-wc="${wc}"`:''} oninput="initEtapaListeners&&initEtapaListeners()">${esc(v(id))}</textarea>`;
   const sel = (id, opts) => r ? `<div class="fv">${v(id)||'—'}</div>` : `<select id="tr-${id}">${opts}</select>`;
 
   return `
@@ -2724,11 +2711,11 @@ ${!r ? `<div style="background:var(--s2);border:1px solid rgba(26,184,255,.25);b
 <div class="form-section-title">Termo de Referência · Art. 7º, III IN-009/23 | Art. 6º, XXIII LLC</div>
 <div class="form-field"><label>Objeto da Contratação<span class="req">*</span><span class="ref">Art. 6º, XXIII LLC</span></label>${inp('objeto','Ex: Aquisição de materiais de limpeza para uso nas dependências municipais')}</div>
 <div class="form-field"><label>Fundamentação da Necessidade<span class="req">*</span><span class="ref">Art. 6º, XXIII, b LLC</span></label>
-  ${ta('fundamentacao','Fundamentação da necessidade, com referência ao ETP...',3)}
+  ${ta('fundamentacao','Fundamentação da necessidade, com referência ao ETP...',3, 80)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-fundamentacao','Fundamentação da necessidade de contratação')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-field"><label>Descrição Detalhada do Objeto<span class="req">*</span><span class="ref">Art. 41, I LLC</span></label>
-  ${ta('descricao','Descreva detalhadamente o objeto, incluindo especificações técnicas obrigatórias...',5)}
+  ${ta('descricao','Descreva detalhadamente o objeto, incluindo especificações técnicas obrigatórias...',5, 50)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-descricao','Descrição técnica detalhada do objeto')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-grid">
@@ -2752,21 +2739,21 @@ ${!r ? `<div style="background:var(--s2);border:1px solid rgba(26,184,255,.25);b
 <div class="form-field"><label>Prazo de Entrega / Execução<span class="req">*</span></label>${inp('prazo','Ex: 15 dias úteis após emissão da Ordem de Fornecimento')}</div>
 <div class="form-field"><label>Local de Entrega / Execução<span class="req">*</span></label>${inp('local','Ex: Almoxarifado Central — Rua X, nº Y')}</div>
 <div class="form-field"><label>Condições de Pagamento<span class="req">*</span><span class="ref">Art. 18, VII LLC</span></label>
-  ${ta('pagamento','Ex: Mediante apresentação de Nota Fiscal, pagamento em até 30 dias...',2)}
+  ${ta('pagamento','Ex: Mediante apresentação de Nota Fiscal, pagamento em até 30 dias...',2, 50)}
 </div>
 <div class="form-field"><label>Obrigações da Contratante<span class="req">*</span><span class="ref">Art. 41 LLC</span></label>
-  ${ta('obrig_contratante','Descreva as obrigações da prefeitura no contrato...',3)}
+  ${ta('obrig_contratante','Descreva as obrigações da prefeitura no contrato...',3, 50)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-obrig_contratante','Obrigações da Administração Pública contratante')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-field"><label>Obrigações da Contratada<span class="req">*</span><span class="ref">Art. 41 LLC</span></label>
-  ${ta('obrig_contratada','Descreva as obrigações da empresa contratada...',3)}
+  ${ta('obrig_contratada','Descreva as obrigações da empresa contratada...',3, 50)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-obrig_contratada','Obrigações da empresa contratada')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-field"><label>Critério de Recebimento<span class="req">*</span><span class="ref">Art. 18, VIII LLC</span></label>
   ${ta('recebimento','Ex: Provisório — em até 5 dias; Definitivo — em até 30 dias após verificação de conformidade',2)}
 </div>
 <div class="form-field"><label>Penalidades<span class="req">*</span><span class="ref">Arts. 155-163 LLC</span></label>
-  ${ta('penalidades','Ex: Advertência; Multa de X% sobre o valor do contrato; Impedimento de contratar...',3)}
+  ${ta('penalidades','Ex: Advertência; Multa de X% sobre o valor do contrato; Impedimento de contratar...',3, 50)}
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:6px;" onclick="sugerirIA('tr-penalidades','Penalidades administrativas para descumprimento contratual')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-grid">
@@ -2790,96 +2777,111 @@ function formPP(dados, readonly) {
   const r = readonly;
   const v = (k) => dados[k] || '';
   const fontes = dados.fontes || [
-    {id:1, tipo:'', identificacao:'', valor:'', data:''},
-    {id:2, tipo:'', identificacao:'', valor:'', data:''},
-    {id:3, tipo:'', identificacao:'', valor:'', data:''},
+    {id:1, tipo:'cotacao_fornecedor', identificacao:'', valor:'', data:''},
+    {id:2, tipo:'cotacao_fornecedor', identificacao:'', valor:'', data:''},
+    {id:3, tipo:'painel_precos',      identificacao:'', valor:'', data:''},
   ];
   const tiposFonte = [
-    {v:'painel_precos',l:'Painel de Preços — compras.gov.br'},
-    {v:'pncp',l:'PNCP — Contratações anteriores'},
-    {v:'portal_go',l:'Portal de Compras de Goiás'},
-    {v:'sinapi',l:'SINAPI (obras civis)'},
-    {v:'fipe',l:'Tabela FIPE (veículos)'},
-    {v:'site_especializado',l:'Site especializado (com data/hora)'},
+    {v:'painel_precos',l:'Painel de Preços'},
+    {v:'pncp',l:'PNCP'},
+    {v:'portal_go',l:'Portal GO'},
+    {v:'sinapi',l:'SINAPI'},
+    {v:'fipe',l:'FIPE'},
+    {v:'site_especializado',l:'Site especializado'},
     {v:'nota_fiscal',l:'Nota Fiscal'},
-    {v:'cotacao_fornecedor',l:'Cotação direta com fornecedor'},
-    {v:'outro',l:'Outra fonte justificada'},
+    {v:'cotacao_fornecedor',l:'Cotação fornecedor'},
+    {v:'outro',l:'Outra'},
   ];
+  const tiposOpts = tiposFonte.map(t=>`<option value="${t.v}">${t.l}</option>`).join('');
 
-  // Calcular médias
-  const valores = fontes.map(f => parseFloat((f.valor||'0').replace(/\./g,'').replace(',','.'))).filter(v => v > 0);
-  const media = valores.length ? (valores.reduce((a,b)=>a+b,0)/valores.length).toFixed(2) : '—';
-  const menorPreco = valores.length ? Math.min(...valores).toFixed(2) : '—';
+  const fmt = val => {
+    const n = parseFloat(String(val||'0').replace(/\./g,'').replace(',','.'));
+    return n > 0 ? new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n) : '—';
+  };
+  const vals = fontes.map(f=>parseFloat(String(f.valor||'0').replace(/\./g,'').replace(',','.'))).filter(v=>v>0);
+  const media = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  const menor = vals.length ? Math.min(...vals) : 0;
 
   return `
 <div class="form-section-title">Pesquisa de Preços · Art. 7º, IX IN-009/23 | Art. 23, §1º LLC</div>
-<p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Mínimo 3 fontes de pesquisa. Siga a hierarquia de fontes conforme IN-009/23 Anexo 1.</p>
+<p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Mínimo 3 fontes. Hierarquia conforme IN-009/23 Anexo 1. Edite diretamente na tabela.</p>
 <div class="form-grid">
   <div class="form-field"><label>Item Pesquisado<span class="req">*</span></label>
-    <input type="text" id="pp-item" value="${esc(v('item'))}" placeholder="Descrição do item ou serviço" ${r?'readonly':''}>
+    <input type="text" id="pp-item" value="${esc(v('item'))}" placeholder="Descrição do item ou serviço" ${r?'readonly':''} oninput="ppMarcarUnsaved()">
   </div>
   <div class="form-grid" style="grid-template-columns:1fr 1fr;">
     <div class="form-field"><label>Quantidade</label>
-      <input type="text" id="pp-quantidade" value="${esc(v('quantidade'))}" placeholder="Ex: 100 un" ${r?'readonly':''}>
+      <input type="text" id="pp-quantidade" value="${esc(v('quantidade'))}" placeholder="Ex: 100 un" ${r?'readonly':''} oninput="ppMarcarUnsaved()">
     </div>
     <div class="form-field"><label>Unidade</label>
-      <input type="text" id="pp-unidade" value="${esc(v('unidade'))}" placeholder="Ex: un" ${r?'readonly':''}>
+      <input type="text" id="pp-unidade" value="${esc(v('unidade'))}" placeholder="Ex: un" ${r?'readonly':''} oninput="ppMarcarUnsaved()">
     </div>
   </div>
 </div>
 
-<div id="pp-fontes-container">
-${fontes.map((f, idx) => `
-<div class="pp-fonte" id="pp-fonte-${f.id}" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-    <span style="font-size:12px;font-weight:700;color:var(--text2);">Fonte ${idx+1} de Pesquisa</span>
-    ${idx > 2 && !r ? `<button class="btn btn-danger btn-sm" onclick="removerFontePP(${f.id})">✕</button>` : ''}
-  </div>
-  <div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr;gap:10px;align-items:end;">
-    <div class="form-field" style="margin:0;"><label>Tipo de Fonte</label>
-      ${r ? `<div class="fv">${f.tipo||'—'}</div>` : `<select class="pp-campo" data-fonte="${f.id}" data-campo="tipo">${tiposFonte.map(t=>`<option value="${t.v}" ${f.tipo===t.v?'selected':''}>${t.l}</option>`).join('')}</select>`}
-    </div>
-    <div class="form-field" style="margin:0;"><label>Identificação / Link</label>
-      ${r ? `<div class="fv">${f.identificacao||'—'}</div>` : `<input class="pp-campo" data-fonte="${f.id}" data-campo="identificacao" type="text" value="${esc(f.identificacao)}" placeholder="URL, nº do processo, empresa...">`}
-    </div>
-    <div class="form-field" style="margin:0;"><label>Valor Unit. (R$)</label>
-      ${r ? `<div class="fv">${f.valor||'—'}</div>` : `<input class="pp-campo" data-fonte="${f.id}" data-campo="valor" type="text" value="${esc(f.valor)}" placeholder="0,00" oninput="recalcularMedia()">`}
-    </div>
-    <div class="form-field" style="margin:0;"><label>Data</label>
-      ${r ? `<div class="fv">${f.data||'—'}</div>` : `<input class="pp-campo" data-fonte="${f.id}" data-campo="data" type="date" value="${f.data||''}">`}
-    </div>
-  </div>
-</div>
-`).join('')}
+${!r ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">Fontes Consultadas</span>
+  <button class="split-ia-btn" style="margin-top:0;padding:3px 10px;" onclick="ppAdicionarFonte()">+ Adicionar fonte</button>
+</div>` : ''}
+
+<div class="pp-table-wrap">
+<table class="pp-inline-table" id="pp-inline-table">
+  <thead><tr>
+    ${!r?'<th style="width:24px;"></th>':''}
+    <th style="width:4%;text-align:center;">Nº</th>
+    <th style="width:18%">Tipo de Fonte</th>
+    <th>Identificação / Link / Empresa</th>
+    <th style="width:14%">Valor Unit. (R$)</th>
+    <th style="width:12%">Data</th>
+    ${!r?'<th style="width:50px;text-align:center;"></th>':''}
+  </tr></thead>
+  <tbody id="pp-fontes-tbody">
+    ${fontes.map((f,i) => `<tr data-fonte-id="${f.id}" draggable="${!r}" ${!r?`ondragstart="ppDragStart(event,'${f.id}')" ondragover="ppDragOver(event)" ondrop="ppDrop(event,'${f.id}')" ondragleave="ppDragLeave(event)"`:''}
+      id="pp-fonte-${f.id}">
+      ${!r?`<td><span class="drag-handle">⠿</span></td>`:''}
+      <td style="text-align:center;color:var(--muted);font-size:11px;">${i+1}</td>
+      <td>${r ? (tiposFonte.find(t=>t.v===f.tipo)?.l||f.tipo||'—') : `<select class="pp-cell-input pp-campo" data-fonte="${f.id}" data-campo="tipo" onchange="ppMarcarUnsaved()">${tiposOpts.replace(`value="${f.tipo}"`,`value="${f.tipo}" selected`)}</select>`}</td>
+      <td>${r ? (f.identificacao||'—') : `<input class="pp-cell-input pp-campo" data-fonte="${f.id}" data-campo="identificacao" value="${esc(f.identificacao)}" placeholder="URL, empresa, processo..." oninput="ppMarcarUnsaved()">`}</td>
+      <td>${r ? fmt(f.valor) : `<input class="pp-cell-input pp-campo" data-fonte="${f.id}" data-campo="valor" type="text" value="${esc(f.valor)}" placeholder="0,00" oninput="ppRecalcular();ppMarcarUnsaved()">`}</td>
+      <td>${r ? (f.data||'—') : `<input class="pp-cell-input pp-campo" data-fonte="${f.id}" data-campo="data" type="date" value="${f.data||''}" oninput="ppMarcarUnsaved()">`}</td>
+      ${!r?`<td style="text-align:center;" id="pp-actions-${f.id}">
+        <button onclick="ppConfirmarRemover('${f.id}')" title="Remover" style="background:none;border:none;color:#e55;cursor:pointer;font-size:13px;padding:1px 4px;">✕</button>
+      </td>`:''}
+    </tr>`).join('')}
+  </tbody>
+</table>
 </div>
 
-${!r?`<button class="btn btn-secondary btn-sm" onclick="adicionarFontePP()" style="margin-bottom:14px;">+ Adicionar Fonte</button>`:''}
-
-<div style="background:var(--green-l);border:1px solid rgba(65,243,106,.2);border-radius:var(--r);padding:14px;margin:12px 0;">
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-    <div><div style="font-size:11px;color:var(--muted);">Menor Preço</div><div style="font-size:18px;font-weight:700;color:var(--text);" id="pp-menor">R$ ${menorPreco}</div></div>
-    <div><div style="font-size:11px;color:var(--muted);">Preço Médio</div><div style="font-size:18px;font-weight:700;color:var(--green);" id="pp-media">R$ ${media}</div></div>
-    <div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Metodologia<span class="req">*</span></div>
-      ${r ? `<div class="fv">${v('metodologia')||'—'}</div>` : `<select id="pp-metodologia"><option value="media">Média aritmética</option><option value="mediana">Mediana</option><option value="menor">Menor preço</option></select>`}
-    </div>
+<div class="pp-stats-bar" id="pp-stats-bar">
+  <div class="pp-stat-item">
+    <div class="lbl">Menor Preço</div>
+    <div class="val" id="pp-menor">${menor>0?fmt(menor):'—'}</div>
+  </div>
+  <div class="pp-stat-item">
+    <div class="lbl">Preço Médio</div>
+    <div class="val green" id="pp-media">${media>0?fmt(media):'—'}</div>
+  </div>
+  <div class="pp-stat-item" style="margin-left:auto;">
+    <div class="lbl">Metodologia</div>
+    ${r ? `<div class="val" style="font-size:13px;">${v('metodologia')||'—'}</div>` : `<select id="pp-metodologia" style="background:transparent;border:none;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;outline:none;"><option value="media" ${v('metodologia')==='media'?'selected':''}>Média aritmética</option><option value="mediana" ${v('metodologia')==='mediana'?'selected':''}>Mediana</option><option value="menor" ${v('metodologia')==='menor'?'selected':''}>Menor preço</option></select>`}
   </div>
 </div>
 
 <div class="form-grid">
   <div class="form-field"><label>Valor de Referência Adotado (R$)<span class="req">*</span></label>
-    <input type="text" id="pp-valor_referencia" value="${esc(v('valor_referencia'))}" placeholder="Valor que será utilizado no TR" ${r?'readonly':''}>
+    <input type="text" id="pp-valor_referencia" value="${esc(v('valor_referencia'))}" placeholder="Valor a usar no TR" ${r?'readonly':''} oninput="ppMarcarUnsaved()">
   </div>
   <div class="form-field"><label>Responsável pela Pesquisa<span class="req">*</span></label>
-    <input type="text" id="pp-responsavel" value="${esc(v('responsavel'))}" placeholder="Nome e cargo" ${r?'readonly':''}>
+    <input type="text" id="pp-responsavel" value="${esc(v('responsavel'))}" placeholder="Nome e cargo" ${r?'readonly':''} oninput="ppMarcarUnsaved()">
   </div>
 </div>
 
-${!r?`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+${!r?`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+  <span id="pp-unsaved-indicator" style="font-size:11px;color:var(--muted);"></span>
   <button class="btn btn-secondary" onclick="buscarPNCP()">
-    <svg width="14" height="14"><use href="#ic-arrow-right"/></svg> Buscar no Licit.ai (PNCP)
+    <svg width="14" height="14"><use href="#ic-arrow-right"/></svg> Buscar no PNCP
   </button>
-  <button class="btn btn-primary" onclick="salvarDocEtapa('PP')">💾 Salvar Pesquisa de Preços</button>
+  <button class="btn btn-primary" id="pp-save-btn" onclick="salvarDocEtapa('PP')">💾 Salvar Pesquisa de Preços</button>
 </div>`:''}`;
 }
 
@@ -2989,7 +2991,7 @@ function formParecer(dados, readonly) {
   ${!r?`<button class="btn btn-secondary btn-sm ia-btn" style="margin-top:4px;" onclick="sugerirIA('par-analise_edital','Análise jurídica da minuta de edital licitatório')">✨ Sugerir com IA</button>`:''}
 </div>
 <div class="form-field"><label>Fundamentação Legal do Parecer<span class="req">*</span></label>
-  ${ta('fundamentacao','Ex: Com base na Lei 14.133/2021, art. 53, e na IN-009/23 TCM-GO...',3)}
+  ${ta('fundamentacao','Ex: Com base na Lei 14.133/2021, art. 53, e na IN-009/23 TCM-GO...',3, 50)}
 </div>
 <div class="form-field"><label>Conclusão<span class="req">*</span></label>
   ${r ? `<div class="fv">${v('conclusao')||'—'}</div>` : `<select id="par-conclusao">
@@ -3039,7 +3041,6 @@ function renderFormEtapa(proc, etapa, doc) {
   if (etapa.n === 1) {
     html = renderDFDView(dados); // já chama ativarSplitLayout()
     document.getElementById('doc-body').innerHTML = html;
-    setTimeout(initSVItens, 0);
     return;
   }
 
@@ -3130,11 +3131,10 @@ function renderDFDView(dados) {
     <div class="split-editor-toolbar">
       <span class="split-editor-toolbar-title">✏️ Editar DFD</span>
       <div style="display:flex;gap:6px;align-items:center;">
-        <span id="sv-autosave-label" style="font-size:10px;color:var(--muted);"></span>
         <button class="btn btn-ghost btn-sm" onclick="gerarPDFDoc('DFD')" title="Baixar documento Word">
           <svg width="13" height="13"><use href="#ic-file"/></svg> .doc
         </button>
-        <button class="btn btn-primary btn-sm" id="sv-save-btn" onclick="salvarEdicaoDFD()">
+        <button class="btn btn-primary btn-sm" onclick="salvarEdicaoDFD()">
           <svg width="13" height="13"><use href="#ic-check"/></svg> Salvar
         </button>
       </div>
@@ -3165,8 +3165,7 @@ function renderDFDView(dados) {
       </div>
       <div class="form-field">
         <label>Justificativa da Necessidade</label>
-        <textarea id="sv-justificativa" rows="8" placeholder="Descreva a necessidade e justificativa..." oninput="atualizarPreviewDFD();svContarPalavras()">${esc2(dados.justificativa)}</textarea>
-        <div class="word-counter" id="sv-word-counter"></div>
+        <textarea id="sv-justificativa" rows="8" placeholder="Descreva a necessidade e justificativa..." oninput="atualizarPreviewDFD()">${esc2(dados.justificativa)}</textarea>
         <button class="split-ia-btn" id="btn-ia-just" onclick="gerarJustificativaIASplit()">✨ Gerar justificativa com IA</button>
       </div>
       <div class="split-ia-status" id="sv-ia-status"></div>
@@ -3193,20 +3192,10 @@ function renderDFDView(dados) {
           </select>
         </div>
         <div class="form-field">
-          <label>Prazo de Entrega</label>
-          <input type="text" id="sv-prazo-entrega" value="${esc2(dados.prazo_entrega||dados.prazo)}" placeholder="Ex: 30 dias" oninput="atualizarPreviewDFD()">
+          <label>Quantidade</label>
+          <input type="text" id="sv-quantidade" value="${esc2(dados.quantidade)}" placeholder="—" oninput="atualizarPreviewDFD()" readonly style="opacity:.6;cursor:default;">
         </div>
       </div>
-
-      <div class="split-section-divider" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>Itens da Contratação</span>
-        <div style="display:flex;gap:6px;">
-          <button class="split-ia-btn" style="margin-top:0;padding:3px 8px;" onclick="svDesfazer()" id="btn-sv-undo" title="Desfazer última alteração">↩ Desfazer</button>
-          <button class="split-ia-btn" style="margin-top:0;padding:3px 8px;background:rgba(26,184,255,.08);color:var(--blue);border-color:rgba(26,184,255,.2);" onclick="svAdicionarItem()">+ Adicionar item</button>
-          <button class="split-ia-btn" style="margin-top:0;padding:3px 8px;background:rgba(26,184,255,.08);color:var(--blue);border-color:rgba(26,184,255,.2);" onclick="abrirImportarSV()">📥 Importar</button>
-        </div>
-      </div>
-      <div id="sv-itens-container" style="border:1px solid var(--border);border-radius:6px;overflow:hidden;min-height:50px;"></div>
 
     </div>
   </div>
@@ -3220,28 +3209,6 @@ function renderDFDView(dados) {
   </div>
 
 </div>`;
-}
-
-// Inicializar sv-itens após o DOM do split estar pronto
-function initSVItens() {
-  renderSVItens();
-  svContarPalavras();
-  // Restaurar autosave se houver
-  const proc = _processoAtual;
-  if (proc) {
-    const key = 'autosave_dfd_' + proc.id;
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        const d = JSON.parse(saved);
-        const age = (Date.now() - (d.ts||0)) / 1000 / 60;
-        if (age < 60) { // só restaura se tiver menos de 1h
-          const lbl = document.getElementById('sv-autosave-label');
-          if (lbl) lbl.textContent = `Rascunho: ${Math.round(age)}min atrás`;
-        }
-      } catch(e) {}
-    }
-  }
 }
 
 // Gera o HTML do preview inline (não abre janela)
@@ -3283,37 +3250,11 @@ function gerarHTMLPreviewDFD(dados) {
   <div class="sp-secao">
     <div class="sp-secao-titulo">3. Dados da Contratação</div>
     <div class="sp-chips">
-      <div class="sp-chip"><b>Valor Total</b> ${(() => { try { const itens = typeof dados.itens==='string'?JSON.parse(dados.itens):(dados.itens||[]); const tot = itens.reduce((s,it)=>s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0); return tot>0?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(tot):'R$ '+( dados.valor||'—'); }catch(e){return 'R$ '+(dados.valor||'—');}})()}</div>
+      <div class="sp-chip"><b>Valor Est.</b> R$ ${dados.valor||'—'}</div>
       <div class="sp-chip"><b>Prazo</b> ${dados.prazo||'—'}</div>
-      <div class="sp-chip"><b>Itens</b> ${(() => { try { return (typeof dados.itens==='string'?JSON.parse(dados.itens):(dados.itens||[])).length; }catch(e){return '—';}})()}</div>
+      <div class="sp-chip"><b>Qtd.</b> ${dados.quantidade||'—'}</div>
       <div class="sp-chip"><b>Prioridade</b> ${{alta:'Alta ↑',media:'Média',baixa:'Baixa ↓'}[dados.prioridade]||'—'}</div>
     </div>
-    ${(() => {
-      try {
-        const itens = typeof dados.itens==='string'?JSON.parse(dados.itens):(dados.itens||[]);
-        if (!itens.length) return '';
-        const fmt = v => v>0?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v):'—';
-        const total = itens.reduce((s,it)=>s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0);
-        return `<table class="sp-itens-table">
-          <thead><tr>
-            <th style="width:4%">Nº</th>
-            <th>Descrição</th>
-            <th style="width:8%">Unid.</th>
-            <th style="width:8%">Qtd.</th>
-            <th style="width:14%">Vl. Unit.</th>
-            <th style="width:14%">Vl. Total</th>
-          </tr></thead>
-          <tbody>
-            ${itens.map((it,i)=>{
-              const vu=parseFloat(it.valor_unitario||0);
-              const qt=parseFloat(it.quantidade||1);
-              return `<tr><td style="text-align:center">${i+1}</td><td>${it.descricao||it.nome||'—'}</td><td style="text-align:center">${it.unidade||'UN'}</td><td style="text-align:center">${qt.toLocaleString('pt-BR')}</td><td style="text-align:right">${vu>0?fmt(vu):'—'}</td><td style="text-align:right">${vu>0?fmt(vu*qt):'—'}</td></tr>`;
-            }).join('')}
-          </tbody>
-          <tfoot><tr class="sp-total-row"><td colspan="5" style="text-align:right;padding:4px 6px;">VALOR TOTAL DO PROCESSO:</td><td style="text-align:right;padding:4px 6px;">${total>0?fmt(total):'—'}</td></tr></tfoot>
-        </table>`;
-      } catch(e) { return ''; }
-    })()}
   </div>
 
   <div class="sp-secao">
@@ -3333,7 +3274,6 @@ function gerarHTMLPreviewDFD(dados) {
 // Atualiza preview ao vivo conforme o usuário digita
 function atualizarPreviewDFD() {
   const sv = id => document.getElementById('sv-' + id)?.value || '';
-  const itensJson = document.getElementById('dfd-itens-json')?.value || '[]';
   const dados = {
     unidade:      sv('unidade'),
     responsavel:  sv('responsavel'),
@@ -3344,11 +3284,9 @@ function atualizarPreviewDFD() {
     prazo:        sv('prazo'),
     prioridade:   sv('prioridade'),
     quantidade:   sv('quantidade'),
-    itens:        itensJson,
   };
   const prev = document.getElementById('dfd-split-preview');
   if (prev) prev.innerHTML = gerarHTMLPreviewDFD(dados);
-  svMarcarNaoSalvo();
 }
 
 // Salvar edição do DFD a partir do split view
@@ -3382,7 +3320,6 @@ async function salvarEdicaoDFD() {
     // Atualizar objeto no processo
     await sb.from('processos').update({ objeto: dados.objeto, atualizado_em: new Date().toISOString() }).eq('id', proc.id);
     toast('✅ DFD salvo com sucesso!', 'success');
-    svMarcarSalvo();
     await abrirProcesso(proc.id);
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'error');
@@ -3485,6 +3422,7 @@ async function salvarDocEtapa(tipo) {
       });
     }
     toast('Documento salvo com sucesso!', 'success');
+    etapaMarcarSalvo(tipo);
     await abrirProcesso(proc.id);
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'error');
@@ -4212,9 +4150,7 @@ function setDFDItens(arr) {
   const el = document.getElementById('dfd-itens-json');
   if (el) el.value = JSON.stringify(arr);
   renderDFDItens();
-  renderSVItens();
   atualizarQuantidadeTotal();
-  atualizarPreviewDFD();
 }
 
 function renderDFDItens() {
@@ -5256,17 +5192,38 @@ function previewETP3(proc) {
 function previewPP(dados, proc) {
   const { municipio, hoje } = _prefHeader();
   const fontes = dados.fontes || [];
+  const fmt = val => { const n=parseFloat(String(val||'0').replace(/\./g,'').replace(',','.')); return n>0?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n):'—'; };
+  const vals = fontes.map(f=>parseFloat(String(f.valor||'0').replace(/\./g,'').replace(',','.'))).filter(v=>v>0);
+  const media = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  const menor = vals.length ? Math.min(...vals) : 0;
+  const tiposLabel = {painel_precos:'Painel de Preços',pncp:'PNCP',portal_go:'Portal GO',sinapi:'SINAPI',fipe:'FIPE',site_especializado:'Site Especializado',nota_fiscal:'Nota Fiscal',cotacao_fornecedor:'Cotação Fornecedor',outro:'Outra'};
   return `${_spHeader('Pesquisa de Preços', proc)}
   <div class="sp-secao">
     <div class="sp-secao-titulo">Item Pesquisado</div>
-    <div class="sp-body">${dados.item || proc?.objeto || '—'}</div>
+    <div class="sp-body"><b>${dados.item || proc?.objeto || '—'}</b> &nbsp;·&nbsp; Qtd: ${dados.quantidade||'—'} ${dados.unidade||''}</div>
   </div>
   <div class="sp-secao">
     <div class="sp-secao-titulo">Fontes Consultadas</div>
-    ${fontes.length ? fontes.map((f,i) => `<div class="sp-body" style="margin-bottom:4px;"><b>${i+1}.</b> ${f.identificacao||f.tipo||'—'} — R$ ${f.valor||'—'} <span style="color:#666;font-size:9pt;">(${f.data||'—'})</span></div>`).join('') : '<div class="sp-body" style="color:#aaa;">Preencha as fontes para visualizar</div>'}
+    ${fontes.length ? `
+    <table class="sp-itens-table">
+      <thead><tr>
+        <th style="width:4%">Nº</th>
+        <th style="width:20%">Tipo</th>
+        <th>Identificação</th>
+        <th style="width:14%;text-align:right">Valor Unit.</th>
+        <th style="width:12%">Data</th>
+      </tr></thead>
+      <tbody>
+        ${fontes.map((f,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${tiposLabel[f.tipo]||f.tipo||'—'}</td><td>${f.identificacao||'—'}</td><td style="text-align:right">${fmt(f.valor)}</td><td>${f.data?new Date(f.data+'T12:00').toLocaleDateString('pt-BR'):'—'}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr class="sp-total-row">
+        <td colspan="3" style="text-align:right;padding:4px 6px;">Menor Preço: <b>${menor>0?fmt(menor):'—'}</b> &nbsp;&nbsp; Média: </td>
+        <td colspan="2" style="padding:4px 6px;"><b>${media>0?fmt(media):'—'}</b></td>
+      </tr></tfoot>
+    </table>` : '<div class="sp-body" style="color:#aaa;">Preencha as fontes para visualizar</div>'}
   </div>
   <div class="sp-chips">
-    <div class="sp-chip"><b>Valor Ref.</b> R$ ${dados.valor_referencia||'—'}</div>
+    <div class="sp-chip"><b>Valor Ref.</b> ${dados.valor_referencia?fmt(dados.valor_referencia):'—'}</div>
     <div class="sp-chip"><b>Metodologia</b> ${{media:'Média',mediana:'Mediana',menor:'Menor Preço'}[dados.metodologia]||'—'}</div>
     <div class="sp-chip"><b>Fontes</b> ${fontes.length||'0'}</div>
     <div class="sp-chip"><b>Responsável</b> ${dados.responsavel||'—'}</div>
@@ -5377,260 +5334,192 @@ function toggleSidebar() {
 
 
 // ══════════════════════════════════════════════════════════
-// SPLIT VIEW — ITENS, UNDO, AUTOSAVE, WORD COUNTER
+// GRUPO 1 — Unsaved indicator + autosave + word counter
+//           (genérico para todas as etapas)
 // ══════════════════════════════════════════════════════════
 
-// Estado central do split view
-const _svHistory = [];
-let   _svUnsaved = false;
-let   _svAutoSaveTimer = null;
+// Inicializar listeners genéricos após renderizar qualquer etapa
+function initEtapaListeners(tipo) {
+  // Word counter em todas as textareas com data-wc
+  document.querySelectorAll('textarea[data-wc]').forEach(ta => {
+    const counterId = ta.id + '-wc';
+    let el = document.getElementById(counterId);
+    if (!el) {
+      el = document.createElement('span');
+      el.id = counterId;
+      el.className = 'etapa-word-counter';
+      ta.parentNode.insertBefore(el, ta.nextSibling);
+    }
+    const update = () => {
+      const words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+      const min = parseInt(ta.dataset.wc) || 80;
+      el.textContent = `${words} palavras — mínimo recomendado: ${min}`;
+      el.className = 'etapa-word-counter ' + (words >= min ? 'ok' : 'warn');
+    };
+    ta.addEventListener('input', update);
+    update();
+  });
 
-function svSnapshot() {
-  const itens = document.getElementById('dfd-itens-json')?.value || '[]';
-  return JSON.stringify({ itens });
-}
-
-function svSalvarHistorico() {
-  _svHistory.push(svSnapshot());
-  if (_svHistory.length > 30) _svHistory.shift();
-}
-
-function svDesfazer() {
-  if (_svHistory.length === 0) { toast('Nada para desfazer', 'info'); return; }
-  const snap = JSON.parse(_svHistory.pop());
-  const el = document.getElementById('dfd-itens-json');
-  if (el) el.value = snap.itens;
-  renderSVItens();
-  renderDFDItens();
-  atualizarQuantidadeTotal();
-  atualizarPreviewDFD();
-  toast('Alteração desfeita', 'info');
-}
-
-function svMarcarNaoSalvo() {
-  _svUnsaved = true;
-  const btn = document.getElementById('sv-save-btn');
-  if (btn && !btn.querySelector('.sv-unsaved-dot')) {
-    btn.innerHTML = `<span class="sv-unsaved-dot"></span> Salvar*`;
+  // Auto-save genérico a cada 30s
+  clearInterval(window._etapaAutoSaveInterval);
+  if (tipo) {
+    window._etapaAutoSaveInterval = setInterval(() => {
+      const proc = _processoAtual;
+      if (!proc || !tipo) return;
+      try {
+        const dados = coletarDadosForm(tipo);
+        localStorage.setItem(`autosave_${tipo}_${proc.id}`, JSON.stringify({dados, ts: Date.now()}));
+        // Toast discreto
+        let toastEl = document.getElementById('autosave-toast');
+        if (!toastEl) {
+          toastEl = document.createElement('div');
+          toastEl.id = 'autosave-toast';
+          toastEl.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--text2);z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;';
+          document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = '✓ Rascunho salvo';
+        toastEl.style.opacity = '1';
+        setTimeout(() => { toastEl.style.opacity = '0'; }, 2500);
+      } catch(e) {}
+    }, 30000);
   }
-  // Auto-save a cada 30s no localStorage
-  clearTimeout(_svAutoSaveTimer);
-  _svAutoSaveTimer = setTimeout(() => {
-    const proc = _processoAtual;
-    if (!proc) return;
-    const key = 'autosave_dfd_' + proc.id;
-    const itens = document.getElementById('dfd-itens-json')?.value || '[]';
-    const sv = id => document.getElementById('sv-' + id)?.value || '';
-    localStorage.setItem(key, JSON.stringify({
-      objeto: sv('objeto'), justificativa: sv('justificativa'),
-      unidade: sv('unidade'), responsavel: sv('responsavel'),
-      cargo: sv('cargo'), valor: sv('valor'), prazo: sv('prazo'),
-      prioridade: sv('prioridade'), itens, ts: Date.now()
-    }));
-    const lbl = document.getElementById('sv-autosave-label');
-    if (lbl) { lbl.textContent = '✓ Rascunho salvo'; setTimeout(() => { lbl.textContent = ''; }, 2500); }
-  }, 30000);
 }
 
-function svMarcarSalvo() {
-  _svUnsaved = false;
-  const btn = document.getElementById('sv-save-btn');
-  if (btn) btn.innerHTML = `<svg width="13" height="13"><use href="#ic-check"/></svg> Salvar`;
+function etapaMarcarUnsaved(btnId) {
+  const btn = document.getElementById(btnId);
+  if (!btn || btn.dataset.unsaved) return;
+  btn.dataset.unsaved = '1';
+  const orig = btn.innerHTML;
+  btn.dataset.origHtml = orig;
+  btn.innerHTML = `<span class="etapa-unsaved-dot"></span> Salvar*`;
 }
 
-function svContarPalavras() {
-  const txt = document.getElementById('sv-justificativa')?.value || '';
-  const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
-  const el = document.getElementById('sv-word-counter');
-  if (!el) return;
-  const min = 80;
-  el.textContent = `${words} palavras — mínimo recomendado: ${min}`;
-  el.className = 'word-counter ' + (words >= min ? 'ok' : 'warn');
+function etapaMarcarSalvo(tipo) {
+  // Resetar qualquer botão salvar que tenha unsaved
+  ['pp-save-btn','do-save-btn','auth-save-btn','par-save-btn',
+   'prot-save-btn','etp-save-btn','tr-save-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn && btn.dataset.unsaved) {
+      btn.innerHTML = btn.dataset.origHtml || '💾 Salvar';
+      delete btn.dataset.unsaved;
+    }
+  });
+  clearInterval(window._etapaAutoSaveInterval);
 }
 
-// ── RENDER TABELA DE ITENS NO SPLIT VIEW ──────────────────
-function renderSVItens() {
-  const cont = document.getElementById('sv-itens-container');
-  if (!cont) return;
-  const itens = getDFDItens();
-  if (itens.length === 0) {
-    cont.innerHTML = `<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px;">
-      Nenhum item. Use "Adicionar item" ou "Importar" acima.
-    </div>`;
-    return;
-  }
-  const fmt = v => v > 0 ? new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v) : '—';
-  const total = itens.reduce((s,it) => s + (parseFloat(it.valor_unitario||0) * parseFloat(it.quantidade||1)), 0);
+// ══════════════════════════════════════════════════════════
+// GRUPO 2 — PP inline table functions
+// ══════════════════════════════════════════════════════════
 
-  cont.innerHTML = `
-  <table class="sv-itens-table">
-    <thead><tr>
-      <th style="width:24px;text-align:center;">⠿</th>
-      <th style="width:4%;text-align:center;">Nº</th>
-      <th>Descrição</th>
-      <th style="width:9%">Unid.</th>
-      <th style="width:10%">Qtd.</th>
-      <th style="width:13%">Vl. Unit.</th>
-      <th style="width:13%">Vl. Total</th>
-      <th style="width:50px;text-align:center;">Ações</th>
-    </tr></thead>
-    <tbody id="sv-itens-tbody">
-      ${itens.map((it,i) => {
-        const vu = parseFloat(it.valor_unitario||0);
-        const qt = parseFloat(it.quantidade||1);
-        const vt = vu * qt;
-        return `<tr draggable="true" data-idx="${i}"
-          ondragstart="svDragStart(event,${i})"
-          ondragover="svDragOver(event)"
-          ondrop="svDrop(event,${i})"
-          ondragleave="svDragLeave(event)">
-          <td style="text-align:center;"><span class="drag-handle">⠿</span></td>
-          <td style="text-align:center;color:var(--muted);font-size:11px;">${i+1}</td>
-          <td><input class="sv-cell-input" value="${(it.descricao||it.nome||'').replace(/"/g,'&quot;')}"
-            oninput="svEditItem(${i},'descricao',this.value)" placeholder="Descrição..."></td>
-          <td><input class="sv-cell-input" value="${it.unidade||'UN'}"
-            oninput="svEditItem(${i},'unidade',this.value.toUpperCase())"
-            style="text-align:center;text-transform:uppercase;"></td>
-          <td><input class="sv-cell-input" type="number" min="0.001" step="any" value="${qt}"
-            oninput="svEditItem(${i},'quantidade',parseFloat(this.value)||1)"
-            style="text-align:center;"></td>
-          <td><input class="sv-cell-input" type="number" min="0" step="0.01" value="${vu||''}"
-            placeholder="0,00" oninput="svEditItem(${i},'valor_unitario',parseFloat(this.value)||0)"
-            style="text-align:right;"></td>
-          <td style="text-align:right;font-size:11px;color:var(--text2);padding-right:6px;">${vu>0?fmt(vt):'—'}</td>
-          <td style="text-align:center;">
-            <button onclick="svDuplicarItem(${i})" title="Duplicar"
-              style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:1px 3px;">⧉</button>
-            <button onclick="svRemoverItem(${i})" title="Remover"
-              style="background:none;border:none;color:#e55;cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>
-          </td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>
-  <div class="sv-itens-footer">
-    <span>${itens.length} item(s)</span>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <span style="font-size:11px;color:var(--muted);">Total do processo:</span>
-      <span class="sv-total-valor">${total > 0 ? fmt(total) : '—'}</span>
-    </div>
-  </div>`;
+function ppMarcarUnsaved() {
+  etapaMarcarUnsaved('pp-save-btn');
+  const ind = document.getElementById('pp-unsaved-indicator');
+  if (ind) { ind.innerHTML = '<span class="etapa-unsaved-dot"></span> Alterações não salvas'; }
 }
 
-// Editar item inline
-function svEditItem(idx, campo, valor) {
-  svSalvarHistorico();
-  const itens = getDFDItens();
-  if (!itens[idx]) return;
-  itens[idx][campo] = valor;
-  const el = document.getElementById('dfd-itens-json');
-  if (el) el.value = JSON.stringify(itens);
-  // Atualizar só o valor total da linha sem re-renderizar tudo
-  const qt  = parseFloat(itens[idx].quantidade||1);
-  const vu  = parseFloat(itens[idx].valor_unitario||0);
-  const vt  = qt * vu;
+function ppRecalcular() {
+  const vals = [];
+  document.querySelectorAll('.pp-campo[data-campo="valor"]').forEach(el => {
+    const n = parseFloat(String(el.value||'0').replace(/\./g,'').replace(',','.'));
+    if (n > 0) vals.push(n);
+  });
   const fmt = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
-  const row = document.querySelector(`#sv-itens-tbody tr[data-idx="${idx}"]`);
-  if (row) {
-    const vtCell = row.cells[6];
-    if (vtCell) vtCell.textContent = vu > 0 ? fmt(vt) : '—';
-  }
-  // Atualizar total geral
-  const total = itens.reduce((s,it) => s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0);
-  const totalEl = document.querySelector('.sv-total-valor');
-  if (totalEl) totalEl.textContent = total > 0 ? fmt(total) : '—';
-  atualizarQuantidadeTotal();
-  atualizarPreviewDFD();
+  const media = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  const menor = vals.length ? Math.min(...vals) : 0;
+  const mEl = document.getElementById('pp-media');
+  const nEl = document.getElementById('pp-menor');
+  if (mEl) mEl.textContent = media > 0 ? fmt(media) : '—';
+  if (nEl) nEl.textContent = menor > 0 ? fmt(menor) : '—';
 }
 
-function svRemoverItem(idx) {
-  svSalvarHistorico();
-  const itens = getDFDItens();
-  itens.splice(idx, 1);
-  setDFDItens(itens);
+function ppAdicionarFonte() {
+  const tbody = document.getElementById('pp-fontes-tbody');
+  if (!tbody) return;
+  const id = Date.now();
+  const rows = tbody.querySelectorAll('tr');
+  const num = rows.length + 1;
+  const tiposOpts = [
+    {v:'cotacao_fornecedor',l:'Cotação fornecedor'},{v:'painel_precos',l:'Painel de Preços'},
+    {v:'pncp',l:'PNCP'},{v:'site_especializado',l:'Site especializado'},
+    {v:'nota_fiscal',l:'Nota Fiscal'},{v:'outro',l:'Outra'},
+  ].map(t=>`<option value="${t.v}">${t.l}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.dataset.fonteId = id;
+  tr.id = `pp-fonte-${id}`;
+  tr.draggable = true;
+  tr.ondragstart = (e) => ppDragStart(e, id);
+  tr.ondragover  = (e) => ppDragOver(e);
+  tr.ondrop      = (e) => ppDrop(e, id);
+  tr.ondragleave = (e) => ppDragLeave(e);
+  tr.innerHTML = `
+    <td><span class="drag-handle">⠿</span></td>
+    <td style="text-align:center;color:var(--muted);font-size:11px;">${num}</td>
+    <td><select class="pp-cell-input pp-campo" data-fonte="${id}" data-campo="tipo" onchange="ppMarcarUnsaved()">${tiposOpts}</select></td>
+    <td><input class="pp-cell-input pp-campo" data-fonte="${id}" data-campo="identificacao" placeholder="URL, empresa, processo..." oninput="ppMarcarUnsaved()"></td>
+    <td><input class="pp-cell-input pp-campo" data-fonte="${id}" data-campo="valor" type="text" placeholder="0,00" oninput="ppRecalcular();ppMarcarUnsaved()"></td>
+    <td><input class="pp-cell-input pp-campo" data-fonte="${id}" data-campo="data" type="date" oninput="ppMarcarUnsaved()"></td>
+    <td style="text-align:center;" id="pp-actions-${id}">
+      <button onclick="ppConfirmarRemover('${id}')" style="background:none;border:none;color:#e55;cursor:pointer;font-size:13px;padding:1px 4px;">✕</button>
+    </td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('.pp-cell-input').focus();
+  ppRenumerar();
+  ppMarcarUnsaved();
 }
 
-function svDuplicarItem(idx) {
-  svSalvarHistorico();
-  const itens = getDFDItens();
-  const clone = { ...itens[idx] };
-  itens.splice(idx + 1, 0, clone);
-  setDFDItens(itens);
-  toast('Item duplicado', 'success');
+function ppConfirmarRemover(id) {
+  const actionsEl = document.getElementById(`pp-actions-${id}`);
+  if (!actionsEl) return;
+  actionsEl.innerHTML = `
+    <span style="font-size:10px;color:#e55;">Remover?</span>
+    <button class="pp-confirm-btn" style="background:#e55;color:#fff;margin:0 2px;"
+      onclick="ppRemoverFonte('${id}')">Sim</button>
+    <button class="pp-confirm-btn" style="background:var(--s3);color:var(--text);"
+      onclick="ppCancelarRemover('${id}')">Não</button>`;
+  document.getElementById(`pp-fonte-${id}`)?.classList.add('pp-confirm-row');
 }
 
-function svAdicionarItem() {
-  svSalvarHistorico();
-  const itens = getDFDItens();
-  itens.push({ descricao: '', unidade: 'UN', quantidade: 1, valor_unitario: 0 });
-  setDFDItens(itens);
-  // Focar na última linha
-  setTimeout(() => {
-    const rows = document.querySelectorAll('#sv-itens-tbody tr');
-    if (rows.length) rows[rows.length-1].querySelector('.sv-cell-input')?.focus();
-  }, 50);
+function ppCancelarRemover(id) {
+  const actionsEl = document.getElementById(`pp-actions-${id}`);
+  if (actionsEl) actionsEl.innerHTML = `<button onclick="ppConfirmarRemover('${id}')" style="background:none;border:none;color:#e55;cursor:pointer;font-size:13px;padding:1px 4px;">✕</button>`;
+  document.getElementById(`pp-fonte-${id}`)?.classList.remove('pp-confirm-row');
 }
 
-// Drag and drop
-let _svDragIdx = null;
-function svDragStart(e, idx) { _svDragIdx = idx; e.dataTransfer.effectAllowed = 'move'; }
-function svDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-function svDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-function svDrop(e, toIdx) {
+function ppRemoverFonte(id) {
+  document.getElementById(`pp-fonte-${id}`)?.remove();
+  ppRenumerar();
+  ppRecalcular();
+  ppMarcarUnsaved();
+}
+
+function ppRenumerar() {
+  document.querySelectorAll('#pp-fontes-tbody tr').forEach((tr,i) => {
+    const numCell = tr.cells[1];
+    if (numCell) numCell.textContent = i + 1;
+  });
+}
+
+// Drag-drop PP
+let _ppDragId = null;
+function ppDragStart(e, id) { _ppDragId = id; e.dataTransfer.effectAllowed = 'move'; }
+function ppDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function ppDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function ppDrop(e, toId) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
-  if (_svDragIdx === null || _svDragIdx === toIdx) return;
-  svSalvarHistorico();
-  const itens = getDFDItens();
-  const [item] = itens.splice(_svDragIdx, 1);
-  itens.splice(toIdx, 0, item);
-  setDFDItens(itens);
-  _svDragIdx = null;
+  if (!_ppDragId || _ppDragId == toId) return;
+  const tbody = document.getElementById('pp-fontes-tbody');
+  if (!tbody) return;
+  const fromRow = document.getElementById(`pp-fonte-${_ppDragId}`);
+  const toRow   = document.getElementById(`pp-fonte-${toId}`);
+  if (fromRow && toRow) tbody.insertBefore(fromRow, toRow);
+  ppRenumerar();
+  ppMarcarUnsaved();
+  _ppDragId = null;
 }
 
-// Importar com merge
-function abrirImportarSV() {
-  // Modificar modal de importar para oferecer merge
-  const modal = document.getElementById('modal-importar-dfd');
-  if (!modal) return;
-  // Injetar opção de merge se ainda não tiver
-  if (!document.getElementById('sv-import-mode')) {
-    const area = modal.querySelector('.modal-body') || modal;
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;gap:12px;margin-bottom:12px;';
-    div.innerHTML = `
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-        <input type="radio" name="sv-import-mode" id="sv-import-mode" value="replace" checked> Substituir tudo
-      </label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-        <input type="radio" name="sv-import-mode" value="merge"> Adicionar aos existentes
-      </label>`;
-    const firstChild = area.firstElementChild;
-    if (firstChild) area.insertBefore(div, firstChild); else area.appendChild(div);
-  }
-  modal.classList.add('show');
-}
-
-// Override confirmarImportacaoDFD para respeitar modo merge
-const _origConfirmarImportacao = typeof confirmarImportacaoDFD === 'function' ? confirmarImportacaoDFD : null;
-function confirmarImportacaoDFD() {
-  const modeEl = document.querySelector('input[name="sv-import-mode"]:checked');
-  const merge = modeEl?.value === 'merge';
-  if (merge) {
-    // Pegar itens existentes antes de chamar o original
-    const existentes = getDFDItens();
-    if (_origConfirmarImportacao) _origConfirmarImportacao();
-    // Após importar, os novos foram setados — fazer merge
-    const novos = getDFDItens();
-    const merged = [...existentes, ...novos];
-    setDFDItens(merged);
-    toast(`${novos.length} item(s) adicionado(s). Total: ${merged.length}`, 'success');
-  } else {
-    if (_origConfirmarImportacao) _origConfirmarImportacao();
-  }
-  renderSVItens();
-  atualizarPreviewDFD();
-}
+// Override de recalcularMedia para compatibilidade
+function recalcularMedia() { ppRecalcular(); }
 
 
 </script>
