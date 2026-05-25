@@ -4030,12 +4030,18 @@ async function salvarNovoUsuario() {
     erroEl.style.display = 'block'; return;
   }
 
-  const credText = 'E-mail: ' + email + '\nSenha: ' + senha + '\nURL: licitacao-app.vercel.app';
+  window._lastCredentials = email + '|' + senha;
   okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha +
-    '<br><button onclick="navigator.clipboard.writeText(\`' + credText.replace(/`/g,"'") + '\`).then(()=>toast('Credenciais copiadas!','success'))" class="btn btn-secondary btn-sm" style="margin-top:6px;">📋 Copiar credenciais</button>';
+    '<br><button onclick="copiarCredenciais()" class="btn btn-secondary btn-sm" style="margin-top:6px;">📋 Copiar credenciais</button>';
   okEl.style.display = 'block';
   toast('Usuário criado com sucesso!', 'success');
   carregarUsuariosAdmin();
+}
+
+function copiarCredenciais() {
+  const parts = (window._lastCredentials || '').split('|');
+  const text = 'E-mail: ' + parts[0] + '\nSenha: ' + parts[1] + '\nURL: licitacao-app.vercel.app';
+  navigator.clipboard.writeText(text).then(() => toast('Credenciais copiadas!', 'success'));
 }
 
 async function toggleUsuarioAtivo(id, ativo) {
