@@ -2601,7 +2601,7 @@ document.addEventListener('keydown', e => {
 // ══════════════════════════════════════════════════════════
 function herdarDadosDFD() {
   const dfdDoc = _processoAtual?.docs?.find(d => d.tipo === 'DFD');
-  if (!dfdDoc?.dados) return {};
+  if (!dfdDoc?.dados) return { objeto:'', justificativa:'', unidade:'', responsavel:'', cargo:'', valor:'', prazo:'', prioridade:'', itens:[], temDFD:false };
   const d = dfdDoc.dados;
   let itens = [];
   try { itens = typeof d.itens === 'string' ? JSON.parse(d.itens) : (d.itens || []); } catch(e) {}
@@ -2660,7 +2660,7 @@ async function etpGerarSecaoIA(secId, secTitulo, btnEl) {
 
   const prompts = {
     '1': `Redija a seção "1. Descrição da Necessidade" do Estudo Técnico Preliminar. Objeto: "${dfd.objeto}". Secretaria: "${dfd.unidade}". Município: ${municipio}. Categoria: ${cat}. Baseie-se nesta justificativa do DFD mas reescreva em tom de "necessidade institucional": "${dfd.justificativa.slice(0,300)}". Mínimo 120 palavras. Tom formal, técnico. Cite a Lei 14.133/2021 e a IN-009/2023. Retorne APENAS o texto da seção.`,
-    '2': `Redija a seção "2. Estimativa da Quantidade" do ETP para: "${dfd.objeto}". Secretaria: ${dfd.unidade}. Município: ${municipio}. Itens do DFD: ${dfd.itens.slice(0,10).map((it,i)=>`${i+1}. ${it.descricao||it.nome||'—'} — ${it.quantidade||1} ${it.unidade||'UN'}`).join('; ')||dfd.valor}. Justifique tecnicamente a necessidade das quantidades com base no histórico de consumo e demanda. Mínimo 80 palavras. Retorne APENAS o texto.`,
+    '2': `Redija a seção "2. Estimativa da Quantidade" do ETP para: "${dfd.objeto}". Secretaria: ${dfd.unidade}. Município: ${municipio}. Itens do DFD: ${(dfd.itens||[]).slice(0,10).map((it,i)=>`${i+1}. ${it.descricao||it.nome||'—'} — ${it.quantidade||1} ${it.unidade||'UN'}`).join('; ')||dfd.valor}. Justifique tecnicamente a necessidade das quantidades com base no histórico de consumo e demanda. Mínimo 80 palavras. Retorne APENAS o texto.`,
     '3': `Redija a seção "3. Levantamento de Mercado" do ETP para: "${dfd.objeto}". Município: ${municipio}. Categoria: ${cat}. Inclua: menção ao PNCP, Painel de Preços (compras.gov.br), pesquisa junto a fornecedores locais e regionais, SINAPI (se obra), Ata de Registro de Preços similares. Mínimo 100 palavras. Retorne APENAS o texto.`,
     '4': `Redija a seção "4. Estimativa do Valor da Contratação" do ETP. Objeto: "${dfd.objeto}". Valor estimado no DFD: R$ ${dfd.valor||'—'}. Explique a metodologia de apuração do valor (pesquisa de preços, PNCP, fornecedores). Cite a IN SEGES nº 65/2021. Mínimo 80 palavras. Retorne APENAS o texto.`,
     '5': `Redija a seção "5. Descrição da Solução" do ETP para: "${dfd.objeto}". Município: ${municipio}. Categoria: ${cat}. Descreva a solução escolhida (licitação via Pregão Eletrônico / SRP), justificando por que é a mais adequada. Mínimo 100 palavras. Retorne APENAS o texto.`,
@@ -2783,8 +2783,9 @@ function formETP(dados, readonly) {
     </div>`;
   };
 
-  const taSecao = (num, ph='') => {
+  const taSecao = (num, tituloSec='', ph='') => {
     if (r) return `<div class="fv" style="white-space:pre-wrap;min-height:60px;">${esc(defaults[num]||'—')}</div>`;
+    const tituloEsc = tituloSec.replace(/'/g, "\\'");
     return `
     <textarea id="etp-sec-${num}" rows="5" placeholder="${ph}"
       oninput="etpAtualizarWC('${num}');etpAtualizarPreview()"
@@ -2792,13 +2793,13 @@ function formETP(dados, readonly) {
     >${esc(defaults[num]||'')}</textarea>
     <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
       <button class="btn btn-ghost btn-sm" style="font-size:11px;" id="etp-btn-ia-${num}"
-        onclick="etpGerarSecaoIA('${num}','${titulo.replace(/'/g,"\\'")}',this)">✨ Gerar com IA</button>
+        onclick="etpGerarSecaoIA('${num}','${tituloEsc}',this)">✨ Gerar com IA</button>
       <span id="etp-wc-${num}" style="font-size:11px;color:var(--muted);"></span>
     </div>`;
   };
-  // helper para titulo inside secao closure
+  // helper: passa titulo para taSecao
   const makeSecao = (num, titulo, ph='', extra='') => {
-    const inner = `${taSecao(num, ph)}${extra}`;
+    const inner = `${taSecao(num, titulo, ph)}${extra}`;
     return secao(num, titulo, inner, num === '1');
   };
 
