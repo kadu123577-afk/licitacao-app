@@ -554,6 +554,30 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
   .stats-row{grid-template-columns:1fr 1fr;}
   .proc-layout{grid-template-columns:1fr;}
 }
+
+/* ── SPLIT VIEW ── */
+.split-view{display:grid;grid-template-columns:1fr 1fr;height:calc(100vh - 260px);min-height:500px;}
+.split-editor{overflow-y:auto;padding:20px;border-right:1px solid var(--border);}
+.split-preview{
+  overflow-y:auto;background:#fff;
+  padding:28px 32px;
+  font-family:'Times New Roman',Times,serif;
+  font-size:11pt;color:#000;line-height:1.6;
+}
+.split-preview h1{font-size:12pt;text-align:center;text-transform:uppercase;font-weight:bold;margin:0 0 2px;letter-spacing:.5px;}
+.split-preview h2{font-size:11pt;text-align:center;font-weight:bold;margin:0 0 12px;}
+.split-preview .sp-meta{border:1px solid #000;margin-bottom:14px;}
+.split-preview .sp-meta-row{padding:4px 8px;font-size:10pt;border-bottom:1px solid #000;}
+.split-preview .sp-meta-row:last-child{border-bottom:none;}
+.split-preview .sp-secao{margin-bottom:12px;}
+.split-preview .sp-secao-titulo{font-weight:bold;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:6px;font-size:10.5pt;}
+.split-preview .sp-body{font-size:10.5pt;text-align:justify;margin:0 0 8px;}
+.split-preview .sp-chips{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin:6px 0;}
+.split-preview .sp-chip{border:1px solid #ccc;padding:4px 6px;font-size:9.5pt;}
+.split-preview .sp-chip b{display:block;font-size:8.5pt;color:#555;}
+.split-preview .sp-label{font-size:9pt;color:#555;margin-bottom:2px;}
+.doc-area.split-mode .doc-body{padding:0;}
+@media(max-width:900px){.split-view{grid-template-columns:1fr;height:auto;}}
 </style>
 </head>
 <body>
@@ -1712,6 +1736,8 @@ const PAGE_TITLES = {
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  // Limpar split-mode ao navegar
+  if (page !== 'processo') document.querySelector('.doc-area')?.classList.remove('split-mode');
   const pageEl = document.getElementById('page-' + page);
   const navEl  = document.getElementById('nav-' + page);
   if (pageEl) pageEl.classList.add('active');
@@ -2844,23 +2870,243 @@ function formProtocolo(dados, readonly, proc) {
 }
 
 function renderDFDView(dados) {
+  // Ativar modo split no doc-area
+  const docArea = document.querySelector('.doc-area');
+  if (docArea) docArea.classList.add('split-mode');
+
+  const esc2 = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const prio  = dados.prioridade || '';
+  const prioLabel = {alta:'Alta — Urgente', media:'Média — Normal', baixa:'Baixa — Planejamento'}[prio] || prio;
+
+  return `<div class="split-view">
+
+  <!-- ── EDITOR ── -->
+  <div class="split-editor">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);">✏️ Editar DFD</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Baixar .doc</button>
+        <button class="btn btn-primary btn-sm" onclick="salvarEdicaoDFD()">💾 Salvar</button>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label>Unidade Requisitante <span class="req">*</span></label>
+      <input type="text" id="sv-unidade" value="${esc2(dados.unidade)}" placeholder="Ex: Secretaria de Saúde" oninput="atualizarPreviewDFD()">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-field">
+        <label>Responsável <span class="req">*</span></label>
+        <input type="text" id="sv-responsavel" value="${esc2(dados.responsavel)}" placeholder="Nome completo" oninput="atualizarPreviewDFD()">
+      </div>
+      <div class="form-field">
+        <label>Cargo <span class="req">*</span></label>
+        <input type="text" id="sv-cargo" value="${esc2(dados.cargo)}" placeholder="Ex: Secretário de Saúde" oninput="atualizarPreviewDFD()">
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label>Objeto <span class="req">*</span></label>
+      <textarea id="sv-objeto" rows="3" placeholder="Descreva o objeto da contratação..." oninput="atualizarPreviewDFD()">${esc2(dados.objeto)}</textarea>
+      <button class="btn btn-secondary btn-sm ia-btn" style="margin-top:5px;" onclick="gerarObjetoIASplit()">✨ Gerar com IA</button>
+    </div>
+
+    <div class="form-field">
+      <label>Justificativa da Necessidade <span class="req">*</span></label>
+      <textarea id="sv-justificativa" rows="7" placeholder="Descreva a justificativa..." oninput="atualizarPreviewDFD()">${esc2(dados.justificativa)}</textarea>
+      <button class="btn btn-secondary btn-sm ia-btn" style="margin-top:5px;" onclick="gerarJustificativaIASplit()">✨ Gerar com IA</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-field">
+        <label>Valor Estimado (R$)</label>
+        <input type="text" id="sv-valor" value="${esc2(dados.valor)}" placeholder="Ex: 10.000,00" oninput="atualizarPreviewDFD()">
+      </div>
+      <div class="form-field">
+        <label>Prazo</label>
+        <input type="text" id="sv-prazo" value="${esc2(dados.prazo)}" placeholder="Ex: 12 meses" oninput="atualizarPreviewDFD()">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-field">
+        <label>Prioridade</label>
+        <select id="sv-prioridade" onchange="atualizarPreviewDFD()">
+          <option value="">Selecione...</option>
+          <option value="alta" ${prio==='alta'?'selected':''}>Alta — Urgente</option>
+          <option value="media" ${prio==='media'?'selected':''}>Média — Normal</option>
+          <option value="baixa" ${prio==='baixa'?'selected':''}>Baixa — Planejamento</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Quantidade</label>
+        <input type="text" id="sv-quantidade" value="${esc2(dados.quantidade)}" placeholder="Ex: 1 item" oninput="atualizarPreviewDFD()" readonly style="background:var(--s3);">
+      </div>
+    </div>
+
+    <div id="sv-ia-status" style="font-size:12px;color:var(--text2);margin-top:4px;min-height:18px;"></div>
+  </div>
+
+  <!-- ── PREVIEW ── -->
+  <div class="split-preview" id="dfd-split-preview">
+    ${gerarHTMLPreviewDFD(dados)}
+  </div>
+</div>`;
+}
+
+// Gera o HTML do preview inline (não abre janela)
+function gerarHTMLPreviewDFD(dados) {
+  const municipio = (() => {
+    const m = _perfil?._prefeitura?.municipio || '';
+    if (m) return m;
+    return (_perfil?._prefeitura?.nome||'').replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'município';
+  })();
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const cnpj = _perfil?._prefeitura?.cnpj || '';
+  const uf   = _perfil?._prefeitura?.uf || 'GO';
+  const proc = _processoAtual;
+
   return `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-    <div><div style="font-size:11px;color:var(--muted);">Unidade Requisitante</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.unidade||'—'}</div></div>
-    <div><div style="font-size:11px;color:var(--muted);">Responsável (Chefe do Órgão)</div><div style="font-size:14px;font-weight:500;margin-top:2px;">${dados.responsavel||'—'} · ${dados.cargo||'—'}</div></div>
+  <h1>Prefeitura Municipal de ${municipio}</h1>
+  ${cnpj ? `<div style="text-align:center;font-size:9pt;margin-bottom:12px;">CNPJ: ${cnpj} — ${municipio}/${uf}</div>` : ''}
+  <h2>Documento de Formalização de Demanda — DFD</h2>
+  <div style="text-align:center;font-size:9.5pt;margin-bottom:14px;border:1px solid #000;padding:4px;">
+    Processo nº ${proc?.numero_protocolo||'—'}
   </div>
-  <div style="margin-bottom:14px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Objeto</div><div style="font-size:15px;font-weight:600;">${dados.objeto||'—'}</div></div>
-  <div style="margin-bottom:14px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Justificativa da Necessidade</div><div style="font-size:13px;color:var(--text2);line-height:1.6;">${dados.justificativa||'—'}</div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Quantidade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.quantidade||'—'}</div></div>
-    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Valor Estimado</div><div style="font-size:13px;font-weight:500;margin-top:2px;">R$ ${dados.valor||'—'}</div></div>
-    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Prazo</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.prazo||'—'}</div></div>
-    <div style="background:var(--s2);border-radius:var(--r-sm);padding:10px;"><div style="font-size:10px;color:var(--muted);">Prioridade</div><div style="font-size:13px;font-weight:500;margin-top:2px;">${dados.prioridade||'—'}</div></div>
+
+  <div class="sp-meta">
+    <div class="sp-meta-row"><b>Unidade Requisitante:</b> ${dados.unidade||'—'}</div>
+    <div class="sp-meta-row"><b>Responsável:</b> ${dados.responsavel||'—'} &nbsp;&nbsp; <b>Cargo:</b> ${dados.cargo||'—'}</div>
   </div>
-  ${dados.hipotese ? `<div style="padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal — Contratação Direta</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}
-  <div style="margin-top:14px;display:flex;gap:8px;">
-    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar DOCX do DFD</button>
+
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">1. Descrição do Objeto</div>
+    <div class="sp-body">${dados.objeto||'—'}</div>
+  </div>
+
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">2. Justificativa da Necessidade</div>
+    <div class="sp-body">${dados.justificativa||'—'}</div>
+  </div>
+
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">3. Dados da Contratação</div>
+    <div class="sp-chips">
+      <div class="sp-chip"><b>Valor Est.</b> R$ ${dados.valor||'—'}</div>
+      <div class="sp-chip"><b>Prazo</b> ${dados.prazo||'—'}</div>
+      <div class="sp-chip"><b>Qtd.</b> ${dados.quantidade||'—'}</div>
+      <div class="sp-chip"><b>Prioridade</b> ${{alta:'Alta',media:'Média',baixa:'Baixa'}[dados.prioridade]||dados.prioridade||'—'}</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;font-size:10pt;text-align:justify;">
+    Em conformidade com a Lei nº 14.133/2021, encaminhe-se à autoridade competente para análise e demais providências.
+  </div>
+  <div style="margin-top:8px;font-size:10pt;">${municipio}, ${hoje}.</div>
+  <div style="margin-top:40px;text-align:center;">
+    <div style="border-top:1px solid #000;width:280px;margin:0 auto 4px;"></div>
+    <div style="font-size:10pt;font-weight:bold;">${dados.responsavel||'—'}</div>
+    <div style="font-size:9.5pt;">${dados.cargo||'—'}</div>
   </div>`;
+}
+
+// Atualiza preview ao vivo conforme o usuário digita
+function atualizarPreviewDFD() {
+  const sv = id => document.getElementById('sv-' + id)?.value || '';
+  const dados = {
+    unidade:      sv('unidade'),
+    responsavel:  sv('responsavel'),
+    cargo:        sv('cargo'),
+    objeto:       sv('objeto'),
+    justificativa:sv('justificativa'),
+    valor:        sv('valor'),
+    prazo:        sv('prazo'),
+    prioridade:   sv('prioridade'),
+    quantidade:   sv('quantidade'),
+  };
+  const prev = document.getElementById('dfd-split-preview');
+  if (prev) prev.innerHTML = gerarHTMLPreviewDFD(dados);
+}
+
+// Salvar edição do DFD a partir do split view
+async function salvarEdicaoDFD() {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const sv = id => document.getElementById('sv-' + id)?.value?.trim() || '';
+
+  // Preservar campos que não estão no editor (itens, pca, etc.)
+  const docAtual = proc.docs?.find(d => d.tipo === 'DFD');
+  const dadosAntigos = docAtual?.dados || {};
+
+  const dados = {
+    ...dadosAntigos,
+    unidade:      sv('unidade'),
+    responsavel:  sv('responsavel'),
+    cargo:        sv('cargo'),
+    objeto:       sv('objeto'),
+    justificativa:sv('justificativa'),
+    valor:        sv('valor'),
+    prazo:        sv('prazo'),
+    prioridade:   sv('prioridade'),
+  };
+
+  try {
+    if (docAtual) {
+      await sb.from('documentos').update({ dados, atualizado_em: new Date().toISOString() }).eq('id', docAtual.id);
+    } else {
+      await sb.from('documentos').insert({ processo_id: proc.id, tipo:'DFD', dados, versao:1, status:'enviado', criado_por: _user.id });
+    }
+    // Atualizar objeto no processo
+    await sb.from('processos').update({ objeto: dados.objeto, atualizado_em: new Date().toISOString() }).eq('id', proc.id);
+    toast('✅ DFD salvo com sucesso!', 'success');
+    await abrirProcesso(proc.id);
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
+// IA para objeto no split view
+async function gerarObjetoIASplit() {
+  const objetoEl  = document.getElementById('sv-objeto');
+  const unidade   = document.getElementById('sv-unidade')?.value?.trim() || '';
+  const cargo     = document.getElementById('sv-cargo')?.value?.trim() || '';
+  const statusEl  = document.getElementById('sv-ia-status');
+  if (!objetoEl?.value?.trim()) { toast('Preencha o objeto antes de usar a IA', 'error'); return; }
+  statusEl.textContent = '⏳ Profissionalizando o objeto...';
+  const objeto = objetoEl.value.trim();
+  const municipio = _perfil?._prefeitura?.municipio || 'município';
+  const prompt = `Reescreva este objeto em linguagem oficial de prefeitura municipal. Objeto: "${objeto}". Unidade: ${unidade||'órgão municipal'}. Município: ${municipio}. Deve soar como: "Aquisição de [itens] para atendimento das necessidades da ${unidade||'unidade'} do Município de ${municipio}". Máximo 140 caracteres. Sem ponto final. Retorne APENAS o texto final.`;
+  try {
+    const resp = await fetch('/api/ia', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt, max_tokens: 200 }) });
+    const data = await resp.json();
+    objetoEl.value = (data.content || '').trim();
+    atualizarPreviewDFD();
+    statusEl.textContent = '✅ Objeto profissionalizado';
+  } catch(e) { statusEl.textContent = '⚠️ Erro: ' + e.message; }
+}
+
+// IA para justificativa no split view
+async function gerarJustificativaIASplit() {
+  const justEl   = document.getElementById('sv-justificativa');
+  const objeto   = document.getElementById('sv-objeto')?.value?.trim() || '';
+  const unidade  = document.getElementById('sv-unidade')?.value?.trim() || '';
+  const statusEl = document.getElementById('sv-ia-status');
+  if (!objeto) { toast('Preencha o objeto antes de usar a IA', 'error'); return; }
+  statusEl.textContent = '⏳ Gerando justificativa...';
+  const municipio = _perfil?._prefeitura?.municipio || 'município';
+  const prompt = `Você é servidor público da Prefeitura de ${municipio}. Redija a justificativa da necessidade de contratação para o objeto: "${objeto}". Secretaria: ${unidade||'órgão municipal'}. Use linguagem formal, densa, com referências à Lei 14.133/2021. Use as expressões: "eventual fornecimento/aquisição", "de suma importância", "cidadãos do Município de ${municipio}", "planejamento adequado dos recursos públicos". Entre 180 e 260 palavras. Retorne APENAS o texto da justificativa.`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const resp = await fetch('/api/ia', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt, max_tokens: 600 }), signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await resp.json();
+    justEl.value = (data.content || '').trim();
+    atualizarPreviewDFD();
+    statusEl.textContent = '✅ Justificativa gerada — revise antes de salvar';
+  } catch(e) {
+    clearTimeout(timer);
+    statusEl.textContent = e.name === 'AbortError' ? '⚠️ IA demorou demais. Tente novamente.' : '⚠️ Erro: ' + e.message;
+  }
 }
 
 function renderEtapa3(proc, dados, doc, readonly) {
