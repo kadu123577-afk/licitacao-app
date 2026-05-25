@@ -2490,6 +2490,12 @@ async function abrirProcesso(id) {
   renderAcoesProcesso(proc, etapaAtual);
 
   navigate('processo');
+
+  // Hooks pós-carregamento (integridade, score, detector)
+  renderStatusIntegridade(proc).catch(()=>{});
+  renderScoreRisco(proc);
+  exibirClassificacaoObjeto(proc).catch(()=>{});
+  setTimeout(() => rodarDetectorInconsistencias(), 300);
 }
 
 // [REMOVIDO] renderFormEtapa simples substituída pela versão completa abaixo
@@ -8594,18 +8600,7 @@ async function renderStatusIntegridade(proc) {
   bar.style.display = 'flex';
 }
 
-// Hook em abrirProcesso para renderizar integridade
-const _abrirProcessoConfianca = abrirProcesso;
-async function abrirProcesso(id) {
-  await _abrirProcessoConfianca(id);
-  if (_processoAtual) renderStatusIntegridade(_processoAtual).catch(() => {});
-  // [INTELIGÊNCIA] F2 + F3
-  if (_processoAtual) {
-    renderScoreRisco(_processoAtual);
-    exibirClassificacaoObjeto(_processoAtual).catch(()=>{});
-    setTimeout(() => rodarDetectorInconsistencias(), 300);
-  }
-}
+// [REMOVIDO] Hook abrirProcesso mesclado à função original
 
 // ══════════════════════════════════════════════════════════
 // [SOBREVIVÊNCIA] FUNÇÃO 1 — Health Check do Sistema
