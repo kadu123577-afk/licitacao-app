@@ -2016,10 +2016,20 @@ const TIPO_LABELS = {
 // ══════════════════════════════════════════════════════════
 //  AUTH
 // ══════════════════════════════════════════════════════════
+// [PRODUTO] Flag síncrona — detectar ?validar= antes de qualquer async
+window._VALIDACAO_PUBLICA = new URLSearchParams(window.location.search).has('validar');
+if (window._VALIDACAO_PUBLICA) {
+  // Mostrar view imediatamente, bloquear app
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const _vv = document.getElementById('view-validacao-publica');
+  if (_vv) { _vv.classList.add('active'); _vv.style.display = 'flex'; }
+}
+
 (async () => {
-  // [PRODUTO] Validação pública antes do auth
-  const _isVal = await verificarValidacaoPublica().catch(()=>false);
-  if (_isVal) return;
+  if (window._VALIDACAO_PUBLICA) {
+    await verificarValidacaoPublica().catch(()=>{});
+    return; // nunca carrega o app
+  }
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     await carregarPerfil(session.user);
@@ -2081,6 +2091,7 @@ async function carregarPerfil(user, usuario = null) {
 }
 
 function mostrarApp() {
+  if (window._VALIDACAO_PUBLICA) return; // bloquear quando em página de validação
   // Hide all views
   ['view-login','view-app','view-superadmin','view-admin-pref'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
@@ -7044,14 +7055,7 @@ async function verificarValidacaoPublica() {
   const params = new URLSearchParams(window.location.search);
   const hash   = params.get('validar');
   if (!hash) return false;
-
-  // Mostrar view imediatamente (antes da query)
-  const view = document.getElementById('view-validacao-publica');
-  if (view) {
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    view.classList.add('active');
-    view.style.display = 'flex'; // forçar exibição mesmo sem classe
-  }
+  // View já foi mostrada sincronamente pela flag — só atualizar o card
   const card = document.getElementById('valid-card-inner');
   if (!card) return true;
   try {
