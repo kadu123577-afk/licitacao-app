@@ -245,14 +245,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);font-si
 /* ── PAGE HEADER ── */
 .page-head{
   display:flex;align-items:flex-start;justify-content:space-between;
-  margin-bottom:24px;
+  margin-bottom:24px;transition:all .2s;
 }
 .page-title{
   font-family:var(--font-display);
-  font-size:22px;font-weight:700;
+  font-size:22px;font-weight:700;transition:font-size .2s;
 }
 .page-sub{font-size:13px;color:var(--text2);margin-top:3px;}
 .page-actions{display:flex;gap:8px;}
+/* Título compacto quando split view ativo */
+.split-header-compact .page-head{margin-bottom:10px;}
+.split-header-compact .page-title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:500px;}
+.split-header-compact .page-sub{display:none;}
 
 /* ── STATS ── */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
@@ -445,11 +449,42 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 
 /* ── PROCESSO (visão individual) ── */
 .proc-layout{display:grid;grid-template-columns:280px 1fr;gap:20px;height:100%;}
+.proc-layout.split-active{grid-template-columns:44px 1fr;gap:0;}
 .proc-sidebar{
   background:var(--s1);border:1px solid var(--border);
   border-radius:var(--r-lg);overflow:hidden;height:fit-content;
-  position:sticky;top:0;
+  position:sticky;top:0;transition:all .22s ease;
 }
+/* Sidebar colapsada — só ícones de etapa */
+.proc-layout.split-active .proc-sidebar{
+  border-radius:var(--r-sm);
+  border-right:none;border-radius:0;
+  border-top-left-radius:var(--r-lg);border-bottom-left-radius:var(--r-lg);
+}
+.proc-layout.split-active .proc-info{display:none;}
+.proc-layout.split-active .etapa-item .etapa-info{display:none;}
+.proc-layout.split-active .etapa-item{
+  padding:10px;justify-content:center;
+}
+.proc-layout.split-active .etapa-item .etapa-num{
+  width:26px;height:26px;font-size:11px;
+}
+/* Botão toggle sidebar */
+.sidebar-toggle-btn{
+  display:none;
+  position:absolute;top:50%;right:-14px;transform:translateY(-50%);
+  width:28px;height:28px;border-radius:50%;
+  background:var(--s3);border:1px solid var(--border2);
+  color:var(--text2);cursor:pointer;
+  align-items:center;justify-content:center;
+  font-size:11px;z-index:20;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+  transition:all .15s;
+}
+.sidebar-toggle-btn:hover{background:var(--s2);color:var(--text);}
+.proc-layout.split-active .sidebar-toggle-btn{display:flex;}
+/* Sidebar wrapper relativo para o toggle */
+.proc-sidebar-wrap{position:relative;}
 .proc-info{padding:18px;}
 .proc-num{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px;}
 .proc-obj{font-size:15px;font-weight:700;font-family:var(--font-display);line-height:1.3;margin-bottom:12px;}
@@ -727,9 +762,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 }
 .doc-area.split-mode .doc-body{padding:0;}
 
-/* ── proc-layout em modo split: sidebar mais compacta ── */
-.proc-layout.split-active{grid-template-columns:200px 1fr;}
-
 @media(max-width:1100px){.split-view{grid-template-columns:1fr;height:auto;}}
 @media(max-width:900px){.proc-layout.split-active{grid-template-columns:1fr;}}
 </style>
@@ -947,7 +979,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 
         <div class="proc-layout">
           <!-- sidebar do processo -->
-          <div>
+          <div class="proc-sidebar-wrap">
             <div class="proc-sidebar">
               <div class="proc-info">
                 <div class="proc-num" id="proc-num">—</div>
@@ -962,6 +994,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
               </div>
               <div class="etapa-list" id="proc-etapa-list"></div>
             </div>
+            <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Expandir/recolher etapas">‹</button>
           </div>
 
           <!-- área principal do processo -->
@@ -1894,6 +1927,9 @@ function navigate(page) {
   if (page !== 'processo') {
     document.querySelector('.doc-area')?.classList.remove('split-mode');
     document.querySelector('.proc-layout')?.classList.remove('split-active');
+    document.querySelector('#page-processo')?.classList.remove('split-header-compact');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    if (toggleBtn) toggleBtn.textContent = '‹';
   }
   const pageEl = document.getElementById('page-' + page);
   const navEl  = document.getElementById('nav-' + page);
@@ -3035,8 +3071,12 @@ function renderDFDView(dados) {
   const prio  = dados.prioridade || '';
   const prioLabel = {alta:'Alta — Urgente', media:'Média — Normal', baixa:'Baixa — Planejamento'}[prio] || prio;
 
-  // Adicionar classe split-active no proc-layout
+  // Modo split: compactar header e colapsar sidebar
   document.querySelector('.proc-layout')?.classList.add('split-active');
+  document.querySelector('#page-processo')?.classList.add('split-header-compact');
+  // Colapsar sidebar automaticamente ao entrar no split
+  const toggleBtn = document.getElementById('sidebar-toggle-btn');
+  if (toggleBtn) toggleBtn.textContent = '›';
 
   return `<div class="split-view">
 
@@ -4967,6 +5007,28 @@ function autoPreencherMunicipio() {
     .replace(/Prefeitura de /i, '')
     .trim();
   if (derivado) municipioEl.value = derivado;
+}
+
+
+// Toggle da sidebar no modo split
+function toggleSidebar() {
+  const layout = document.querySelector('.proc-layout');
+  const btn    = document.getElementById('sidebar-toggle-btn');
+  if (!layout || !btn) return;
+  const collapsed = layout.classList.contains('split-active');
+  if (collapsed) {
+    // Expandir de volta
+    layout.classList.remove('split-active');
+    layout.style.gridTemplateColumns = '200px 1fr';
+    btn.textContent = '‹';
+    btn.title = 'Recolher etapas';
+  } else {
+    // Colapsar
+    layout.classList.add('split-active');
+    layout.style.gridTemplateColumns = '';
+    btn.textContent = '›';
+    btn.title = 'Expandir etapas';
+  }
 }
 
 
