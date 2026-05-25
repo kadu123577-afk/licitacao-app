@@ -882,6 +882,28 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
 .diff-row.changed{background:rgba(255,200,87,.08);}
 .diff-key{color:var(--muted);flex-shrink:0;max-width:40%;}
 .diff-val{font-weight:500;word-break:break-all;text-align:right;}
+
+/* ── DETECTOR DE INCONSISTÊNCIAS ── */
+.incons-toggle-btn{position:fixed;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:50%;background:var(--s3);border:1px solid var(--border2);color:var(--text);cursor:pointer;display:none;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.5);transition:all .15s;}
+.incons-toggle-btn:hover{background:var(--s2);}
+.incons-toggle-btn.has-errors{border-color:#e55;box-shadow:0 4px 16px rgba(229,85,85,.4);}
+.incons-toggle-btn.has-warnings{border-color:#f90;box-shadow:0 4px 16px rgba(255,153,0,.3);}
+.incons-badge{position:absolute;top:-4px;right:-4px;background:#e55;color:#fff;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);}
+.incons-badge.warn{background:#f90;}
+.incons-panel{position:fixed;bottom:84px;right:24px;z-index:1000;width:360px;max-height:60vh;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r-lg);box-shadow:0 8px 32px rgba(0,0,0,.6);display:none;flex-direction:column;overflow:hidden;}
+.incons-panel.open{display:flex;}
+.incons-panel-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.incons-panel-title{font-size:13px;font-weight:700;}
+.incons-panel-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;}
+.incons-panel-body{overflow-y:auto;padding:8px;}
+.incons-item{padding:10px 12px;border-radius:var(--r-sm);margin-bottom:6px;border:1px solid transparent;display:flex;align-items:flex-start;gap:10px;}
+.incons-item.erro{background:rgba(229,85,85,.1);border-color:rgba(229,85,85,.25);}
+.incons-item.aviso{background:rgba(255,153,0,.08);border-color:rgba(255,153,0,.2);}
+.incons-item-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.incons-item-body{flex:1;min-width:0;}
+.incons-item-msg{font-size:12px;line-height:1.4;color:var(--text);}
+.incons-item-link{font-size:11px;color:var(--blue);cursor:pointer;margin-top:4px;display:inline-block;text-decoration:underline;}
+.incons-empty{padding:20px;text-align:center;color:var(--muted);font-size:12px;}
 </style>
 </head>
 <body>
@@ -2251,6 +2273,10 @@ function filtrarProcessos() {
 //  ABRIR PROCESSO
 // ══════════════════════════════════════════════════════════
 async function abrirProcesso(id) {
+  const _toggleBtn = document.getElementById('incons-toggle-btn');
+  if (_toggleBtn) _toggleBtn.style.display = 'none';
+  const _panel = document.getElementById('incons-panel');
+  if (_panel) _panel.classList.remove('open');
   const proc = _processos.find(p => p.id === id);
   if (!proc) return;
   _processoAtual = proc;
@@ -2537,6 +2563,7 @@ function prepararAcao(tipo, procId) {
   document.getElementById('btn-confirmar-acao').className = tipo === 'devolver'
     ? 'btn btn-danger' : 'btn btn-primary';
 
+  if (tipo === 'avancar') setTimeout(()=>rodarDetectorInconsistencias(),100);
   document.getElementById('modal-acao').classList.add('show');
 }
 
@@ -4297,6 +4324,7 @@ async function salvarEdicaoDFD() {
     // Atualizar objeto no processo
     await sb.from('processos').update({ objeto: dados.objeto, atualizado_em: new Date().toISOString() }).eq('id', proc.id);
     toast('✅ DFD salvo com sucesso!', 'success');
+    setTimeout(() => rodarDetectorInconsistencias(), 200);
     await abrirProcesso(proc.id);
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'error');
@@ -4986,7 +5014,23 @@ function buildPDFHtml(tipo, dados, proc) {
       Gerado pelo Licite.ai | Processo ${proc.numero_protocolo} | ${hoje}<br>
       <span style="font-size:8pt;">Documento gerado eletronicamente — autenticidade verificável em <strong>licitacao-app.vercel.app</strong> | ID: ${proc.id ? proc.id.slice(0,8).toUpperCase() : '—'}</span>
     </div>
-    </body></html>`;
+    
+<!-- ── DETECTOR DE INCONSISTÊNCIAS ── -->
+<button class="incons-toggle-btn" id="incons-toggle-btn" onclick="toggleInconsPanel()" title="Verificar inconsistências" style="position:fixed;">
+  🔍
+  <span class="incons-badge" id="incons-badge" style="display:none;"></span>
+</button>
+<div class="incons-panel" id="incons-panel">
+  <div class="incons-panel-head">
+    <span class="incons-panel-title">🔍 Verificação do Processo</span>
+    <button class="incons-panel-close" onclick="toggleInconsPanel()">✕</button>
+  </div>
+  <div class="incons-panel-body" id="incons-panel-body">
+    <div class="incons-empty">Nenhuma inconsistência detectada.</div>
+  </div>
+</div>
+
+</body></html>`;
   }
 
   if (tipo === 'ETP') {
@@ -8185,6 +8229,155 @@ async function checklist_forcePDF() {
 // [SOBREVIVÊNCIA] Hook no login — health check chamado após carregarDados()
 // (não usa override de função para evitar loop infinito)
 // ══════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════
+// DETECTOR DE INCONSISTÊNCIAS
+// ══════════════════════════════════════════════════════════
+
+function detectarInconsistencias(proc) {
+  if (!proc) return [];
+  const alertas = [];
+  const docs    = proc.docs || [];
+  const dfdDoc  = docs.find(d => d.tipo === 'DFD');
+  const etpDoc  = docs.find(d => d.tipo === 'ETP');
+  const trDoc   = docs.find(d => d.tipo === 'TR');
+  const ppDoc   = docs.find(d => d.tipo === 'PP');
+  const dfd     = dfdDoc?.dados || {};
+  const tr      = trDoc?.dados  || {};
+  const pp      = ppDoc?.dados  || {};
+  const fmt = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+
+  // 1. Itens sem CATMAT
+  try {
+    const itens = typeof dfd.itens==='string' ? JSON.parse(dfd.itens) : (dfd.itens||[]);
+    itens.forEach(it => {
+      if (!it.catmat) alertas.push({
+        nivel:'aviso',
+        msg:`Item "${(it.descricao||it.nome||'sem nome').slice(0,40)}" sem código CATMAT`,
+        campo:'sv-itens-container', etapa:1
+      });
+    });
+  } catch(e){}
+
+  // 2. Valor divergente >15%
+  try {
+    const itens = typeof dfd.itens==='string' ? JSON.parse(dfd.itens) : (dfd.itens||[]);
+    const totalItens = itens.reduce((s,it)=>s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0);
+    const valorProc  = parseFloat(String(proc.valor_estimado||dfd.valor||'0').replace(/[R$\s]/g,'').replace(/\./g,'').replace(',','.'));
+    if (totalItens>0 && valorProc>0) {
+      const diff = Math.abs(totalItens-valorProc)/valorProc;
+      if (diff>0.15) alertas.push({
+        nivel:'erro',
+        msg:`Valor estimado (${fmt(valorProc)}) diverge do somatório dos itens (${fmt(totalItens)}) em ${(diff*100).toFixed(1)}%`,
+        campo:'sv-valor', etapa:1
+      });
+    }
+  } catch(e){}
+
+  // 3. Quantidade suspeita
+  try {
+    const itens = typeof dfd.itens==='string' ? JSON.parse(dfd.itens) : (dfd.itens||[]);
+    itens.forEach(it => {
+      const qt = parseFloat(it.quantidade||1);
+      if (qt===0) alertas.push({nivel:'erro', msg:`Item "${(it.descricao||it.nome||'—').slice(0,40)}" com quantidade zero`, campo:'sv-itens-container', etapa:1});
+      else if (qt>10000) alertas.push({nivel:'aviso', msg:`Item "${(it.descricao||it.nome||'—').slice(0,40)}" com quantidade muito alta (${qt.toLocaleString('pt-BR')})`, campo:'sv-itens-container', etapa:1});
+    });
+  } catch(e){}
+
+  // 4. Justificativa fraca
+  const palavras = (dfd.justificativa||'').trim().split(/\s+/).filter(Boolean).length;
+  if (dfdDoc && palavras<80) alertas.push({
+    nivel:'aviso',
+    msg:`Justificativa com apenas ${palavras} palavra${palavras!==1?'s':''} — TCM-GO recomenda mínimo de 80`,
+    campo:'sv-justificativa', etapa:1
+  });
+
+  // 5. TR sem prazo
+  if (trDoc && !tr.prazo && !tr.prazo_entrega) alertas.push({
+    nivel:'aviso',
+    msg:'TR sem prazo de entrega — campo obrigatório pelo Art. 40, II da LLC',
+    campo:'tr-prazo', etapa:3
+  });
+
+  // 6. PP com poucos fornecedores
+  if (ppDoc) {
+    const fontes = pp.fontes||[];
+    const comValor = fontes.filter(f=>parseFloat(String(f.valor||'0').replace(/\./g,'').replace(',','.'))||0 > 0);
+    if (comValor.length<3) alertas.push({
+      nivel:'aviso',
+      msg:`Pesquisa de preços com apenas ${comValor.length} fornecedor${comValor.length!==1?'es':''} com valor — recomenda-se 3`,
+      campo:'pp-inline-table', etapa:4
+    });
+  }
+
+  return alertas;
+}
+
+function rodarDetectorInconsistencias() {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const alertas   = detectarInconsistencias(proc);
+  const toggleBtn = document.getElementById('incons-toggle-btn');
+  const badge     = document.getElementById('incons-badge');
+  const body      = document.getElementById('incons-panel-body');
+  if (!toggleBtn || !badge || !body) return;
+
+  toggleBtn.style.display = 'flex';
+
+  if (!alertas.length) {
+    badge.style.display = 'none';
+    toggleBtn.className = 'incons-toggle-btn';
+    body.innerHTML = '<div class="incons-empty">✅ Nenhuma inconsistência detectada.</div>';
+    return;
+  }
+
+  const erros  = alertas.filter(a=>a.nivel==='erro').length;
+  const avisos = alertas.filter(a=>a.nivel==='aviso').length;
+  badge.style.display = 'flex';
+  badge.textContent = alertas.length;
+  badge.className = erros>0 ? 'incons-badge' : 'incons-badge warn';
+  toggleBtn.className = 'incons-toggle-btn ' + (erros>0 ? 'has-errors' : 'has-warnings');
+
+  body.innerHTML = alertas.map(a=>`
+    <div class="incons-item ${a.nivel}">
+      <span class="incons-item-icon">${a.nivel==='erro'?'🔴':'🟡'}</span>
+      <div class="incons-item-body">
+        <div class="incons-item-msg">${a.msg}</div>
+        ${a.campo?`<span class="incons-item-link" onclick="irParaCampoIncons('${a.campo}',${a.etapa||0})">→ Ir para o campo</span>`:''}
+      </div>
+    </div>`).join('') +
+    `<div style="padding:8px 4px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;">
+      ${erros} erro${erros!==1?'s':''} · ${avisos} aviso${avisos!==1?'s':''}
+    </div>`;
+}
+
+function toggleInconsPanel() {
+  const panel = document.getElementById('incons-panel');
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) rodarDetectorInconsistencias();
+}
+
+function irParaCampoIncons(campoId, etapaNum) {
+  document.getElementById('incons-panel')?.classList.remove('open');
+  const el = document.getElementById(campoId);
+  if (el) {
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    el.focus?.();
+    const orig = el.style.outline;
+    el.style.outline = '2px solid #f90';
+    el.style.outlineOffset = '2px';
+    setTimeout(()=>{ el.style.outline=orig; el.style.outlineOffset=''; }, 2000);
+    return;
+  }
+  if (etapaNum && _processoAtual) {
+    document.querySelectorAll('.etapa-item').forEach(el=>{
+      if (el.dataset.n==etapaNum) el.click?.();
+    });
+    toast(`Navegando para etapa ${etapaNum}...`,'info');
+  }
+}
 
 
 </script>
