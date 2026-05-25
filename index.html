@@ -458,88 +458,242 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 .tipo-card.selected .tipo-label{color:var(--green);}
 
 /* ── PROCESSO (visão individual) ── */
-.proc-layout{display:grid;grid-template-columns:280px 1fr;gap:20px;height:100%;}
-.proc-layout.split-active{grid-template-columns:44px 1fr;gap:0;}
+/* ══ LAYOUT DO PROCESSO — redesign profissional ══ */
+.proc-layout{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  gap:0;
+  height:calc(100vh - 130px);
+  overflow:hidden;
+}
+.proc-layout.split-active{grid-template-columns:56px 1fr;}
+
+/* ── Sidebar: apenas timeline ── */
+.proc-sidebar-wrap{position:relative;display:flex;flex-direction:column;}
 .proc-sidebar{
-  background:var(--s1);border:1px solid var(--border);
-  border-radius:var(--r-lg);overflow:hidden;height:fit-content;
-  position:sticky;top:0;transition:all .22s ease;
+  background:var(--s1);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  height:100%;
+  display:flex;flex-direction:column;
+  transition:width .2s ease;
 }
-/* Sidebar colapsada — só ícones de etapa */
-.proc-layout.split-active .proc-sidebar{
-  border-radius:var(--r-sm);
-  border-right:none;border-radius:0;
-  border-top-left-radius:var(--r-lg);border-bottom-left-radius:var(--r-lg);
+.proc-info{
+  padding:16px 14px 12px;
+  border-bottom:1px solid var(--border);
 }
+.proc-num{
+  font-size:10px;color:var(--muted);font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;
+}
+.proc-obj{
+  font-size:13px;font-weight:700;font-family:var(--font-display);
+  line-height:1.4;margin-bottom:10px;color:var(--text);
+}
+.proc-meta{display:flex;flex-direction:column;gap:4px;}
+.proc-meta-item{display:flex;justify-content:space-between;align-items:center;font-size:11px;}
+.proc-meta-item .k{color:var(--muted);}
+.proc-meta-item .v{font-weight:600;color:var(--text);}
+
+/* Sidebar colapsada */
 .proc-layout.split-active .proc-info{display:none;}
 .proc-layout.split-active .etapa-item .etapa-info{display:none;}
-.proc-layout.split-active .etapa-item{
-  padding:10px;justify-content:center;
-}
-.proc-layout.split-active .etapa-item .etapa-num{
-  width:26px;height:26px;font-size:11px;
-}
-/* Botão toggle sidebar */
+.proc-layout.split-active .etapa-item{padding:10px;justify-content:center;}
+.proc-layout.split-active .etapa-item .etapa-num{width:28px;height:28px;font-size:11px;}
+.proc-layout.split-active .score-widget{display:none!important;}
+.proc-layout.split-active .exigencias-panel{display:none!important;}
+
+/* Toggle btn */
 .sidebar-toggle-btn{
   display:none;
-  position:absolute;top:50%;right:-14px;transform:translateY(-50%);
-  width:28px;height:28px;border-radius:50%;
-  background:var(--s3);border:1px solid var(--border2);
+  position:absolute;top:50%;right:-13px;transform:translateY(-50%);
+  width:26px;height:26px;border-radius:50%;
+  background:var(--s2);border:1px solid var(--border2);
   color:var(--text2);cursor:pointer;
   align-items:center;justify-content:center;
-  font-size:11px;z-index:20;
-  box-shadow:0 2px 8px rgba(0,0,0,.4);
+  font-size:10px;z-index:20;
+  box-shadow:0 2px 8px rgba(0,0,0,.35);
   transition:all .15s;
 }
-.sidebar-toggle-btn:hover{background:var(--s2);color:var(--text);}
+.sidebar-toggle-btn:hover{background:var(--s3);color:var(--text);}
 .proc-layout.split-active .sidebar-toggle-btn{display:flex;}
-/* Sidebar wrapper relativo para o toggle */
-.proc-sidebar-wrap{position:relative;}
-.proc-info{padding:18px;}
-.proc-num{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px;}
-.proc-obj{font-size:15px;font-weight:700;font-family:var(--font-display);line-height:1.3;margin-bottom:12px;}
-.proc-meta{display:flex;flex-direction:column;gap:6px;}
-.proc-meta-item{display:flex;justify-content:space-between;font-size:12px;}
-.proc-meta-item .k{color:var(--muted);}
-.proc-meta-item .v{font-weight:500;}
 
-.etapa-list{border-top:1px solid var(--border);}
+/* ── Timeline de etapas ── */
+.etapa-list{flex:1;padding:8px 0;}
 .etapa-item{
   display:flex;align-items:center;gap:10px;
-  padding:10px 18px;border-bottom:1px solid var(--border);
-  cursor:pointer;transition:all .12s;
+  padding:8px 14px;
+  cursor:pointer;transition:background .1s;
+  border-radius:0;
+  position:relative;
 }
-.etapa-item:last-child{border-bottom:none;}
 .etapa-item:hover{background:var(--s2);}
-.etapa-item.active{background:rgba(65,243,106,.06);}
-.etapa-item.concluida .etapa-num{background:var(--green);color:#000;}
-.etapa-item.ativa .etapa-num{background:var(--gold);color:#000;}
+.etapa-item.active{background:rgba(65,243,106,.07);}
+.etapa-item.concluida .etapa-num{background:var(--green);color:#000;border-color:var(--green);}
+.etapa-item.ativa .etapa-num{background:rgba(65,243,106,.15);color:var(--green);border-color:var(--green);}
 .etapa-num{
   width:22px;height:22px;border-radius:50%;
   background:var(--s3);color:var(--muted);
   font-size:10px;font-weight:700;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  border:1px solid var(--border);
+  border:1.5px solid var(--border2);
+  transition:all .15s;
 }
-.etapa-info{flex:1;}
-.etapa-nome{font-size:12px;font-weight:500;}
-.etapa-resp{font-size:11px;color:var(--muted);}
+.etapa-info{flex:1;min-width:0;}
+.etapa-nome{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.etapa-resp{font-size:10px;color:var(--muted);}
 .etapa-item.active .etapa-nome{color:var(--green);}
 
-.proc-main{overflow-y:auto;}
+/* ── Área principal ── */
+.proc-main{
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+  background:var(--bg);
+}
+
+/* ── Header da etapa (dentro de proc-main) ── */
 .doc-area{
-  background:var(--s1);border:1px solid var(--border);
-  border-radius:var(--r-lg);overflow:hidden;
+  flex:1;
+  display:flex;flex-direction:column;
+  min-height:0;
+  background:transparent;
+  border:none;
+  border-radius:0;
 }
 .doc-head{
-  padding:16px 20px;border-bottom:1px solid var(--border);
+  padding:12px 20px 0;
   display:flex;align-items:center;justify-content:space-between;
+  background:transparent;
+  border-bottom:none;
+  flex-shrink:0;
 }
 .doc-badge{
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
   padding:3px 10px;border-radius:20px;
 }
-.doc-body{padding:20px;}
+.doc-body{
+  flex:1;
+  padding:16px 20px 20px;
+  overflow-y:auto;
+}
+/* split-mode override */
+.doc-area.split-mode{overflow:visible;}
+.doc-area.split-mode .doc-head{padding:12px 20px 0;}
+.doc-area.split-mode .doc-body{padding:0;}
+
+/* ── Header do processo (page-head dentro de page-processo) ── */
+#page-processo .page-head{
+  padding:12px 20px 10px;
+  margin-bottom:0;
+  border-bottom:1px solid var(--border);
+  background:var(--s1);
+}
+#page-processo .page-title{font-size:15px;font-weight:700;}
+#page-processo .page-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* split header compact */
+.split-header-compact #page-processo .page-title{font-size:13px;}
+.split-header-compact #page-processo .page-sub{display:none;}
+.split-header-compact #page-processo .page-head{padding:8px 20px 8px;}
+
+/* ── Score widget: compacto na sidebar ── */
+.score-widget{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;border-top:1px solid var(--border);
+  cursor:pointer;
+  background:transparent;
+  transition:background .12s;
+}
+.score-widget:hover{background:var(--s2);}
+.score-circle{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;flex-shrink:0;
+  border:2px solid currentColor;
+}
+.score-circle.baixo{color:var(--green);background:rgba(65,243,106,.1);}
+.score-circle.medio{color:#f9c02e;background:rgba(249,192,46,.1);}
+.score-circle.alto{color:#f97316;background:rgba(249,115,22,.1);}
+.score-critico{color:#e55;background:rgba(229,85,85,.1);}
+.score-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+.score-fatores{padding:8px 14px 12px;display:none;border-top:1px solid var(--border);}
+.score-fatores.open{display:block;}
+.score-fator-item{display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);}
+.score-fator-item:last-child{border-bottom:none;}
+.score-fator-pts{font-size:10px;font-weight:700;color:#e55;min-width:24px;text-align:right;flex-shrink:0;}
+.score-fator-info{flex:1;}
+.score-fator-desc{font-size:11px;color:var(--text);}
+.score-fator-fix{font-size:10px;color:var(--muted);margin-top:1px;}
+
+/* ── Histórico no fundo ── */
+.proc-historico-card{
+  margin:0;
+  border-top:1px solid var(--border);
+  border-radius:0;
+  background:var(--s1);
+  flex-shrink:0;
+}
+.proc-tabs{
+  display:flex;gap:0;
+  border-bottom:1px solid var(--border);
+  background:var(--s1);
+  padding:0 16px;
+}
+.proc-tab{
+  padding:9px 14px;font-size:11px;font-weight:600;
+  cursor:pointer;color:var(--text2);
+  border-bottom:2px solid transparent;
+  transition:all .12s;margin-bottom:-1px;
+}
+.proc-tab:hover{color:var(--text);}
+.proc-tab.active{color:var(--green);border-bottom-color:var(--green);}
+
+/* ── Alertas: dropdown discreto no header do processo ── */
+.proc-alerts-btn{
+  position:relative;
+  background:none;border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:5px 10px;
+  color:var(--text2);cursor:pointer;font-size:12px;
+  display:flex;align-items:center;gap:5px;
+  transition:all .12s;
+}
+.proc-alerts-btn:hover{background:var(--s2);color:var(--text);}
+.proc-alerts-btn.has-alerts{border-color:rgba(229,85,85,.4);color:#e55;}
+.proc-alerts-badge{
+  background:#e55;color:#fff;
+  font-size:9px;font-weight:700;
+  width:15px;height:15px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.proc-alerts-badge.warn{background:#f90;}
+.proc-alerts-dropdown{
+  position:absolute;top:calc(100% + 6px);right:0;
+  width:320px;max-height:400px;overflow-y:auto;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:var(--r);box-shadow:0 8px 32px rgba(0,0,0,.5);
+  z-index:200;display:none;
+}
+.proc-alerts-dropdown.open{display:block;}
+.proc-alerts-header{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  font-size:12px;font-weight:700;color:var(--text);
+}
+.proc-alert-item{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:8px 14px;border-bottom:1px solid var(--border);
+}
+.proc-alert-item:last-child{border-bottom:none;}
+.proc-alert-icon{font-size:12px;flex-shrink:0;margin-top:1px;}
+.proc-alert-msg{font-size:11px;color:var(--text);line-height:1.4;}
+.proc-alert-fix{font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline;margin-top:2px;}
+
+/* integridade bar: mover para dentro do dropdown de alertas */
+.integrity-bar{display:none!important;}
+
+@media(max-width:900px){
+  .proc-layout{grid-template-columns:1fr;height:auto;}
+  .proc-layout.split-active{grid-template-columns:1fr;}
+}
 
 .hist-item{
   display:flex;gap:12px;padding:12px 0;
@@ -1219,91 +1373,112 @@ html[data-validacao] #view-validacao-publica {
 
       <!-- PÁGINA: PROCESSO (visão individual) -->
       <div class="page" id="page-processo">
-        <div class="page-head">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <button class="btn btn-ghost btn-sm" onclick="navigate('processos')">
+
+        <!-- HEADER DO PROCESSO: limpo, focado, profissional -->
+        <div class="page-head" id="proc-header">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+            <button class="btn btn-ghost btn-sm" onclick="navigate('processos')" style="flex-shrink:0;">
               <svg><use href="#ic-arrow-left"/></svg> Voltar
             </button>
-            <div>
-              <div class="page-title" id="proc-title">Processo</div>
-              <div class="page-sub" id="proc-sub">Protocolo</div>
+            <div style="min-width:0;">
+              <div class="page-title" id="proc-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:500px;">Processo</div>
+              <div class="page-sub" id="proc-sub" style="display:flex;align-items:center;gap:8px;">
+                <span id="proc-num-header">—</span>
+                <span id="proc-status-badge" style="font-size:10px;"></span>
+              </div>
             </div>
           </div>
-          <div class="page-actions" id="proc-actions"></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <!-- Botão de alertas discreto -->
+            <div style="position:relative;" id="proc-alerts-wrap" style="display:none;">
+              <button class="proc-alerts-btn" id="proc-alerts-btn" onclick="toggleAlertsDropdown()" style="display:none;">
+                ⚠️ <span id="proc-alerts-count">0</span> alerta(s)
+                <span class="proc-alerts-badge" id="proc-alerts-badge" style="display:none;"></span>
+              </button>
+              <div class="proc-alerts-dropdown" id="proc-alerts-dropdown">
+                <div class="proc-alerts-header">Verificação do processo</div>
+                <div id="proc-alerts-list"></div>
+              </div>
+            </div>
+            <div id="proc-actions"></div>
+          </div>
         </div>
 
-        <div class="proc-layout">
-          <!-- sidebar do processo -->
+        <!-- LAYOUT PRINCIPAL: sidebar + conteúdo -->
+        <div class="proc-layout" style="height:calc(100vh - 130px);">
+
+          <!-- SIDEBAR: só timeline + dados compactos + score -->
           <div class="proc-sidebar-wrap">
             <div class="proc-sidebar">
+              <!-- Dados compactos do processo -->
               <div class="proc-info">
                 <div class="proc-num" id="proc-num">—</div>
-                <!-- [CONFIANÇA] Barra de integridade -->
-                <div class="integrity-bar" id="proc-integrity-bar" style="display:none;margin:0 -18px 10px;"></div>
                 <div class="proc-obj" id="proc-obj">—</div>
                 <div class="proc-meta">
                   <div class="proc-meta-item"><span class="k">Tipo</span><span class="v" id="proc-tipo-label">—</span></div>
                   <div class="proc-meta-item"><span class="k">Setor</span><span class="v" id="proc-setor">—</span></div>
-                  <div class="proc-meta-item"><span class="k">Valor est.</span><span class="v" id="proc-valor">—</span></div>
-                  <div class="proc-meta-item"><span class="k">Etapa</span><span class="v" id="proc-etapa-num">—</span></div>
-                  <div class="proc-meta-item"><span class="k">Status</span><span id="proc-status-badge">—</span></div>
+                  <div class="proc-meta-item"><span class="k">Valor</span><span class="v" id="proc-valor">—</span></div>
                   <div class="proc-meta-item" id="proc-cat-row" style="display:none;">
-                    <span class="k">Categoria</span>
-                    <span id="proc-cat-badge"></span>
+                    <span class="k">Categoria</span><span id="proc-cat-badge"></span>
                   </div>
                   <div class="proc-meta-item" id="proc-modal-row" style="display:none;">
-                    <span class="k">Modalidade</span>
-                    <span id="proc-modal-chip"></span>
+                    <span class="k">Modalidade</span><span id="proc-modal-chip"></span>
                   </div>
                 </div>
               </div>
-              <!-- [INTELIGÊNCIA] Score de Risco -->
-              <div id="score-widget" class="score-widget" onclick="toggleScoreFatores()" style="display:none;" title="Score de risco processual">
+
+              <!-- [INTELIGÊNCIA] Score compacto -->
+              <div id="score-widget" class="score-widget" onclick="toggleScoreFatores()" style="display:none;">
                 <div class="score-circle baixo" id="score-circle">0</div>
-                <div>
+                <div style="min-width:0;">
                   <div class="score-label" id="score-nivel-label">BAIXO RISCO</div>
-                  <div style="font-size:10px;color:var(--muted);">clique para ver fatores</div>
+                  <div style="font-size:10px;color:var(--muted);">clique p/ fatores</div>
                 </div>
               </div>
               <div class="score-fatores" id="score-fatores-body"></div>
+
+              <!-- Exigências legais colapsável -->
+              <div id="proc-exigencias-panel" style="display:none;"></div>
+
+              <!-- Timeline de etapas -->
               <div class="etapa-list" id="proc-etapa-list"></div>
             </div>
-            <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Expandir/recolher etapas">‹</button>
+            <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()">‹</button>
           </div>
 
-          <!-- área principal do processo -->
+          <!-- ÁREA PRINCIPAL: formulário + histórico -->
           <div class="proc-main">
+
+            <!-- Cabeçalho da etapa atual -->
             <div class="doc-area" id="doc-area">
               <div class="doc-head">
                 <div>
-                  <div style="font-size:13px;font-weight:600;" id="doc-etapa-title">Etapa atual</div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="doc-etapa-resp">Responsável</div>
+                  <div style="font-size:12px;font-weight:700;letter-spacing:.04em;" id="doc-etapa-title">Etapa atual</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:1px;" id="doc-etapa-resp">Responsável</div>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center;">
+                <div style="display:flex;gap:6px;align-items:center;">
                   <span class="doc-badge" id="doc-status-badge">Rascunho</span>
                 </div>
               </div>
-              <div class="doc-body" id="doc-body">
-                <!-- formulário da etapa atual renderizado aqui -->
-              </div>
+              <!-- [CONFIANÇA] Barra de integridade (oculta — dados no dropdown de alertas) -->
+              <div class="integrity-bar" id="proc-integrity-bar" style="display:none;"></div>
+              <div class="doc-body" id="doc-body"></div>
             </div>
 
-            <div class="card" style="margin-top:16px;">
-              <div class="card-head">
-                <div><div class="card-title">Histórico de movimentações</div></div>
-              </div>
-              <!-- [INSTITUCIONAL] Tabs: movimentações | snapshots | auditoria -->
+            <!-- HISTÓRICO: abas discretas -->
+            <div class="proc-historico-card">
               <div class="proc-tabs">
-                <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">📋 Linha do Tempo</div>
-                <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">🔒 Versões</div>
-                <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">🔍 Auditoria</div>
-                <div class="proc-tab" id="tab-tcm" onclick="switchProcTab('tcm')">✅ Conformidade TCM</div>
+                <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">Linha do Tempo</div>
+                <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">Versões</div>
+                <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">Auditoria</div>
+                <div class="proc-tab" id="tab-tcm" onclick="switchProcTab('tcm')">Conformidade TCM</div>
               </div>
-              <div id="tab-content-mov" style="padding:4px 18px;"></div>
-              <div id="tab-content-snaps" style="display:none;padding:4px 18px;"></div>
-              <div id="tab-content-audit" style="display:none;padding:4px 18px;"></div>
-              <div id="tab-content-tcm" style="display:none;padding:4px 18px;"></div>
+              <div id="tab-content-mov" style="padding:4px 18px 16px;"></div>
+              <div id="tab-content-snaps" style="display:none;padding:4px 18px 16px;"></div>
+              <div id="tab-content-audit" style="display:none;padding:4px 18px 16px;"></div>
+              <div id="tab-content-tcm" style="display:none;padding:4px 18px 16px;"></div>
             </div>
+
           </div>
         </div>
       </div>
@@ -2466,6 +2641,7 @@ async function abrirProcesso(id) {
   document.getElementById('proc-title').textContent = proc.objeto || 'Processo';
   document.getElementById('proc-sub').textContent   = proc.numero_protocolo || '—';
   document.getElementById('proc-num').textContent   = proc.numero_protocolo || '—';
+  const _nh = document.getElementById('proc-num-header'); if (_nh) _nh.textContent = proc.numero_protocolo || '—';
   document.getElementById('proc-obj').textContent   = proc.objeto || '—';
   document.getElementById('proc-tipo-label').textContent = TIPO_LABELS[proc.tipo_contratacao] || '—';
   document.getElementById('proc-setor').textContent = proc.setor_requisitante || '—';
@@ -8953,39 +9129,56 @@ function detectarInconsistencias(proc) {
 function rodarDetectorInconsistencias() {
   const proc = _processoAtual;
   if (!proc) return;
-  const alertas   = detectarInconsistencias(proc);
-  const toggleBtn = document.getElementById('incons-toggle-btn');
-  const badge     = document.getElementById('incons-badge');
-  const body      = document.getElementById('incons-panel-body');
-  if (!toggleBtn || !badge || !body) return;
+  const alertas = detectarInconsistencias(proc);
 
-  toggleBtn.style.display = 'flex';
+  // Ocultar painel flutuante legado
+  const toggleBtn = document.getElementById('incons-toggle-btn');
+  if (toggleBtn) toggleBtn.style.display = 'none';
+
+  // Botão de alertas no header do processo
+  const alertsBtn  = document.getElementById('proc-alerts-btn');
+  const alertsList = document.getElementById('proc-alerts-list');
+  if (!alertsBtn) return;
 
   if (!alertas.length) {
-    badge.style.display = 'none';
-    toggleBtn.className = 'incons-toggle-btn';
-    body.innerHTML = '<div class="incons-empty">✅ Nenhuma inconsistência detectada.</div>';
+    alertsBtn.style.display = 'none';
     return;
   }
 
   const erros  = alertas.filter(a=>a.nivel==='erro').length;
   const avisos = alertas.filter(a=>a.nivel==='aviso').length;
-  badge.style.display = 'flex';
-  badge.textContent = alertas.length;
-  badge.className = erros>0 ? 'incons-badge' : 'incons-badge warn';
-  toggleBtn.className = 'incons-toggle-btn ' + (erros>0 ? 'has-errors' : 'has-warnings');
+  alertsBtn.style.display = 'flex';
+  alertsBtn.className = 'proc-alerts-btn ' + (erros > 0 ? 'has-alerts' : '');
+  alertsBtn.innerHTML = `${erros>0?'🔴':'🟡'} ${alertas.length} alerta${alertas.length!==1?'s':''}`;
 
-  body.innerHTML = alertas.map(a=>`
-    <div class="incons-item ${a.nivel}">
-      <span class="incons-item-icon">${a.nivel==='erro'?'🔴':'🟡'}</span>
-      <div class="incons-item-body">
-        <div class="incons-item-msg">${a.msg}</div>
-        ${a.campo?`<span class="incons-item-link" onclick="irParaCampoIncons('${a.campo}',${a.etapa||0})">→ Ir para o campo</span>`:''}
-      </div>
-    </div>`).join('') +
-    `<div style="padding:8px 4px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;">
-      ${erros} erro${erros!==1?'s':''} · ${avisos} aviso${avisos!==1?'s':''}
-    </div>`;
+  if (alertsList) {
+    alertsList.innerHTML = alertas.map(a=>`
+      <div class="proc-alert-item">
+        <span class="proc-alert-icon">${a.nivel==='erro'?'🔴':'🟡'}</span>
+        <div>
+          <div class="proc-alert-msg">${a.msg}</div>
+          ${a.campo?`<div class="proc-alert-fix" onclick="irParaCampoIncons('${a.campo||''}',${a.etapa||0});toggleAlertsDropdown()">→ Ir para o campo</div>`:''}
+        </div>
+      </div>`).join('') +
+      `<div style="padding:6px 14px 8px;font-size:10px;color:var(--muted);">${erros} erro${erros!==1?'s':''} · ${avisos} aviso${avisos!==1?'s':''}</div>`;
+  }
+}
+
+function toggleAlertsDropdown() {
+  const dd = document.getElementById('proc-alerts-dropdown');
+  if (!dd) return;
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    setTimeout(() => {
+      document.addEventListener('click', function closeDD(e) {
+        const btn = document.getElementById('proc-alerts-btn');
+        if (!dd.contains(e.target) && e.target !== btn && !btn?.contains(e.target)) {
+          dd.classList.remove('open');
+          document.removeEventListener('click', closeDD);
+        }
+      });
+    }, 10);
+  }
 }
 
 function toggleInconsPanel() {
