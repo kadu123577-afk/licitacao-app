@@ -2006,6 +2006,8 @@ async function carregarDados() {
   await carregarProcessos();
   renderDashboard();
   renderTabelaProcessos();
+  // [SOBREVIVÊNCIA] Health check não-bloqueante após login
+  setTimeout(() => executarHealthCheck(false), 2000);
 }
 
 // Mapeamento perfil → etapa(s) de responsabilidade
@@ -7848,16 +7850,9 @@ async function checklist_forcePDF() {
 }
 
 // ══════════════════════════════════════════════════════════
-// [SOBREVIVÊNCIA] Hook no login — health check após autenticação
+// [SOBREVIVÊNCIA] Hook no login — health check chamado após carregarDados()
+// (não usa override de função para evitar loop infinito)
 // ══════════════════════════════════════════════════════════
-
-// Override de mostrarApp para adicionar health check pós-login
-const _mostrarAppOriginal = mostrarApp;
-function mostrarApp() {
-  _mostrarAppOriginal();
-  // [SOBREVIVÊNCIA] Health check discreto após login (non-blocking)
-  setTimeout(() => executarHealthCheck(false), 1500);
-}
 
 
 </script>
