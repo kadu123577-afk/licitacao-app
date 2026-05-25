@@ -1956,6 +1956,22 @@ html[data-validacao] #view-validacao-publica {
 const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// [SEGURANÇA] RLS: verificar no painel Supabase se todas
+// as tabelas críticas têm RLS habilitado com política:
+// USING (prefeitura_id = auth.jwt()->>'prefeitura_id')
+// Isso deve ser configurado no banco — não só no frontend.
+console.warn(
+  '%c[LICITE SEGURANÇA] Tabelas que precisam de RLS configurado no Supabase:',
+  'color:#f90;font-weight:bold;',
+  '\n  • processos         — USING (prefeitura_id = ...)',
+  '\n  • documentos        — USING (processo_id IN SELECT id FROM processos WHERE prefeitura_id = ...)',
+  '\n  • process_snapshots — USING (process_id IN SELECT id FROM processos WHERE prefeitura_id = ...)',
+  '\n  • audit_logs        — USING (prefeitura_id = ...)',
+  '\n  • usuarios          — USING (prefeitura_id = ...)',
+  '\n  • prefeituras       — USING (id = ... OU role super_admin)',
+  '\nSem RLS no banco, qualquer usuário com a chave anon pode ler dados de outras prefeituras!'
+);
 // IA via proxy Vercel /api/ia (chave protegida no servidor)
 
 // ══════════════════════════════════════════════════════════
@@ -2377,8 +2393,8 @@ function renderListaProcessos(containerId, lista) {
       onclick="abrirProcesso('${p.id}')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${p.numero_protocolo || '—'} · ${TIPO_LABELS[p.tipo_contratacao] || '—'}</div>
-          <div style="font-size:14px;font-weight:600;">${p.objeto || '—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${esc(p.numero_protocolo||'—')} · ${TIPO_LABELS[p.tipo_contratacao] || '—'} <!-- [SEGURANÇA] XSS corrigido --></div>
+          <div style="font-size:14px;font-weight:600;">${esc(p.objeto||'—')}</div> <!-- [SEGURANÇA] XSS corrigido -->
         </div>
         ${statusBadge(p.status)}
       </div>
@@ -2405,8 +2421,8 @@ function renderTabelaProcessos(lista = null) {
     const etapas = ETAPAS[p.tipo_contratacao] || ETAPAS.aquisicao_bens;
     const etapaInfo = etapas.find(e => e.n === p.etapa_atual) || etapas[0];
     return `<tr onclick="abrirProcesso('${p.id}')">
-      <td><div class="td-main">${p.numero_protocolo || '—'}</div></td>
-      <td><div class="td-main" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.objeto || '—'}</div></td>
+      <td><div class="td-main">${esc(p.numero_protocolo||'—')}</div></td> <!-- [SEGURANÇA] XSS corrigido -->
+      <td><div class="td-main" style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.objeto||'—')}</div></td> <!-- [SEGURANÇA] XSS corrigido -->
       <td>${tipoBadge(p.tipo_contratacao)}</td>
       <td style="font-size:12px;color:var(--text2);">Etapa ${p.etapa_atual}/${etapas.length}<div class="td-sub">${etapaInfo.nome}</div></td>
       <td>${statusBadge(p.status)}</td>
@@ -2512,7 +2528,7 @@ function renderHistorico(movs) {
       <div class="hist-dot" style="background:${cores[m.acao]||'var(--text2)'}"></div>
       <div class="hist-content">
         <div class="hist-acao">${labelAcao(m)}</div>
-        <div class="hist-meta">${m.usuarios?.nome || '—'} · ${formatData(m.criado_em)}${m.observacao ? ` · "${m.observacao}"` : ''}</div>
+        <div class="hist-meta">${esc(m.usuarios?.nome||'—')} · ${formatData(m.criado_em)}${m.observacao ? ` · "${esc(m.observacao)}"` : ''} <!-- [SEGURANÇA] XSS corrigido --></div>
       </div>
     </div>`).join('');
 }
@@ -5120,8 +5136,8 @@ function buildPDFHtml(tipo, dados, proc) {
     <title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 <div id="cabecalho-inst-placeholder"></div>
     <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
-    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'}</div>
-    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">${_perfil?._prefeitura?.endereco || 'Praça Três Poderes s/n, Centro'} — ${municipio}/${_perfil?._prefeitura?.uf || 'GO'} — CEP ${_perfil?._prefeitura?.cep || '76520-000'}</div>
+    ${ _perfil?._prefeitura?.cnpj ? `<div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil._prefeitura.cnpj}</div>` : `<div style="text-align:center;font-size:11pt;margin-bottom:2px;color:#c00;">⚠️ Cadastro institucional incompleto — configure os dados da prefeitura antes de gerar documentos.</div>` } <!-- [SEGURANÇA] Correção 1 -->
+    ${ _perfil?._prefeitura?.endereco ? `<div style="text-align:center;font-size:11pt;margin-bottom:2px;">${_perfil._prefeitura.endereco} — ${municipio}/${_perfil._prefeitura.uf||'GO'} — CEP ${_perfil._prefeitura.cep||''}</div>` : '' } <!-- [SEGURANÇA] Correção 1 -->
     <h2>Documento de Formalização de Demanda – DFD</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo} | ${TIPO_LABELS[proc.tipo_contratacao] || 'Aquisição de Bens'}</div>
 
@@ -5223,7 +5239,7 @@ function buildPDFHtml(tipo, dados, proc) {
     <title>ETP — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 <div id="cabecalho-inst-placeholder"></div>
     <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
-    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'} | ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}</div>
+    ${ _perfil?._prefeitura?.cnpj ? `<div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil._prefeitura.cnpj} | ${municipio}/${_perfil._prefeitura.uf||'GO'}</div>` : '' } <!-- [SEGURANÇA] Correção 1 -->
     <h2>Estudo Técnico Preliminar – ETP</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
 
@@ -5296,7 +5312,7 @@ function buildPDFHtml(tipo, dados, proc) {
     <title>TR — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 <div id="cabecalho-inst-placeholder"></div>
     <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
-    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'} | ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}</div>
+    ${ _perfil?._prefeitura?.cnpj ? `<div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil._prefeitura.cnpj} | ${municipio}/${_perfil._prefeitura.uf||'GO'}</div>` : '' } <!-- [SEGURANÇA] Correção 1 -->
     <h2>Termo de Referência</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
 
@@ -5623,8 +5639,8 @@ function renderTabelaPrefeituras() {
     const statusLabel = p.ativo && !vencido ? '✅ Ativo' : vencido ? '⚠️ Vencido' : '🔒 Bloqueado';
     const planoClass = p.plano || 'basico';
     return `<tr>
-      <td><strong>${p.nome}</strong></td>
-      <td>${p.municipio}/${p.uf || 'GO'}</td>
+      <td><strong>${esc(p.nome||'—')}</strong></td> <!-- [SEGURANÇA] XSS corrigido -->
+      <td>${esc(p.municipio||'—')}/${esc(p.uf||'GO')}</td> <!-- [SEGURANÇA] XSS corrigido -->
       <td><span class="badge-plano ${planoClass}">${(p.plano||'básico').charAt(0).toUpperCase()+(p.plano||'básico').slice(1)}</span></td>
       <td style="color:${vencido?'var(--red)':'var(--text2)'};">${venc}</td>
       <td><span class="badge-status ${statusClass}">${statusLabel}</span></td>
@@ -5864,10 +5880,10 @@ async function carregarUsuariosAdmin() {
     return;
   }
   tbody.innerHTML = _apUsuarios.map(u => `<tr>
-    <td><strong>${u.nome || '—'}</strong></td>
-    <td style="color:var(--text2);">${u.email}</td>
+    <td><strong>${esc(u.nome||'—')}</strong></td> <!-- [SEGURANÇA] XSS corrigido -->
+    <td style="color:var(--text2);">${esc(u.email||'—')}</td> <!-- [SEGURANÇA] XSS corrigido -->
     <td><span class="badge-perfil">${PERFIL_LABELS[u.perfil] || u.perfil || '—'}</span></td>
-    <td style="color:var(--text2);">${u.setor || '—'}</td>
+    <td style="color:var(--text2);">${esc(u.setor||'—')}</td> <!-- [SEGURANÇA] XSS corrigido -->
     <td><span class="badge-status ${u.ativo !== false ? 'ativo' : 'inativo'}">${u.ativo !== false ? 'Ativo' : 'Inativo'}</span></td>
     <td style="text-align:right;">
       <button class="btn btn-ghost btn-sm" onclick="editarUsuario('${u.id}')" style="color:var(--blue);">✏️</button>
@@ -5890,9 +5906,9 @@ async function carregarProcessosAdmin() {
     return;
   }
   tbody.innerHTML = data.map(p => `<tr>
-    <td><strong>${p.numero_protocolo}</strong></td>
-    <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.objeto || '—'}</td>
-    <td style="color:var(--text2);">${p.setor_requisitante || '—'}</td>
+    <td><strong>${esc(p.numero_protocolo||'—')}</strong></td> <!-- [SEGURANÇA] XSS corrigido -->
+    <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.objeto||'—')}</td> <!-- [SEGURANÇA] XSS corrigido -->
+    <td style="color:var(--text2);">${esc(p.setor_requisitante||'—')}</td> <!-- [SEGURANÇA] XSS corrigido -->
     <td><span class="badge-perfil">${ETAPA_LABELS[p.etapa_atual] || 'Etapa ' + p.etapa_atual}</span></td>
     <td><span class="badge-status ${p.status === 'concluido' ? 'ativo' : 'inativo'}">${p.status || '—'}</span></td>
   </tr>`).join('');
@@ -5968,7 +5984,7 @@ async function salvarNovoUsuario() {
 
     if (dbErr) throw dbErr;
 
-    okEl.innerHTML = `✅ Usuário criado com sucesso!<br><strong>E-mail:</strong> ${email}<br><strong>Senha:</strong> ${senha}`;
+    okEl.innerHTML = `✅ Usuário criado com sucesso!<br><strong>E-mail:</strong> ${esc(email)}<br><strong>Senha:</strong> ${esc(senha)}` // [SEGURANÇA] XSS corrigido;
     okEl.style.display = 'block';
     toast('Usuário criado!', 'success');
     carregarUsuariosAdmin();
@@ -6211,7 +6227,7 @@ async function preencherTRcomIA() {
 
   const municipio = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'município';
   const prefNome  = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipio);
-  const endereco  = _perfil?._prefeitura?.endereco || 'Praça Três Poderes s/n, Centro';
+  const endereco  = _perfil?._prefeitura?.endereco || 'endereço não cadastrado'; // [SEGURANÇA] Correção 1
 
   let itensTexto = '';
   try {
