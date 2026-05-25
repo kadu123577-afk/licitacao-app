@@ -783,88 +783,146 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 
 <!-- ══ VIEW: SUPER ADMIN (Nível 1 — Carlos Eduardo) ══ -->
 <div id="view-superadmin" class="view">
-  <div class="admin-header">
-    <div class="brand"><div class="app-logo" style="width:28px;height:28px;font-size:13px;">L</div> Licite.ai <span>· Super Admin</span></div>
-    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">Sair</button>
-  </div>
-  <div class="admin-body">
-    <div style="margin-bottom:24px;">
-      <h2 style="font-size:20px;font-weight:700;">Painel de Administração</h2>
-      <p style="color:var(--text2);font-size:13px;">Gerencie as prefeituras e planos da plataforma.</p>
+  <header class="admin-header">
+    <div class="admin-brand">
+      <div class="admin-brand-mark">L</div>
+      <div class="admin-brand-text">Licite.ai</div>
+      <span class="admin-badge">Super Admin</span>
     </div>
-    <div class="admin-tabs">
-      <div class="admin-tab active" onclick="adminTab('prefeituras')">🏛️ Prefeituras</div>
-      <div class="admin-tab" onclick="adminTab('financeiro')">💰 Financeiro</div>
-    </div>
+    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
+      <svg width="14" height="14"><use href="#ic-logout"/></svg> Sair
+    </button>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-label">Menu</div>
+      <div class="admin-nav-item active" id="sanav-prefeituras" onclick="adminTab('prefeituras')">
+        <span class="nav-ico">🏛️</span> Prefeituras
+      </div>
+      <div class="admin-nav-item" id="sanav-financeiro" onclick="adminTab('financeiro')">
+        <span class="nav-ico">💰</span> Financeiro
+      </div>
+    </aside>
+    <main class="admin-main">
 
-    <!-- PREFEITURAS -->
-    <div class="admin-section active" id="admin-sec-prefeituras">
-      <div class="admin-toolbar">
-        <div style="font-size:13px;color:var(--text2);" id="sa-pref-count">Carregando...</div>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalPrefeitura()">+ Nova Prefeitura</button>
+      <!-- PREFEITURAS -->
+      <div class="admin-page active" id="admin-sec-prefeituras">
+        <div class="admin-page-header">
+          <div>
+            <div class="admin-page-title">Prefeituras</div>
+            <div class="admin-page-sub" id="sa-pref-count">Carregando...</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalPrefeitura()">
+            <svg width="14" height="14"><use href="#ic-plus"/></svg> Nova Prefeitura
+          </button>
+        </div>
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr>
+                <th>Prefeitura</th><th>Município/UF</th><th>Plano</th><th>Vencimento</th><th>Status</th><th style="text-align:right;">Ações</th>
+              </tr></thead>
+              <tbody id="sa-pref-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text2);">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="admin-table">
-          <thead><tr>
-            <th>Prefeitura</th><th>Município/UF</th><th>Plano</th><th>Vencimento</th><th>Status</th><th>Ações</th>
-          </tr></thead>
-          <tbody id="sa-pref-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
 
-    <!-- FINANCEIRO -->
-    <div class="admin-section" id="admin-sec-financeiro">
-      <div style="color:var(--text2);font-size:13px;padding:24px;text-align:center;">
-        Módulo financeiro em desenvolvimento. Em breve: controle de pagamentos, vencimentos e histórico.
+      <!-- FINANCEIRO -->
+      <div class="admin-page" id="admin-sec-financeiro">
+        <div class="admin-page-header">
+          <div>
+            <div class="admin-page-title">Financeiro</div>
+            <div class="admin-page-sub">Controle de pagamentos e vencimentos</div>
+          </div>
+        </div>
+        <div class="admin-card">
+          <div style="text-align:center;padding:48px;color:var(--text2);">
+            <div style="font-size:32px;margin-bottom:12px;">💰</div>
+            <div style="font-weight:600;margin-bottom:4px;">Em desenvolvimento</div>
+            <div style="font-size:13px;">Controle de pagamentos, vencimentos e histórico em breve.</div>
+          </div>
+        </div>
       </div>
-    </div>
+
+    </main>
   </div>
 </div>
 
 <!-- ══ VIEW: ADMIN DA PREFEITURA (Nível 2) ══ -->
 <div id="view-admin-pref" class="view">
-  <div class="admin-header">
-    <div class="brand"><div class="app-logo" style="width:28px;height:28px;font-size:13px;">L</div> Licite.ai <span id="admin-pref-nome">· Administrador</span></div>
-    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">Sair</button>
-  </div>
-  <div class="admin-body">
-    <div style="margin-bottom:24px;">
-      <h2 style="font-size:20px;font-weight:700;">Administração da Prefeitura</h2>
-      <p style="color:var(--text2);font-size:13px;">Gerencie usuários e acompanhe os processos.</p>
+  <header class="admin-header">
+    <div class="admin-brand">
+      <div class="admin-brand-mark">L</div>
+      <div class="admin-brand-text">Licite.ai</div>
+      <span id="admin-pref-nome" style="font-size:13px;color:var(--text2);font-weight:500;">· Administrador</span>
     </div>
-    <div class="admin-tabs">
-      <div class="admin-tab active" onclick="adminPrefTab('usuarios')">👥 Usuários</div>
-      <div class="admin-tab" onclick="adminPrefTab('processos')">📋 Processos</div>
-    </div>
+    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
+      <svg width="14" height="14"><use href="#ic-logout"/></svg> Sair
+    </button>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-label">Menu</div>
+      <div class="admin-nav-item active" id="apnav-usuarios" onclick="adminPrefTab('usuarios')">
+        <span class="nav-ico">👥</span> Usuários
+      </div>
+      <div class="admin-nav-item" id="apnav-processos" onclick="adminPrefTab('processos')">
+        <span class="nav-ico">📋</span> Processos
+      </div>
+    </aside>
+    <main class="admin-main">
 
-    <!-- USUÁRIOS -->
-    <div class="admin-section active" id="ap-sec-usuarios">
-      <div class="admin-toolbar">
-        <div style="font-size:13px;color:var(--text2);" id="ap-user-count">Carregando...</div>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
+      <!-- USUÁRIOS -->
+      <div class="admin-page active" id="ap-sec-usuarios">
+        <div class="admin-page-header">
+          <div>
+            <div class="admin-page-title">Usuários</div>
+            <div class="admin-page-sub" id="ap-user-count">Carregando...</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalNovoUsuario()">
+            <svg width="14" height="14"><use href="#ic-plus"/></svg> Novo Usuário
+          </button>
+        </div>
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr>
+                <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Setor</th><th>Status</th><th style="text-align:right;">Ações</th>
+              </tr></thead>
+              <tbody id="ap-users-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text2);">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="admin-table">
-          <thead><tr>
-            <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th>
-          </tr></thead>
-          <tbody id="ap-users-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
 
-    <!-- PROCESSOS -->
-    <div class="admin-section" id="ap-sec-processos">
-      <div style="overflow-x:auto;margin-top:8px;">
-        <table class="admin-table">
-          <thead><tr>
-            <th>Protocolo</th><th>Objeto</th><th>Setor</th><th>Etapa</th><th>Status</th>
-          </tr></thead>
-          <tbody id="ap-proc-tbody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2);">Carregando...</td></tr></tbody>
-        </table>
+      <!-- PROCESSOS -->
+      <div class="admin-page" id="ap-sec-processos">
+        <div class="admin-page-header">
+          <div>
+            <div class="admin-page-title">Processos</div>
+            <div class="admin-page-sub">Todos os processos da prefeitura</div>
+          </div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr>
+                <th>Protocolo</th><th>Objeto</th><th>Setor</th><th>Etapa</th><th>Status</th>
+              </tr></thead>
+              <tbody id="ap-proc-tbody">
+                <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text2);">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
+
+    </main>
   </div>
 </div>
 
@@ -3448,11 +3506,10 @@ function salvarContato() {
 let _saPrefeituras = [];
 
 function adminTab(tab) {
-  document.querySelectorAll('#view-superadmin .admin-tab').forEach((t,i) => {
-    t.classList.toggle('active', ['prefeituras','financeiro'][i] === tab);
+  ['prefeituras','financeiro'].forEach(t => {
+    document.getElementById('sanav-' + t)?.classList.toggle('active', t === tab);
+    document.getElementById('admin-sec-' + t)?.classList.toggle('active', t === tab);
   });
-  document.querySelectorAll('#view-superadmin .admin-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('admin-sec-' + tab)?.classList.add('active');
 }
 
 async function carregarPrefeiturasSA() {
@@ -3560,11 +3617,10 @@ async function togglePrefeitura(id, ativo) {
 let _apUsuarios = [];
 
 function adminPrefTab(tab) {
-  document.querySelectorAll('#view-admin-pref .admin-tab').forEach((t,i) => {
-    t.classList.toggle('active', ['usuarios','processos'][i] === tab);
+  ['usuarios','processos'].forEach(t => {
+    document.getElementById('apnav-' + t)?.classList.toggle('active', t === tab);
+    document.getElementById('ap-sec-' + t)?.classList.toggle('active', t === tab);
   });
-  document.querySelectorAll('#view-admin-pref .admin-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('ap-sec-' + tab)?.classList.add('active');
 }
 
 const PERFIL_LABELS = {
