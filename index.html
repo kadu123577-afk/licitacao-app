@@ -555,7 +555,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
   .proc-layout{grid-template-columns:1fr;}
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 </head>
 <body>
 
@@ -1380,18 +1380,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-// DeepSeek chamado via proxy seguro — chave nunca exposta no frontend
-const DEEPSEEK_URL = '/api/ia';
-async function chamarDeepSeek(prompt, max_tokens = 800) {
-  const resp = await fetch('/api/ia', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, max_tokens })
-  });
-  if (!resp.ok) throw new Error('Erro na API de IA: ' + resp.status);
-  const data = await resp.json();
-  return data.content || data.choices?.[0]?.message?.content || '';
-}
+const DEEPSEEK_KEY = 'sk-e289ba7d38e8418d9cbc14c2c5509da8';
+const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 // ══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
@@ -1958,12 +1948,9 @@ async function criarProcesso() {
     const prefId = _perfil?.prefeitura_id;
     if (!prefId) throw new Error('Perfil sem prefeitura vinculada. Contate o administrador.');
 
-    // Gerar número de protocolo único por prefeitura+ano
+    // Gerar número de protocolo
     const ano = new Date().getFullYear();
-    const { count } = await sb.from('processos')
-      .select('*', { count: 'exact', head: true })
-      .eq('prefeitura_id', prefId)
-      .like('numero_protocolo', `%/${ano}`);
+    const { count } = await sb.from('processos').select('*', { count: 'exact', head: true }).eq('prefeitura_id', prefId);
     const num = String((count || 0) + 1).padStart(4, '0');
     const protocolo = `${num}/${ano}`;
 
@@ -1976,7 +1963,7 @@ async function criarProcesso() {
       telefone:      document.getElementById('dfd-telefone').value.trim(),
       justificativa: document.getElementById('dfd-justificativa').value.trim(),
       objeto:        document.getElementById('dfd-objeto').value.trim(),
-      itens:         (() => { try { return JSON.parse(document.getElementById('dfd-itens-json')?.value || '[]'); } catch(e) { return []; } })(),
+      itens:         document.getElementById('dfd-itens-json')?.value || '[]',
       quantidade:    document.getElementById('dfd-quantidade').value.trim(),
       valor:         document.getElementById('dfd-valor').value.trim(),
       prazo:         document.getElementById('dfd-prazo').value.trim(),
@@ -2699,7 +2686,7 @@ function renderDFDView(dados) {
   </div>
   ${dados.hipotese ? `<div style="padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal — Contratação Direta</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}
   <div style="margin-top:14px;display:flex;gap:8px;">
-    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar PDF do DFD</button>
+    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar DOCX do DFD</button>
   </div>`;
 }
 
@@ -2843,11 +2830,13 @@ INSTRUÇÕES:
 Texto:`;
 
   try {
-    try {
-      _iaTextoGerado = await chamarDeepSeek(prompt, 800);
-    } catch(e) {
-      _iaTextoGerado = 'Erro ao gerar texto: ' + e.message;
-    }
+    const resp = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    _iaTextoGerado = data.choices?.[0]?.message?.content || 'Erro ao gerar texto.';
     document.getElementById('modal-ia-resultado').textContent = _iaTextoGerado;
     document.getElementById('modal-ia-resultado').style.display = 'block';
     document.getElementById('btn-ia-usar').style.display = 'inline-flex';
@@ -3058,8 +3047,19 @@ RETORNE APENAS este JSON (sem markdown, sem backticks):
 {"objeto_profissional":"...","justificativa":"..."}`;
 
   try {
-    let raw = '';
-    try { raw = await chamarDeepSeek(prompt, 900); } catch(e) { raw = ''; }
+    const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
+    const DURL = typeof DEEPSEEK_URL !== 'undefined' ? DEEPSEEK_URL : 'https://api.deepseek.com/v1/chat/completions';
+    const resp = await fetch(DURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DKEY },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 900,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    let raw = data.choices?.[0]?.message?.content || '';
 
     // Strip markdown fences if present
     raw = raw.replace(/```json|```/g, '').trim();
@@ -3103,36 +3103,133 @@ RETORNE APENAS este JSON (sem markdown, sem backticks):
 async function gerarPDFDoc(tipo) {
   const proc = _processoAtual;
   if (!proc) return;
-  const doc = proc.docs?.find(d => d.tipo === tipo);
-  const dados = doc?.dados || {};
-  const nomes = {DFD:'DFD',ETP:'ETP',TR:'Termo_de_Referencia',PP:'Pesquisa_de_Precos',DO:'Dotacao_Orcamentaria',AUTH:'Autorizacao',PARECER:'Parecer_Juridico'};
-  const fileName = `${nomes[tipo]||tipo}_${proc.numero_protocolo?.replace('/','_')}.pdf`;
+  const docObj = proc.docs?.find(d => d.tipo === tipo);
+  const dados = docObj?.dados || {};
+  await gerarDOCX(tipo, dados, proc);
+}
 
-  toast('Gerando PDF...', 'info');
+async function gerarDOCX(tipo, dados, proc) {
+  const D = window.docx;
+  if (!D) { toast('Biblioteca DOCX não carregada, tente recarregar a página', 'error'); return; }
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, BorderStyle, WidthType, ShadingType } = D;
 
-  const html = buildPDFHtml(tipo, dados, proc);
+  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  const municipio = dados.municipio || proc.municipio || _perfil?._prefeitura?.municipio || 'município';
+  const orgao = dados.unidade || proc.setor_requisitante || '—';
+  const responsavel = dados.responsavel || '—';
+  const cargo = dados.cargo || '—';
+  const objeto = dados.objeto || proc.objeto || '—';
+  const justificativa = dados.justificativa || '—';
+  const email = dados.email || '—';
+  const telefone = dados.telefone || '—';
+  const matricula = dados.matricula || '___________';
+  const valor = dados.valor ? 'R$ ' + parseFloat(String(dados.valor).replace(/\./g,'').replace(',','.')).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  const ano = new Date().getFullYear();
+  const pcaVal = dados.pca || 'na';
+  const pcaTexto = pcaVal === 'sim'
+    ? 'A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício ' + ano + ', em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.'
+    : pcaVal === 'nao'
+    ? 'A presente contratação não consta no Plano de Contratações Anual – PCA do exercício ' + ano + ', sendo necessária sua inclusão por meio de revisão ou aditamento, conforme faculdade prevista na Lei nº 14.133/2021.'
+    : 'Não foi adotado o Plano de Contratações Anual – PCA para o exercício ' + ano + ', conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.';
 
-  // Usar html2pdf para gerar PDF real
-  if (typeof html2pdf !== 'undefined') {
-    const container = document.createElement('div');
-    container.innerHTML = html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<body[^>]*>|<\/body>/gi, '');
-    container.style.cssText = 'font-family:Times New Roman,serif;font-size:12pt;color:#000;background:#fff;';
-    document.body.appendChild(container);
-    await html2pdf().set({
-      margin: [25, 20, 25, 20],
-      filename: fileName,
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    }).from(container).save();
-    document.body.removeChild(container);
-    toast('PDF salvo com sucesso!', 'success');
+  let itensArray = [];
+  try { itensArray = typeof dados.itens === 'string' ? JSON.parse(dados.itens) : (dados.itens || []); } catch(e) {}
+
+  const b1 = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
+  const borders = { top: b1, bottom: b1, left: b1, right: b1 };
+  const tnr = (text, opts={}) => new TextRun({ text, font: 'Times New Roman', size: 24, ...opts });
+  const tnrSm = (text, opts={}) => new TextRun({ text, font: 'Times New Roman', size: 20, ...opts });
+  const para = (text, align) => new Paragraph({
+    alignment: align || AlignmentType.JUSTIFIED,
+    spacing: { before: 0, after: 120 },
+    children: [tnr(text)]
+  });
+  const secao = (num, text) => new Paragraph({
+    spacing: { before: 240, after: 100 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
+    children: [tnr(num + '. ' + text.toUpperCase(), { bold: true })]
+  });
+  const vazio = () => new Paragraph({ spacing: { before: 100, after: 100 }, children: [new TextRun('')] });
+  const cell = (children, width, shade) => new TableCell({
+    borders, width: { size: width, type: WidthType.DXA },
+    shading: shade ? { fill: shade, type: ShadingType.CLEAR } : undefined,
+    margins: { top: 80, bottom: 80, left: 100, right: 100 },
+    children
+  });
+
+  // Header table
+  const tId = new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [9360], rows: [
+    new TableRow({ children: [cell([new Paragraph({ children: [tnr('Órgão: ', {bold:true}), tnr(orgao)] })], 9360)] }),
+    new TableRow({ children: [cell([new Paragraph({ children: [tnr('Setor Requisitante: ', {bold:true}), tnr(orgao)] })], 9360)] }),
+    new TableRow({ children: [cell([new Paragraph({ children: [tnr('Responsável: ', {bold:true}), tnr(responsavel), tnr('     Matrícula: ', {bold:true}), tnr(matricula)] })], 9360)] }),
+    new TableRow({ children: [cell([new Paragraph({ children: [tnr('E-mail: ', {bold:true}), tnr(email), tnr('     Telefone: ', {bold:true}), tnr(telefone)] })], 9360)] }),
+  ]});
+
+  const tTitulo = new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [9360], rows: [
+    new TableRow({ children: [cell([new Paragraph({ alignment: AlignmentType.CENTER, children: [tnr('DOCUMENTO DE FORMALIZAÇÃO DE DEMANDA – DFD', {bold:true})] })], 9360)] })
+  ]});
+
+  const children = [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 60 }, children: [tnr('PREFEITURA MUNICIPAL', {bold:true, size:28})] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 60 }, children: [tnr('Documento de Formalização de Demanda', {bold:true, size:24})] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 200 }, children: [tnr('Processo nº ' + proc.numero_protocolo + ' | Aquisição de Bens', {size:22})] }),
+    tId, vazio(), tTitulo, vazio(),
+    secao(1, 'Descrição do Objeto'), para(objeto),
+    secao(2, 'Justificativa da Necessidade'), para(justificativa),
+    secao(3, 'Descrição e Quantidades'),
+  ];
+
+  if (itensArray.length > 0) {
+    const hRow = new TableRow({ tableHeader: true, children: [
+      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm('Nº',{bold:true})]})], 500, 'E8E8E8'),
+      cell([new Paragraph({children:[tnrSm('Nome do Produto / Descrição',{bold:true})]})], 5860, 'E8E8E8'),
+      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm('Unid. Medida',{bold:true})]})], 1500, 'E8E8E8'),
+      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm('Quantidade',{bold:true})]})], 1500, 'E8E8E8'),
+    ]});
+    const dRows = itensArray.map((it,i) => new TableRow({ children: [
+      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm(String(i+1))]})], 500),
+      cell([new Paragraph({children:[tnrSm(it.descricao||it.nome||'—')]})], 5860),
+      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm(it.unidade||'UN')]})], 1500),
+      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm(String(it.quantidade||1))]})], 1500),
+    ]}));
+    children.push(new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[500,5860,1500,1500], rows:[hRow,...dRows] }));
+    children.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing:{before:60,after:60}, children:[new TextRun({text:'Total: '+itensArray.length+' item(s)', italics:true, size:20, font:'Times New Roman'})] }));
   } else {
-    // Fallback para impressão do navegador
-    const w = window.open('', '_blank');
-    w.document.write(html);
-    w.document.close();
-    setTimeout(() => w.print(), 800);
+    children.push(para('Conforme relação de itens constante nos autos do processo administrativo licitatório.'));
+  }
+
+  children.push(
+    secao(4, 'Valor Estimado Preliminar para a Contratação'), para(valor),
+    secao(5, 'Alinhamento ao Plano de Contratação Anual – PCA'), para(pcaTexto),
+    secao(6, 'Encaminhamento'),
+    para('Em conformidade com a legislação que rege o tema, especialmente a Lei nº 14.133/2021 e as normas expedidas pelo Tribunal de Contas dos Municípios do Estado de Goiás, encaminhe-se à autoridade competente para análise de conveniência e oportunidade para a presente contratação e demais providências cabíveis.'),
+    para(municipio + ', ' + hoje + '.'),
+    vazio(), vazio(), vazio(),
+    new Paragraph({ alignment: AlignmentType.CENTER, border: { top: { style: BorderStyle.SINGLE, size: 6, color: '000000' } }, spacing: { before: 0, after: 60 }, children: [tnr('')] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 60 }, children: [tnr(responsavel, {bold:true})] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 200 }, children: [tnr(cargo)] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 40 }, children: [new TextRun({text:'Gerado pelo Licite.ai | Processo '+proc.numero_protocolo+' | '+hoje, size:18, color:'666666', font:'Times New Roman'})] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new TextRun({text:'Documento gerado eletronicamente — autenticidade verificável em licitacao-app.vercel.app | ID: '+(proc.id?.slice(0,8).toUpperCase()||'—'), size:16, color:'888888', font:'Times New Roman'})] }),
+  );
+
+  const document = new Document({
+    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1134, bottom: 1440, left: 1701 } } }, children }]
+  });
+
+  toast('Gerando documento Word...', 'info');
+  try {
+    const blob = await Packer.toBlob(document);
+    const url = URL.createObjectURL(blob);
+    const link = window.document.createElement('a');
+    link.href = url;
+    link.download = 'DFD_' + (proc.numero_protocolo?.replace('/','_') || 'documento') + '.docx';
+    link.click();
+    URL.revokeObjectURL(url);
+    toast('✅ Documento Word baixado!', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao gerar DOCX: ' + e.message, 'error');
   }
 }
 
