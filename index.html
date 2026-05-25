@@ -953,13 +953,18 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 
 <!-- ══ MODAL: NOVA PREFEITURA ══ -->
 <div class="modal-overlay" id="modal-prefeitura">
-  <div class="modal" style="max-width:500px;">
+  <div class="modal" style="max-width:560px;max-height:90vh;overflow-y:auto;">
     <div class="modal-header">
-      <div><h3 id="modal-pref-titulo">Nova Prefeitura</h3><p>Cadastro de cliente na plataforma</p></div>
+      <div><h3 id="modal-pref-titulo">Nova Prefeitura</h3><p id="modal-pref-desc">Cadastro de cliente na plataforma</p></div>
       <button class="modal-close" onclick="fecharModal('modal-prefeitura')"><svg width="16" height="16"><use href="#ic-x"/></svg></button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="pref-id">
+
+      <!-- DADOS DA PREFEITURA -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+        🏛️ Dados da Prefeitura
+      </div>
       <div class="form-grid">
         <div class="form-field">
           <label>Nome da Prefeitura <span class="req">*</span></label>
@@ -1001,11 +1006,38 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
           <option value="false">🔒 Bloqueado</option>
         </select>
       </div>
-      <div id="pref-erro" style="color:var(--red);font-size:12px;margin-top:8px;display:none;"></div>
+
+      <!-- ADMIN DA PREFEITURA — só aparece em Nova Prefeitura -->
+      <div id="pref-admin-section" style="margin-top:20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+          👤 Administrador da Prefeitura
+        </div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">Crie o login do administrador que vai gerenciar os usuários desta prefeitura.</p>
+        <div class="form-field">
+          <label>Nome do Administrador <span class="req">*</span></label>
+          <input type="text" id="pref-admin-nome" placeholder="Ex: João Silva">
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>E-mail <span class="req">*</span></label>
+            <input type="email" id="pref-admin-email" placeholder="admin@novacrixas.go.gov.br">
+          </div>
+          <div class="form-field">
+            <label>Senha inicial <span class="req">*</span></label>
+            <input type="password" id="pref-admin-senha" placeholder="Mínimo 8 caracteres">
+          </div>
+        </div>
+        <div id="pref-admin-credenciais" style="display:none;background:rgba(65,243,106,.08);border:1px solid rgba(65,243,106,.2);border-radius:8px;padding:12px;margin-top:8px;">
+          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px;">✅ Credenciais criadas — anote e envie ao cliente:</div>
+          <div style="font-family:monospace;font-size:12px;color:var(--text);" id="pref-admin-cred-texto"></div>
+        </div>
+      </div>
+
+      <div id="pref-erro" style="color:var(--red);font-size:12px;margin-top:10px;display:none;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-prefeitura')">Cancelar</button>
-      <button class="btn btn-primary" id="btn-salvar-pref" onclick="salvarPrefeitura()">Salvar</button>
+      <button class="btn btn-primary" id="btn-salvar-pref" onclick="salvarPrefeitura()">💾 Salvar e Criar Admin</button>
     </div>
   </div>
 </div>
@@ -3575,15 +3607,18 @@ function renderTabelaPrefeituras() {
 
 function abrirModalPrefeitura() {
   document.getElementById('pref-id').value = '';
-  document.getElementById('pref-nome').value = '';
-  document.getElementById('pref-municipio').value = '';
+  ['pref-nome','pref-municipio','pref-cnpj','pref-validade','pref-admin-nome','pref-admin-email','pref-admin-senha'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
   document.getElementById('pref-uf').value = 'GO';
-  document.getElementById('pref-cnpj').value = '';
   document.getElementById('pref-plano').value = 'profissional';
-  document.getElementById('pref-validade').value = '';
   document.getElementById('pref-ativo').value = 'true';
   document.getElementById('pref-erro').style.display = 'none';
+  document.getElementById('pref-admin-credenciais').style.display = 'none';
+  document.getElementById('pref-admin-section').style.display = 'block';
   document.getElementById('modal-pref-titulo').textContent = 'Nova Prefeitura';
+  document.getElementById('modal-pref-desc').textContent = 'Cadastre a prefeitura e crie o login do administrador dela.';
+  document.getElementById('btn-salvar-pref').textContent = '💾 Salvar e Criar Admin';
   document.getElementById('modal-prefeitura').classList.add('show');
 }
 
@@ -3599,7 +3634,11 @@ function editarPrefeitura(id) {
   document.getElementById('pref-validade').value = p.validade ? p.validade.slice(0,10) : '';
   document.getElementById('pref-ativo').value = String(p.ativo !== false);
   document.getElementById('pref-erro').style.display = 'none';
+  // Edição não mostra seção de admin (já foi criado)
+  document.getElementById('pref-admin-section').style.display = 'none';
   document.getElementById('modal-pref-titulo').textContent = 'Editar Prefeitura';
+  document.getElementById('modal-pref-desc').textContent = 'Atualize os dados da prefeitura.';
+  document.getElementById('btn-salvar-pref').textContent = '💾 Salvar alterações';
   document.getElementById('modal-prefeitura').classList.add('show');
 }
 
@@ -3608,9 +3647,31 @@ async function salvarPrefeitura() {
   const nome = document.getElementById('pref-nome').value.trim();
   const municipio = document.getElementById('pref-municipio').value.trim();
   const erroEl = document.getElementById('pref-erro');
-  if (!nome || !municipio) { erroEl.textContent = 'Nome e município são obrigatórios.'; erroEl.style.display = 'block'; return; }
   const btn = document.getElementById('btn-salvar-pref');
-  btn.disabled = true; btn.textContent = 'Salvando...';
+  erroEl.style.display = 'none';
+
+  if (!nome || !municipio) {
+    erroEl.textContent = 'Nome e município são obrigatórios.';
+    erroEl.style.display = 'block'; return;
+  }
+
+  // Validar admin se for nova prefeitura
+  const adminNome  = document.getElementById('pref-admin-nome')?.value.trim();
+  const adminEmail = document.getElementById('pref-admin-email')?.value.trim();
+  const adminSenha = document.getElementById('pref-admin-senha')?.value;
+  if (!id) {
+    if (!adminNome || !adminEmail || !adminSenha) {
+      erroEl.textContent = 'Preencha nome, e-mail e senha do administrador.';
+      erroEl.style.display = 'block'; return;
+    }
+    if (adminSenha.length < 8) {
+      erroEl.textContent = 'A senha do administrador deve ter ao menos 8 caracteres.';
+      erroEl.style.display = 'block'; return;
+    }
+  }
+
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+
   const payload = {
     nome, municipio,
     uf: document.getElementById('pref-uf').value.toUpperCase(),
@@ -3619,13 +3680,54 @@ async function salvarPrefeitura() {
     validade: document.getElementById('pref-validade').value || null,
     ativo: document.getElementById('pref-ativo').value === 'true'
   };
-  const { error } = id
-    ? await sb.from('prefeituras').update(payload).eq('id', id)
-    : await sb.from('prefeituras').insert(payload);
-  btn.disabled = false; btn.textContent = 'Salvar';
-  if (error) { erroEl.textContent = error.message; erroEl.style.display = 'block'; return; }
-  fecharModal('modal-prefeitura');
-  toast(id ? 'Prefeitura atualizada!' : 'Prefeitura criada!', 'success');
+
+  // ── Salvar prefeitura ──
+  let prefId = id;
+  if (id) {
+    const { error } = await sb.from('prefeituras').update(payload).eq('id', id);
+    if (error) { erroEl.textContent = error.message; erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = '💾 Salvar alterações'; return; }
+    toast('Prefeitura atualizada!', 'success');
+    fecharModal('modal-prefeitura');
+    carregarPrefeiturasSA();
+    return;
+  }
+
+  // ── Nova prefeitura: inserir ──
+  const { data: prefData, error: prefError } = await sb.from('prefeituras').insert(payload).select().single();
+  if (prefError) { erroEl.textContent = prefError.message; erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = '💾 Salvar e Criar Admin'; return; }
+  prefId = prefData.id;
+
+  // ── Criar usuário admin no Auth ──
+  const { data: authData, error: authError } = await sb.auth.signUp({
+    email: adminEmail,
+    password: adminSenha
+  });
+
+  if (authError) {
+    erroEl.textContent = 'Prefeitura criada, mas erro ao criar admin: ' + authError.message;
+    erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = '💾 Salvar e Criar Admin';
+    carregarPrefeiturasSA(); return;
+  }
+
+  const uid = authData?.user?.id;
+  if (uid) {
+    await sb.from('usuarios').insert({
+      id: uid, nome: adminNome, email: adminEmail,
+      perfil: 'admin', role: 'admin',
+      prefeitura_id: prefId,
+      setor: 'Administração', ativo: true
+    });
+  }
+
+  // ── Mostrar credenciais ──
+  btn.disabled = false;
+  const credEl = document.getElementById('pref-admin-credenciais');
+  const credTexto = document.getElementById('pref-admin-cred-texto');
+  credTexto.innerHTML = `E-mail: <strong>${adminEmail}</strong><br>Senha: <strong>${adminSenha}</strong><br>URL: <strong>licitacao-app.vercel.app</strong>`;
+  credEl.style.display = 'block';
+  btn.textContent = '✅ Criado! Fechar';
+  btn.onclick = () => { fecharModal('modal-prefeitura'); carregarPrefeiturasSA(); };
+  toast('Prefeitura e administrador criados!', 'success');
   carregarPrefeiturasSA();
 }
 
