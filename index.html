@@ -764,6 +764,49 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 
 @media(max-width:1100px){.split-view{grid-template-columns:1fr;height:auto;}}
 @media(max-width:900px){.proc-layout.split-active{grid-template-columns:1fr;}}
+
+/* ── TABELA DE ITENS NO SPLIT VIEW ── */
+.sv-itens-table{width:100%;border-collapse:collapse;font-size:12px;}
+.sv-itens-table th{padding:5px 6px;background:var(--s3);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;}
+.sv-itens-table td{padding:2px 3px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.sv-itens-table tr:hover td{background:rgba(255,255,255,.03);}
+.sv-itens-table .drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:0 4px;user-select:none;}
+.sv-itens-table .drag-handle:active{cursor:grabbing;}
+.sv-itens-table tr.drag-over{border-top:2px solid var(--green);}
+.sv-cell-input{
+  width:100%;background:transparent;border:none;
+  color:var(--text);font-size:12px;padding:3px 5px;
+  border-radius:3px;outline:none;font-family:var(--font-body);
+}
+.sv-cell-input:focus{background:var(--s3);border:1px solid var(--green);}
+.sv-cell-input[type=number]{text-align:center;}
+.sv-itens-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 8px;background:var(--s2);border-top:1px solid var(--border);
+  font-size:11px;color:var(--text2);border-radius:0 0 6px 6px;
+}
+.sv-total-valor{
+  font-size:14px;font-weight:700;color:var(--green);
+  font-family:var(--font-display);
+}
+.sv-unsaved-dot{
+  display:inline-block;width:7px;height:7px;
+  border-radius:50%;background:#f90;margin-right:4px;
+  animation:pulse-dot 1.2s infinite;
+}
+@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
+.word-counter{font-size:10px;margin-top:3px;padding:2px 0;}
+.word-counter.ok{color:var(--green);}
+.word-counter.warn{color:#e55;}
+/* Preview tabela de itens */
+.sp-itens-table{width:100%;border-collapse:collapse;font-size:9.5pt;margin:8px 0;}
+.sp-itens-table th{background:#333;color:#fff;padding:4px 6px;text-align:left;font-size:8.5pt;text-transform:uppercase;}
+.sp-itens-table th:last-child,.sp-itens-table td:last-child{text-align:right;}
+.sp-itens-table th:nth-child(3),.sp-itens-table td:nth-child(3),
+.sp-itens-table th:nth-child(4),.sp-itens-table td:nth-child(4){text-align:center;}
+.sp-itens-table td{padding:3px 6px;border-bottom:1px solid #ddd;}
+.sp-itens-table tr:nth-child(even) td{background:#f9f9f9;}
+.sp-itens-table .sp-total-row td{font-weight:bold;background:#f0f0f0;border-top:2px solid #333;}
 </style>
 </head>
 <body>
@@ -2996,6 +3039,7 @@ function renderFormEtapa(proc, etapa, doc) {
   if (etapa.n === 1) {
     html = renderDFDView(dados); // já chama ativarSplitLayout()
     document.getElementById('doc-body').innerHTML = html;
+    setTimeout(initSVItens, 0);
     return;
   }
 
@@ -3086,10 +3130,11 @@ function renderDFDView(dados) {
     <div class="split-editor-toolbar">
       <span class="split-editor-toolbar-title">✏️ Editar DFD</span>
       <div style="display:flex;gap:6px;align-items:center;">
+        <span id="sv-autosave-label" style="font-size:10px;color:var(--muted);"></span>
         <button class="btn btn-ghost btn-sm" onclick="gerarPDFDoc('DFD')" title="Baixar documento Word">
           <svg width="13" height="13"><use href="#ic-file"/></svg> .doc
         </button>
-        <button class="btn btn-primary btn-sm" onclick="salvarEdicaoDFD()">
+        <button class="btn btn-primary btn-sm" id="sv-save-btn" onclick="salvarEdicaoDFD()">
           <svg width="13" height="13"><use href="#ic-check"/></svg> Salvar
         </button>
       </div>
@@ -3120,7 +3165,8 @@ function renderDFDView(dados) {
       </div>
       <div class="form-field">
         <label>Justificativa da Necessidade</label>
-        <textarea id="sv-justificativa" rows="8" placeholder="Descreva a necessidade e justificativa..." oninput="atualizarPreviewDFD()">${esc2(dados.justificativa)}</textarea>
+        <textarea id="sv-justificativa" rows="8" placeholder="Descreva a necessidade e justificativa..." oninput="atualizarPreviewDFD();svContarPalavras()">${esc2(dados.justificativa)}</textarea>
+        <div class="word-counter" id="sv-word-counter"></div>
         <button class="split-ia-btn" id="btn-ia-just" onclick="gerarJustificativaIASplit()">✨ Gerar justificativa com IA</button>
       </div>
       <div class="split-ia-status" id="sv-ia-status"></div>
@@ -3147,10 +3193,20 @@ function renderDFDView(dados) {
           </select>
         </div>
         <div class="form-field">
-          <label>Quantidade</label>
-          <input type="text" id="sv-quantidade" value="${esc2(dados.quantidade)}" placeholder="—" oninput="atualizarPreviewDFD()" readonly style="opacity:.6;cursor:default;">
+          <label>Prazo de Entrega</label>
+          <input type="text" id="sv-prazo-entrega" value="${esc2(dados.prazo_entrega||dados.prazo)}" placeholder="Ex: 30 dias" oninput="atualizarPreviewDFD()">
         </div>
       </div>
+
+      <div class="split-section-divider" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Itens da Contratação</span>
+        <div style="display:flex;gap:6px;">
+          <button class="split-ia-btn" style="margin-top:0;padding:3px 8px;" onclick="svDesfazer()" id="btn-sv-undo" title="Desfazer última alteração">↩ Desfazer</button>
+          <button class="split-ia-btn" style="margin-top:0;padding:3px 8px;background:rgba(26,184,255,.08);color:var(--blue);border-color:rgba(26,184,255,.2);" onclick="svAdicionarItem()">+ Adicionar item</button>
+          <button class="split-ia-btn" style="margin-top:0;padding:3px 8px;background:rgba(26,184,255,.08);color:var(--blue);border-color:rgba(26,184,255,.2);" onclick="abrirImportarSV()">📥 Importar</button>
+        </div>
+      </div>
+      <div id="sv-itens-container" style="border:1px solid var(--border);border-radius:6px;overflow:hidden;min-height:50px;"></div>
 
     </div>
   </div>
@@ -3164,6 +3220,28 @@ function renderDFDView(dados) {
   </div>
 
 </div>`;
+}
+
+// Inicializar sv-itens após o DOM do split estar pronto
+function initSVItens() {
+  renderSVItens();
+  svContarPalavras();
+  // Restaurar autosave se houver
+  const proc = _processoAtual;
+  if (proc) {
+    const key = 'autosave_dfd_' + proc.id;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        const age = (Date.now() - (d.ts||0)) / 1000 / 60;
+        if (age < 60) { // só restaura se tiver menos de 1h
+          const lbl = document.getElementById('sv-autosave-label');
+          if (lbl) lbl.textContent = `Rascunho: ${Math.round(age)}min atrás`;
+        }
+      } catch(e) {}
+    }
+  }
 }
 
 // Gera o HTML do preview inline (não abre janela)
@@ -3205,11 +3283,37 @@ function gerarHTMLPreviewDFD(dados) {
   <div class="sp-secao">
     <div class="sp-secao-titulo">3. Dados da Contratação</div>
     <div class="sp-chips">
-      <div class="sp-chip"><b>Valor Est.</b> R$ ${dados.valor||'—'}</div>
+      <div class="sp-chip"><b>Valor Total</b> ${(() => { try { const itens = typeof dados.itens==='string'?JSON.parse(dados.itens):(dados.itens||[]); const tot = itens.reduce((s,it)=>s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0); return tot>0?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(tot):'R$ '+( dados.valor||'—'); }catch(e){return 'R$ '+(dados.valor||'—');}})()}</div>
       <div class="sp-chip"><b>Prazo</b> ${dados.prazo||'—'}</div>
-      <div class="sp-chip"><b>Qtd.</b> ${dados.quantidade||'—'}</div>
+      <div class="sp-chip"><b>Itens</b> ${(() => { try { return (typeof dados.itens==='string'?JSON.parse(dados.itens):(dados.itens||[])).length; }catch(e){return '—';}})()}</div>
       <div class="sp-chip"><b>Prioridade</b> ${{alta:'Alta ↑',media:'Média',baixa:'Baixa ↓'}[dados.prioridade]||'—'}</div>
     </div>
+    ${(() => {
+      try {
+        const itens = typeof dados.itens==='string'?JSON.parse(dados.itens):(dados.itens||[]);
+        if (!itens.length) return '';
+        const fmt = v => v>0?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v):'—';
+        const total = itens.reduce((s,it)=>s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0);
+        return `<table class="sp-itens-table">
+          <thead><tr>
+            <th style="width:4%">Nº</th>
+            <th>Descrição</th>
+            <th style="width:8%">Unid.</th>
+            <th style="width:8%">Qtd.</th>
+            <th style="width:14%">Vl. Unit.</th>
+            <th style="width:14%">Vl. Total</th>
+          </tr></thead>
+          <tbody>
+            ${itens.map((it,i)=>{
+              const vu=parseFloat(it.valor_unitario||0);
+              const qt=parseFloat(it.quantidade||1);
+              return `<tr><td style="text-align:center">${i+1}</td><td>${it.descricao||it.nome||'—'}</td><td style="text-align:center">${it.unidade||'UN'}</td><td style="text-align:center">${qt.toLocaleString('pt-BR')}</td><td style="text-align:right">${vu>0?fmt(vu):'—'}</td><td style="text-align:right">${vu>0?fmt(vu*qt):'—'}</td></tr>`;
+            }).join('')}
+          </tbody>
+          <tfoot><tr class="sp-total-row"><td colspan="5" style="text-align:right;padding:4px 6px;">VALOR TOTAL DO PROCESSO:</td><td style="text-align:right;padding:4px 6px;">${total>0?fmt(total):'—'}</td></tr></tfoot>
+        </table>`;
+      } catch(e) { return ''; }
+    })()}
   </div>
 
   <div class="sp-secao">
@@ -3229,6 +3333,7 @@ function gerarHTMLPreviewDFD(dados) {
 // Atualiza preview ao vivo conforme o usuário digita
 function atualizarPreviewDFD() {
   const sv = id => document.getElementById('sv-' + id)?.value || '';
+  const itensJson = document.getElementById('dfd-itens-json')?.value || '[]';
   const dados = {
     unidade:      sv('unidade'),
     responsavel:  sv('responsavel'),
@@ -3239,9 +3344,11 @@ function atualizarPreviewDFD() {
     prazo:        sv('prazo'),
     prioridade:   sv('prioridade'),
     quantidade:   sv('quantidade'),
+    itens:        itensJson,
   };
   const prev = document.getElementById('dfd-split-preview');
   if (prev) prev.innerHTML = gerarHTMLPreviewDFD(dados);
+  svMarcarNaoSalvo();
 }
 
 // Salvar edição do DFD a partir do split view
@@ -3275,6 +3382,7 @@ async function salvarEdicaoDFD() {
     // Atualizar objeto no processo
     await sb.from('processos').update({ objeto: dados.objeto, atualizado_em: new Date().toISOString() }).eq('id', proc.id);
     toast('✅ DFD salvo com sucesso!', 'success');
+    svMarcarSalvo();
     await abrirProcesso(proc.id);
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'error');
@@ -4104,7 +4212,9 @@ function setDFDItens(arr) {
   const el = document.getElementById('dfd-itens-json');
   if (el) el.value = JSON.stringify(arr);
   renderDFDItens();
+  renderSVItens();
   atualizarQuantidadeTotal();
+  atualizarPreviewDFD();
 }
 
 function renderDFDItens() {
@@ -5263,6 +5373,263 @@ function toggleSidebar() {
     btn.textContent = '›';
     btn.title = 'Expandir etapas';
   }
+}
+
+
+// ══════════════════════════════════════════════════════════
+// SPLIT VIEW — ITENS, UNDO, AUTOSAVE, WORD COUNTER
+// ══════════════════════════════════════════════════════════
+
+// Estado central do split view
+const _svHistory = [];
+let   _svUnsaved = false;
+let   _svAutoSaveTimer = null;
+
+function svSnapshot() {
+  const itens = document.getElementById('dfd-itens-json')?.value || '[]';
+  return JSON.stringify({ itens });
+}
+
+function svSalvarHistorico() {
+  _svHistory.push(svSnapshot());
+  if (_svHistory.length > 30) _svHistory.shift();
+}
+
+function svDesfazer() {
+  if (_svHistory.length === 0) { toast('Nada para desfazer', 'info'); return; }
+  const snap = JSON.parse(_svHistory.pop());
+  const el = document.getElementById('dfd-itens-json');
+  if (el) el.value = snap.itens;
+  renderSVItens();
+  renderDFDItens();
+  atualizarQuantidadeTotal();
+  atualizarPreviewDFD();
+  toast('Alteração desfeita', 'info');
+}
+
+function svMarcarNaoSalvo() {
+  _svUnsaved = true;
+  const btn = document.getElementById('sv-save-btn');
+  if (btn && !btn.querySelector('.sv-unsaved-dot')) {
+    btn.innerHTML = `<span class="sv-unsaved-dot"></span> Salvar*`;
+  }
+  // Auto-save a cada 30s no localStorage
+  clearTimeout(_svAutoSaveTimer);
+  _svAutoSaveTimer = setTimeout(() => {
+    const proc = _processoAtual;
+    if (!proc) return;
+    const key = 'autosave_dfd_' + proc.id;
+    const itens = document.getElementById('dfd-itens-json')?.value || '[]';
+    const sv = id => document.getElementById('sv-' + id)?.value || '';
+    localStorage.setItem(key, JSON.stringify({
+      objeto: sv('objeto'), justificativa: sv('justificativa'),
+      unidade: sv('unidade'), responsavel: sv('responsavel'),
+      cargo: sv('cargo'), valor: sv('valor'), prazo: sv('prazo'),
+      prioridade: sv('prioridade'), itens, ts: Date.now()
+    }));
+    const lbl = document.getElementById('sv-autosave-label');
+    if (lbl) { lbl.textContent = '✓ Rascunho salvo'; setTimeout(() => { lbl.textContent = ''; }, 2500); }
+  }, 30000);
+}
+
+function svMarcarSalvo() {
+  _svUnsaved = false;
+  const btn = document.getElementById('sv-save-btn');
+  if (btn) btn.innerHTML = `<svg width="13" height="13"><use href="#ic-check"/></svg> Salvar`;
+}
+
+function svContarPalavras() {
+  const txt = document.getElementById('sv-justificativa')?.value || '';
+  const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+  const el = document.getElementById('sv-word-counter');
+  if (!el) return;
+  const min = 80;
+  el.textContent = `${words} palavras — mínimo recomendado: ${min}`;
+  el.className = 'word-counter ' + (words >= min ? 'ok' : 'warn');
+}
+
+// ── RENDER TABELA DE ITENS NO SPLIT VIEW ──────────────────
+function renderSVItens() {
+  const cont = document.getElementById('sv-itens-container');
+  if (!cont) return;
+  const itens = getDFDItens();
+  if (itens.length === 0) {
+    cont.innerHTML = `<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px;">
+      Nenhum item. Use "Adicionar item" ou "Importar" acima.
+    </div>`;
+    return;
+  }
+  const fmt = v => v > 0 ? new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v) : '—';
+  const total = itens.reduce((s,it) => s + (parseFloat(it.valor_unitario||0) * parseFloat(it.quantidade||1)), 0);
+
+  cont.innerHTML = `
+  <table class="sv-itens-table">
+    <thead><tr>
+      <th style="width:24px;text-align:center;">⠿</th>
+      <th style="width:4%;text-align:center;">Nº</th>
+      <th>Descrição</th>
+      <th style="width:9%">Unid.</th>
+      <th style="width:10%">Qtd.</th>
+      <th style="width:13%">Vl. Unit.</th>
+      <th style="width:13%">Vl. Total</th>
+      <th style="width:50px;text-align:center;">Ações</th>
+    </tr></thead>
+    <tbody id="sv-itens-tbody">
+      ${itens.map((it,i) => {
+        const vu = parseFloat(it.valor_unitario||0);
+        const qt = parseFloat(it.quantidade||1);
+        const vt = vu * qt;
+        return `<tr draggable="true" data-idx="${i}"
+          ondragstart="svDragStart(event,${i})"
+          ondragover="svDragOver(event)"
+          ondrop="svDrop(event,${i})"
+          ondragleave="svDragLeave(event)">
+          <td style="text-align:center;"><span class="drag-handle">⠿</span></td>
+          <td style="text-align:center;color:var(--muted);font-size:11px;">${i+1}</td>
+          <td><input class="sv-cell-input" value="${(it.descricao||it.nome||'').replace(/"/g,'&quot;')}"
+            oninput="svEditItem(${i},'descricao',this.value)" placeholder="Descrição..."></td>
+          <td><input class="sv-cell-input" value="${it.unidade||'UN'}"
+            oninput="svEditItem(${i},'unidade',this.value.toUpperCase())"
+            style="text-align:center;text-transform:uppercase;"></td>
+          <td><input class="sv-cell-input" type="number" min="0.001" step="any" value="${qt}"
+            oninput="svEditItem(${i},'quantidade',parseFloat(this.value)||1)"
+            style="text-align:center;"></td>
+          <td><input class="sv-cell-input" type="number" min="0" step="0.01" value="${vu||''}"
+            placeholder="0,00" oninput="svEditItem(${i},'valor_unitario',parseFloat(this.value)||0)"
+            style="text-align:right;"></td>
+          <td style="text-align:right;font-size:11px;color:var(--text2);padding-right:6px;">${vu>0?fmt(vt):'—'}</td>
+          <td style="text-align:center;">
+            <button onclick="svDuplicarItem(${i})" title="Duplicar"
+              style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:1px 3px;">⧉</button>
+            <button onclick="svRemoverItem(${i})" title="Remover"
+              style="background:none;border:none;color:#e55;cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+  <div class="sv-itens-footer">
+    <span>${itens.length} item(s)</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:var(--muted);">Total do processo:</span>
+      <span class="sv-total-valor">${total > 0 ? fmt(total) : '—'}</span>
+    </div>
+  </div>`;
+}
+
+// Editar item inline
+function svEditItem(idx, campo, valor) {
+  svSalvarHistorico();
+  const itens = getDFDItens();
+  if (!itens[idx]) return;
+  itens[idx][campo] = valor;
+  const el = document.getElementById('dfd-itens-json');
+  if (el) el.value = JSON.stringify(itens);
+  // Atualizar só o valor total da linha sem re-renderizar tudo
+  const qt  = parseFloat(itens[idx].quantidade||1);
+  const vu  = parseFloat(itens[idx].valor_unitario||0);
+  const vt  = qt * vu;
+  const fmt = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+  const row = document.querySelector(`#sv-itens-tbody tr[data-idx="${idx}"]`);
+  if (row) {
+    const vtCell = row.cells[6];
+    if (vtCell) vtCell.textContent = vu > 0 ? fmt(vt) : '—';
+  }
+  // Atualizar total geral
+  const total = itens.reduce((s,it) => s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0);
+  const totalEl = document.querySelector('.sv-total-valor');
+  if (totalEl) totalEl.textContent = total > 0 ? fmt(total) : '—';
+  atualizarQuantidadeTotal();
+  atualizarPreviewDFD();
+}
+
+function svRemoverItem(idx) {
+  svSalvarHistorico();
+  const itens = getDFDItens();
+  itens.splice(idx, 1);
+  setDFDItens(itens);
+}
+
+function svDuplicarItem(idx) {
+  svSalvarHistorico();
+  const itens = getDFDItens();
+  const clone = { ...itens[idx] };
+  itens.splice(idx + 1, 0, clone);
+  setDFDItens(itens);
+  toast('Item duplicado', 'success');
+}
+
+function svAdicionarItem() {
+  svSalvarHistorico();
+  const itens = getDFDItens();
+  itens.push({ descricao: '', unidade: 'UN', quantidade: 1, valor_unitario: 0 });
+  setDFDItens(itens);
+  // Focar na última linha
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#sv-itens-tbody tr');
+    if (rows.length) rows[rows.length-1].querySelector('.sv-cell-input')?.focus();
+  }, 50);
+}
+
+// Drag and drop
+let _svDragIdx = null;
+function svDragStart(e, idx) { _svDragIdx = idx; e.dataTransfer.effectAllowed = 'move'; }
+function svDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function svDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function svDrop(e, toIdx) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (_svDragIdx === null || _svDragIdx === toIdx) return;
+  svSalvarHistorico();
+  const itens = getDFDItens();
+  const [item] = itens.splice(_svDragIdx, 1);
+  itens.splice(toIdx, 0, item);
+  setDFDItens(itens);
+  _svDragIdx = null;
+}
+
+// Importar com merge
+function abrirImportarSV() {
+  // Modificar modal de importar para oferecer merge
+  const modal = document.getElementById('modal-importar-dfd');
+  if (!modal) return;
+  // Injetar opção de merge se ainda não tiver
+  if (!document.getElementById('sv-import-mode')) {
+    const area = modal.querySelector('.modal-body') || modal;
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:12px;margin-bottom:12px;';
+    div.innerHTML = `
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="radio" name="sv-import-mode" id="sv-import-mode" value="replace" checked> Substituir tudo
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="radio" name="sv-import-mode" value="merge"> Adicionar aos existentes
+      </label>`;
+    const firstChild = area.firstElementChild;
+    if (firstChild) area.insertBefore(div, firstChild); else area.appendChild(div);
+  }
+  modal.classList.add('show');
+}
+
+// Override confirmarImportacaoDFD para respeitar modo merge
+const _origConfirmarImportacao = typeof confirmarImportacaoDFD === 'function' ? confirmarImportacaoDFD : null;
+function confirmarImportacaoDFD() {
+  const modeEl = document.querySelector('input[name="sv-import-mode"]:checked');
+  const merge = modeEl?.value === 'merge';
+  if (merge) {
+    // Pegar itens existentes antes de chamar o original
+    const existentes = getDFDItens();
+    if (_origConfirmarImportacao) _origConfirmarImportacao();
+    // Após importar, os novos foram setados — fazer merge
+    const novos = getDFDItens();
+    const merged = [...existentes, ...novos];
+    setDFDItens(merged);
+    toast(`${novos.length} item(s) adicionado(s). Total: ${merged.length}`, 'success');
+  } else {
+    if (_origConfirmarImportacao) _origConfirmarImportacao();
+  }
+  renderSVItens();
+  atualizarPreviewDFD();
 }
 
 
