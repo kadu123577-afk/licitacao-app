@@ -1542,7 +1542,7 @@ function mostrarPainelAdmin() {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById('view-admin-pref').classList.add('active');
-  const prefNome = _perfil?._prefeitura?.nome || 'Prefeitura';
+  const prefNome = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace('Prefeitura Municipal de ','').replace('Prefeitura de ','') || 'Prefeitura';
   document.getElementById('admin-pref-nome').textContent = '· ' + prefNome;
   carregarUsuariosAdmin();
   carregarProcessosAdmin();
@@ -1554,8 +1554,8 @@ function mostrarDashboardAdmin() {
   });
   document.getElementById('view-app').classList.add('active');
   const nome = _perfil?.nome || _user?.email || '?';
-  const setor = _perfil?.setor || '—';
-  const letra = nome[0].toUpperCase();
+  const setor = _perfil?.setor || (_perfil?._prefeitura?.nome) || '—';
+  const letra = nome[0]?.toUpperCase() || 'U';
   const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
   const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
   document.getElementById('user-avatar').textContent = letra;
@@ -1566,10 +1566,29 @@ function mostrarDashboardAdmin() {
   const h = new Date().getHours();
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
-  // Show admin button if user is admin
+  // Mostrar botão ⚙️ Admin para admin da prefeitura
   const btnAdmin = document.getElementById('btn-painel-admin');
   if (btnAdmin) btnAdmin.style.display = (_perfil?.role === 'admin') ? 'inline-flex' : 'none';
-  carregarDados();
+  // Carregar TODOS os processos da prefeitura para o admin
+  if (_perfil?.role === 'admin') {
+    carregarTodosProcessosAdmin();
+  } else {
+    carregarDados();
+  }
+}
+
+async function carregarTodosProcessosAdmin() {
+  if (!_perfil?.prefeitura_id) return;
+  // Admin vê TODOS os processos da prefeitura, não só os seus
+  const { data, error } = await sb
+    .from('processos')
+    .select('*')
+    .eq('prefeitura_id', _perfil.prefeitura_id)
+    .order('criado_em', { ascending: false });
+  if (error) { console.error(error); carregarDados(); return; }
+  _processos = data || [];
+  renderProcessos();
+  renderDashboardStats();
 }
 
 async function fazerLogout() {
