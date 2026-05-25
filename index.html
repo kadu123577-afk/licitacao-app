@@ -1007,6 +1007,16 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
       </div>
       <div class="form-grid">
         <div class="form-field">
+          <label>Endereço</label>
+          <input type="text" id="pref-endereco" placeholder="Praça Três Poderes s/n, Centro">
+        </div>
+        <div class="form-field">
+          <label>CEP</label>
+          <input type="text" id="pref-cep" placeholder="00000-000">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
           <label>Plano</label>
           <select id="pref-plano">
             <option value="basico">Básico</option>
@@ -1391,8 +1401,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-const DEEPSEEK_KEY = 'sk-e289ba7d38e8418d9cbc14c2c5509da8';
-const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
+// IA via proxy Vercel /api/ia (chave protegida no servidor)
 
 // ══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
@@ -1508,7 +1517,7 @@ async function carregarPerfil(user, usuario = null) {
   _perfil = usuario;
   // Load prefeitura data for municipality name
   if (usuario?.prefeitura_id) {
-    const { data: pref } = await sb.from('prefeituras').select('nome,municipio,uf').eq('id', usuario.prefeitura_id).single();
+    const { data: pref } = await sb.from('prefeituras').select('*').eq('id', usuario.prefeitura_id).single();
     if (pref) _perfil._prefeitura = pref;
   }
 }
@@ -2216,6 +2225,9 @@ function formatData(iso) {
   return d.toLocaleDateString('pt-BR');
 }
 
+// Alias: formProtocolo usa salvarEtapaDoc, o restante usa salvarDocEtapa
+const salvarEtapaDoc = (tipo) => salvarDocEtapa(tipo);
+
 // Fechar modais clicando fora
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
@@ -2244,6 +2256,13 @@ function formETP(dados, readonly) {
     : `<select id="etp-${id}">${opts}</select>`;
 
   return `
+${!r ? `<div style="background:var(--s2);border:1px solid rgba(65,243,106,.25);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <div>
+    <div style="font-size:13px;font-weight:600;color:var(--green);">✨ Preencher ETP com IA</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:2px;">A IA lê o DFD deste processo e preenche todos os campos automaticamente</div>
+  </div>
+  <button class="btn btn-primary btn-sm" id="btn-preencher-etp-ia" onclick="preencherETPcomIA()">✨ Preencher tudo com IA</button>
+</div>` : ''}
 <div class="form-section-title">ETP — Estudo Técnico Preliminar · Art. 7º, II IN-009/23</div>
 <div class="form-grid">
   <div class="form-field"><label>Área Requisitante<span class="req">*</span></label>${inp('area','Secretaria / Departamento')}</div>
@@ -2352,6 +2371,13 @@ function formTR(dados, readonly, tipo) {
   const sel = (id, opts) => r ? `<div class="fv">${v(id)||'—'}</div>` : `<select id="tr-${id}">${opts}</select>`;
 
   return `
+${!r ? `<div style="background:var(--s2);border:1px solid rgba(26,184,255,.25);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <div>
+    <div style="font-size:13px;font-weight:600;color:var(--blue);">✨ Preencher TR com IA</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:2px;">A IA usa os dados do DFD e ETP já salvos para gerar o Termo de Referência completo</div>
+  </div>
+  <button class="btn btn-secondary btn-sm" id="btn-preencher-tr-ia" onclick="preencherTRcomIA()" style="border-color:rgba(26,184,255,.4);color:var(--blue);">✨ Preencher tudo com IA</button>
+</div>` : ''}
 <div class="form-section-title">Termo de Referência · Art. 7º, III IN-009/23 | Art. 6º, XXIII LLC</div>
 <div class="form-field"><label>Objeto da Contratação<span class="req">*</span><span class="ref">Art. 6º, XXIII LLC</span></label>${inp('objeto','Ex: Aquisição de materiais de limpeza para uso nas dependências municipais')}</div>
 <div class="form-field"><label>Fundamentação da Necessidade<span class="req">*</span><span class="ref">Art. 6º, XXIII, b LLC</span></label>
@@ -2680,8 +2706,9 @@ function renderFormEtapa(proc, etapa, doc) {
     html = formAutorizacao(dados, readonly);
   } else if (etapa.n === 8 || (etapa.n === 6 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
     html = formParecer(dados, readonly);
+  } else if (etapa.n === 2) {
+    html = formProtocolo(dados, readonly, proc);
   } else {
-    const etapaNomes = {2:'Protocolo',7:'Minuta de Edital',9:'Edital Final',10:'Publicação'};
     html = `<div class="empty" style="padding:40px;">
       <svg><use href="#ic-file"/></svg>
       <h4>${etapa.full}</h4>
@@ -2693,6 +2720,46 @@ function renderFormEtapa(proc, etapa, doc) {
     </div>`;
   }
   document.getElementById('doc-body').innerHTML = html;
+}
+
+function formProtocolo(dados, readonly, proc) {
+  const inp = (id, label, placeholder, val='', type='text') =>
+    `<div class="form-field">
+      <label>${label}</label>
+      <input type="${type}" id="prot-${id}" placeholder="${placeholder}" value="${val}" ${readonly?'disabled':''}>
+    </div>`;
+  const ta = (id, label, placeholder, val='', rows=3) =>
+    `<div class="form-field">
+      <label>${label}</label>
+      <textarea id="prot-${id}" rows="${rows}" placeholder="${placeholder}" ${readonly?'disabled':''}>${val}</textarea>
+    </div>`;
+
+  // Load DFD data for reference
+  const dfdDoc = _processoAtual?.docs?.find(d => d.tipo === 'DFD');
+  const dfd = dfdDoc?.dados || {};
+
+  return `
+  <div style="background:var(--s2);border-radius:8px;padding:12px 14px;margin-bottom:16px;border-left:3px solid var(--blue);">
+    <div style="font-size:11px;color:var(--blue);font-weight:700;text-transform:uppercase;margin-bottom:6px;">📋 Resumo do DFD recebido</div>
+    <div style="font-size:13px;"><strong>Objeto:</strong> ${dfd.objeto || proc.objeto || '—'}</div>
+    <div style="font-size:13px;margin-top:4px;"><strong>Solicitante:</strong> ${dfd.responsavel || '—'} · ${dfd.unidade || '—'}</div>
+    <div style="font-size:13px;margin-top:4px;"><strong>Valor Estimado:</strong> R$ ${dfd.valor || '—'}</div>
+  </div>
+
+  <div class="form-grid">
+    ${inp('num_livro', 'Número no Livro de Protocolo', 'Ex: 0154/2026', dados.num_livro||'')}
+    ${inp('data_entrada', 'Data de Entrada', '', dados.data_entrada || new Date().toISOString().slice(0,10), 'date')}
+  </div>
+  <div class="form-grid">
+    ${inp('servidor_recebeu', 'Servidor que Recebeu', 'Nome de quem recebeu o DFD', dados.servidor_recebeu||'')}
+    ${inp('setor_destino', 'Setor de Destino', 'Ex: Setor de Licitações', dados.setor_destino||'Setor de Licitações')}
+  </div>
+  ${ta('observacao', 'Observações do Protocolo', 'Registre qualquer observação sobre o recebimento ou pendências identificadas...', dados.observacao||'')}
+
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+    ${readonly ? '' : `<button class="btn btn-primary btn-sm" onclick="salvarEtapaDoc('PROTOCOLO')">💾 Registrar Protocolo</button>`}
+    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('PROTOCOLO')">📄 Gerar Comprovante</button>
+  </div>`;
 }
 
 function renderDFDView(dados) {
@@ -2711,7 +2778,7 @@ function renderDFDView(dados) {
   </div>
   ${dados.hipotese ? `<div style="padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal — Contratação Direta</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}
   <div style="margin-top:14px;display:flex;gap:8px;">
-    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar PDF do DFD</button>
+    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar DOCX do DFD</button>
   </div>`;
 }
 
@@ -2809,6 +2876,9 @@ function coletarDadosForm(tipo) {
   } else if (tipo === 'PARECER') {
     ['analise_dfd','analise_etp_tr','analise_pp','analise_edital','fundamentacao','conclusao','ressalvas','responsavel','oab']
       .forEach(k => { const el = document.getElementById('par-'+k); if(el) dados[k] = el.value; });
+  } else if (tipo === 'PROTOCOLO') {
+    ['num_livro','data_entrada','servidor_recebeu','setor_destino','observacao']
+      .forEach(k => { const el = document.getElementById('prot-'+k); if(el) dados[k] = el.value; });
   }
   return dados;
 }
@@ -2855,13 +2925,13 @@ INSTRUÇÕES:
 Texto:`;
 
   try {
-    const resp = await fetch(DEEPSEEK_URL, {
+    const resp = await fetch('/api/ia', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 800 })
     });
     const data = await resp.json();
-    _iaTextoGerado = data.choices?.[0]?.message?.content || 'Erro ao gerar texto.';
+    _iaTextoGerado = data.content || 'Erro ao gerar texto.';
     document.getElementById('modal-ia-resultado').textContent = _iaTextoGerado;
     document.getElementById('modal-ia-resultado').style.display = 'block';
     document.getElementById('btn-ia-usar').style.display = 'inline-flex';
@@ -3041,7 +3111,12 @@ async function gerarTextosIA() {
   status.textContent = 'Aguarde — a IA está redigindo o objeto e a justificativa...';
   status.style.color = 'var(--text2)';
 
-  const municipioIA = _perfil?._prefeitura?.municipio || 'do Município';
+  const municipioIA = (() => {
+    const m = _perfil?._prefeitura?.municipio || '';
+    if (m) return m;
+    const n = _perfil?._prefeitura?.nome || '';
+    return n.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'Nova Crixás';
+  })();
   const prefNome = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipioIA);
 
   const prompt = `Você é um servidor público experiente da ${prefNome}, especialista na elaboração de documentos licitatórios conforme a Lei nº 14.133/2021.
@@ -3072,19 +3147,13 @@ RETORNE APENAS este JSON (sem markdown, sem backticks):
 {"objeto_profissional":"...","justificativa":"..."}`;
 
   try {
-    const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
-    const DURL = typeof DEEPSEEK_URL !== 'undefined' ? DEEPSEEK_URL : 'https://api.deepseek.com/v1/chat/completions';
-    const resp = await fetch(DURL, {
+    const resp = await fetch('/api/ia', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DKEY },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        max_tokens: 900,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 900 })
     });
     const data = await resp.json();
-    let raw = data.choices?.[0]?.message?.content || '';
+    let raw = data.content || '';
 
     // Strip markdown fences if present
     raw = raw.replace(/```json|```/g, '').trim();
@@ -3131,9 +3200,9 @@ async function gerarPDFDoc(tipo) {
   const doc = proc.docs?.find(d => d.tipo === tipo);
   const dados = doc?.dados || {};
 
-  toast('Gerando PDF...', 'info');
+  if (tipo === 'DFD') { await gerarDOCX(tipo, dados, proc); return; }
 
-  // Build HTML para impressão
+  toast('Gerando documento...', 'info');
   const html = buildPDFHtml(tipo, dados, proc);
   const w = window.open('', '_blank');
   w.document.write(html);
@@ -3143,7 +3212,12 @@ async function gerarPDFDoc(tipo) {
 
 function buildPDFHtml(tipo, dados, proc) {
   const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'});
-  const municipio = dados.municipio || proc.municipio || _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace('Prefeitura Municipal de ','').replace('Prefeitura de ','') || 'município';
+  const municipio = (() => {
+    const m = _perfil?._prefeitura?.municipio || '';
+    if (m) return m;
+    const n = _perfil?._prefeitura?.nome || '';
+    return n.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || dados.municipio || 'município';
+  })();
   const orgao = dados.unidade || dados.orgao || dados.setor_requisitante || proc.setor_requisitante || '—';
   const responsavel = dados.responsavel || '—';
   const cargo = dados.cargo || '—';
@@ -3259,8 +3333,10 @@ function buildPDFHtml(tipo, dados, proc) {
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 
-    <h1>PREFEITURA MUNICIPAL</h1>
-    <h2>Documento de Formalização de Demanda</h2>
+    <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
+    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'}</div>
+    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">${_perfil?._prefeitura?.endereco || 'Praça Três Poderes s/n, Centro'} — ${municipio}/${_perfil?._prefeitura?.uf || 'GO'} — CEP ${_perfil?._prefeitura?.cep || '76520-000'}</div>
+    <h2>Documento de Formalização de Demanda – DFD</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo} | ${TIPO_LABELS[proc.tipo_contratacao] || 'Aquisição de Bens'}</div>
 
     <div class="header-box">
@@ -3334,7 +3410,8 @@ function buildPDFHtml(tipo, dados, proc) {
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>ETP — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 
-    <h1>PREFEITURA MUNICIPAL</h1>
+    <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
+    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'} | ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}</div>
     <h2>Estudo Técnico Preliminar – ETP</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
 
@@ -3406,7 +3483,8 @@ function buildPDFHtml(tipo, dados, proc) {
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>TR — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
 
-    <h1>PREFEITURA MUNICIPAL</h1>
+    <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
+    <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'} | ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}</div>
     <h2>Termo de Referência</h2>
     <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
 
@@ -3458,7 +3536,7 @@ function buildPDFHtml(tipo, dados, proc) {
   const nomes = {PP:'Pesquisa de Preços',DO:'Dotação Orçamentária',AUTH:'Autorização do Gestor',PARECER:'Parecer Jurídico'};
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
-  <h1>PREFEITURA MUNICIPAL</h1><h2>${nomes[tipo]||tipo}</h2>
+  <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1><h2>${nomes[tipo]||tipo}</h2>
   <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
   ${Object.entries(dados).map(([k,v]) => v && typeof v === 'string' ? `<div class="secao"><div class="secao-titulo">${k.replace(/_/g,' ').toUpperCase()}</div><p>${v}</p></div>` : '').join('')}
   <div class="assinatura"><div class="linha"></div><div class="nome">${responsavel}</div><div class="cargo">${cargo}</div></div>
@@ -3709,7 +3787,7 @@ function renderTabelaPrefeituras() {
 
 function abrirModalPrefeitura() {
   document.getElementById('pref-id').value = '';
-  ['pref-nome','pref-municipio','pref-cnpj','pref-validade','pref-admin-nome','pref-admin-email','pref-admin-senha'].forEach(id => {
+  ['pref-nome','pref-municipio','pref-cnpj','pref-validade','pref-endereco','pref-cep','pref-admin-nome','pref-admin-email','pref-admin-senha'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('pref-uf').value = 'GO';
@@ -3732,6 +3810,8 @@ async function editarPrefeitura(id) {
   document.getElementById('pref-municipio').value = p.municipio;
   document.getElementById('pref-uf').value = p.uf || 'GO';
   document.getElementById('pref-cnpj').value = p.cnpj || '';
+  if (document.getElementById('pref-endereco')) document.getElementById('pref-endereco').value = p.endereco || '';
+  if (document.getElementById('pref-cep')) document.getElementById('pref-cep').value = p.cep || '';
   document.getElementById('pref-plano').value = p.plano || 'profissional';
   document.getElementById('pref-validade').value = p.validade ? p.validade.slice(0,10) : '';
   document.getElementById('pref-ativo').value = String(p.ativo !== false);
@@ -3815,6 +3895,8 @@ async function salvarPrefeitura() {
     nome, municipio,
     uf: document.getElementById('pref-uf').value.toUpperCase(),
     cnpj: document.getElementById('pref-cnpj').value.trim() || null,
+    endereco: document.getElementById('pref-endereco')?.value?.trim() || null,
+    cep: document.getElementById('pref-cep')?.value?.trim() || null,
     plano: document.getElementById('pref-plano').value,
     validade: document.getElementById('pref-validade').value || null,
     ativo: document.getElementById('pref-ativo').value === 'true'
@@ -4067,6 +4149,261 @@ Esta ação não pode ser desfeita.`)) return;
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   toast('Usuário excluído', 'info');
   carregarUsuariosAdmin();
+}
+
+// ══════════════════════════════════════════════════════════
+//  GERAR DOCX — download .doc compatível com LibreOffice/Word
+// ══════════════════════════════════════════════════════════
+async function gerarDOCX(tipo, dados, proc) {
+  toast('Gerando documento .doc...', 'info');
+  const bodyHtml = buildPDFHtml(tipo, dados, proc);
+
+  // Word HTML envelope — LibreOffice e Word abrem nativamente
+  const wordDoc = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--[if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml><![endif]-->
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
+
+  const blob = new Blob(['\ufeff' + wordDoc], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8'
+  });
+  const url  = URL.createObjectURL(blob);
+  const nome = proc.numero_protocolo
+    ? proc.numero_protocolo.replace('/', '_')
+    : 'processo';
+  const a = document.createElement('a');
+  a.href     = url;
+  a.download = `${tipo}_${nome}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('📄 ' + tipo + '_' + nome + '.docx baixado!', 'success');
+}
+
+// ══════════════════════════════════════════════════════════
+//  ETP COM IA CONTEXTUAL — usa dados do DFD já salvo
+// ══════════════════════════════════════════════════════════
+async function preencherETPcomIA() {
+  const proc = _processoAtual;
+  if (!proc) return;
+
+  const dfdDoc = proc.docs?.find(d => d.tipo === 'DFD');
+  const dfd    = dfdDoc?.dados || {};
+  if (!dfd.objeto) {
+    toast('Salve o DFD antes de gerar o ETP com IA', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-preencher-etp-ia');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando ETP...'; }
+
+  const municipio  = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'Nova Crixás';
+  const prefNome   = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipio);
+  const tipoLabel  = TIPO_LABELS[proc.tipo_contratacao] || 'Aquisição de Bens';
+
+  // Serializar itens para o prompt
+  let itensTexto = '';
+  try {
+    const itens = typeof dfd.itens === 'string' ? JSON.parse(dfd.itens) : (dfd.itens || []);
+    if (itens.length) {
+      itensTexto = itens.slice(0, 20).map((it, i) =>
+        `${i+1}. ${it.descricao || it.nome || '—'} — ${it.quantidade || 1} ${it.unidade || 'UN'}`
+      ).join('\n');
+    }
+  } catch(e) {}
+
+  const prompt = `Você é especialista em licitações públicas da ${prefNome} (${municipio}/${_perfil?._prefeitura?.uf || 'GO'}).
+
+Elabore o Estudo Técnico Preliminar (ETP) com base no DFD abaixo. Retorne SOMENTE um JSON válido, sem markdown, sem explicação.
+
+DFD — DADOS DO PROCESSO:
+- Objeto: "${dfd.objeto}"
+- Unidade requisitante: ${dfd.unidade || '—'}
+- Responsável: ${dfd.responsavel || '—'} (${dfd.cargo || '—'})
+- Justificativa do DFD: "${(dfd.justificativa || '').slice(0, 600)}"
+- Valor estimado: R$ ${dfd.valor || '—'}
+- Prazo: ${dfd.prazo || '—'}
+- Tipo de contratação: ${tipoLabel}
+${itensTexto ? '- Itens:\n' + itensTexto : ''}
+
+Gere os seguintes campos do ETP. Cada campo deve ser um parágrafo formal, técnico, com referências à Lei 14.133/2021 quando pertinente. Mínimo 100 palavras por campo.
+
+Retorne EXATAMENTE este JSON:
+{
+  "area": "nome da unidade/secretaria requisitante",
+  "ref_dfd": "Processo nº ${proc.numero_protocolo}",
+  "necessidade": "descrição detalhada da necessidade (150-250 palavras)",
+  "solucoes": "levantamento de soluções alternativas analisadas (100-150 palavras)",
+  "solucao_escolhida": "solução escolhida com justificativa técnica e legal (120-180 palavras)",
+  "quantidade": "estimativa de quantidade com base no objeto",
+  "valor": "${dfd.valor || '0,00'}",
+  "responsavel": "${dfd.responsavel || ''} — ${dfd.cargo || ''}"
+}`;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const resp = await fetch('/api/ia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 2000 }),
+      signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    const data = await resp.json();
+    let raw = (data.content || '').replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch(e) { parsed = null; }
+
+    if (!parsed) throw new Error('IA retornou formato inválido. Tente novamente.');
+
+    const campos = ['area','ref_dfd','necessidade','solucoes','solucao_escolhida','quantidade','valor','responsavel'];
+    let preenchidos = 0;
+    campos.forEach(k => {
+      const el = document.getElementById('etp-' + k);
+      if (el && parsed[k]) { el.value = parsed[k]; preenchidos++; }
+    });
+    // viabilidade padrão viável
+    const elViab = document.getElementById('etp-viabilidade');
+    if (elViab) elViab.value = 'viavel';
+
+    toast(`✅ ETP preenchido — ${preenchidos} campos gerados pela IA. Revise antes de salvar.`, 'success');
+  } catch(e) {
+    clearTimeout(timer);
+    const msg = e.name === 'AbortError' ? 'IA demorou demais. Tente novamente.' : 'Erro ao gerar ETP: ' + e.message;
+    toast(msg, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Preencher tudo com IA'; }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  TR COM IA CONTEXTUAL — usa DFD + ETP já salvos
+// ══════════════════════════════════════════════════════════
+async function preencherTRcomIA() {
+  const proc = _processoAtual;
+  if (!proc) return;
+
+  const dfdDoc = proc.docs?.find(d => d.tipo === 'DFD');
+  const etpDoc = proc.docs?.find(d => d.tipo === 'ETP');
+  const dfd    = dfdDoc?.dados || {};
+  const etp    = etpDoc?.dados || {};
+
+  if (!dfd.objeto) {
+    toast('Salve o DFD antes de gerar o TR com IA', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-preencher-tr-ia');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando TR...'; }
+
+  const municipio = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'Nova Crixás';
+  const prefNome  = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipio);
+  const endereco  = _perfil?._prefeitura?.endereco || 'Praça Três Poderes s/n, Centro';
+
+  let itensTexto = '';
+  try {
+    const itens = typeof dfd.itens === 'string' ? JSON.parse(dfd.itens) : (dfd.itens || []);
+    if (itens.length) {
+      itensTexto = itens.slice(0, 20).map((it, i) =>
+        `${i+1}. ${it.descricao || it.nome || '—'} — ${it.quantidade || 1} ${it.unidade || 'UN'}`
+      ).join('\n');
+    }
+  } catch(e) {}
+
+  const prompt = `Você é especialista em licitações públicas da ${prefNome} (${municipio}).
+
+Elabore o Termo de Referência com base no DFD e ETP abaixo. Retorne SOMENTE um JSON válido, sem markdown.
+
+DADOS DO PROCESSO:
+- Número: ${proc.numero_protocolo}
+- Objeto: "${dfd.objeto}"
+- Unidade: ${dfd.unidade || '—'}
+- Responsável: ${dfd.responsavel || '—'} (${dfd.cargo || '—'})
+- Valor estimado: R$ ${dfd.valor || '—'}
+- Prazo: ${dfd.prazo || '—'}
+- Local de entrega: ${endereco}, ${municipio}
+${itensTexto ? '- Itens:\n' + itensTexto : ''}
+${etp.necessidade ? '- Necessidade (ETP): ' + etp.necessidade.slice(0, 300) : ''}
+${etp.solucao_escolhida ? '- Solução (ETP): ' + etp.solucao_escolhida.slice(0, 200) : ''}
+
+Gere o JSON abaixo. Textos formais, técnicos, com referências à Lei 14.133/2021. Mínimo 80 palavras por campo de texto.
+
+{
+  "objeto": "descrição completa do objeto para o TR",
+  "fundamentacao": "fundamentação legal e necessidade com referência ao ETP (120-180 palavras)",
+  "descricao": "especificação técnica detalhada do objeto (150-200 palavras)",
+  "quantidade": "${dfd.quantidade || '—'}",
+  "unidade": "unidade de medida principal",
+  "valor": "${dfd.valor || '0,00'}",
+  "modalidade": "pregao_eletronico",
+  "criterio": "menor_preco",
+  "modo_disputa": "aberto",
+  "prazo": "${dfd.prazo || '30 dias após emissão da Ordem de Fornecimento'}",
+  "local": "${endereco}, ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}",
+  "pagamento": "texto das condições de pagamento (60-100 palavras)",
+  "obrig_contratante": "obrigações da contratante em formato de lista numerada (100-150 palavras)",
+  "obrig_contratada": "obrigações da contratada em formato de lista numerada (150-200 palavras)",
+  "recebimento": "critérios de recebimento provisório e definitivo (60-80 palavras)",
+  "penalidades": "penalidades conforme art. 156 LLC (100-150 palavras)",
+  "garantia": "nao",
+  "lc123": "sim",
+  "responsavel": "${dfd.responsavel || ''} — ${dfd.cargo || ''}"
+}`;
+
+  const ctrl2 = new AbortController();
+  const timer2 = setTimeout(() => ctrl2.abort(), 30000);
+  try {
+    const resp = await fetch('/api/ia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 3000 }),
+      signal: ctrl2.signal
+    });
+    clearTimeout(timer2);
+    const data = await resp.json();
+    let raw = (data.content || '').replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch(e) { parsed = null; }
+
+    if (!parsed) throw new Error('IA retornou formato inválido. Tente novamente.');
+
+    const campos = ['objeto','fundamentacao','descricao','quantidade','unidade','valor',
+                    'modalidade','criterio','modo_disputa','prazo','local','pagamento',
+                    'obrig_contratante','obrig_contratada','recebimento','penalidades',
+                    'garantia','lc123','responsavel'];
+    let preenchidos = 0;
+    campos.forEach(k => {
+      const el = document.getElementById('tr-' + k);
+      if (el && parsed[k]) { el.value = parsed[k]; preenchidos++; }
+    });
+
+    toast(`✅ TR preenchido — ${preenchidos} campos gerados pela IA. Revise antes de salvar.`, 'success');
+  } catch(e) {
+    clearTimeout(timer2);
+    const msg = e.name === 'AbortError' ? 'IA demorou demais. Tente novamente.' : 'Erro ao gerar TR: ' + e.message;
+    toast(msg, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Preencher tudo com IA'; }
+  }
 }
 
 
