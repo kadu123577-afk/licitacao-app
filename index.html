@@ -904,6 +904,48 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
 .incons-item-msg{font-size:12px;line-height:1.4;color:var(--text);}
 .incons-item-link{font-size:11px;color:var(--blue);cursor:pointer;margin-top:4px;display:inline-block;text-decoration:underline;}
 .incons-empty{padding:20px;text-align:center;color:var(--muted);font-size:12px;}
+
+/* ── [INTELIGÊNCIA] F2 + F3 ── */
+.cat-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:20px;font-size:11px;font-weight:700;
+  background:rgba(26,184,255,.12);color:var(--blue);
+  border:1px solid rgba(26,184,255,.25);}
+.modalidade-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:20px;font-size:11px;font-weight:600;
+  background:rgba(65,243,106,.1);color:var(--green);
+  border:1px solid rgba(65,243,106,.2);}
+.exigencias-panel{margin:8px 0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;}
+.exigencias-toggle{width:100%;padding:7px 12px;background:var(--s2);border:none;
+  color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;text-align:left;
+  display:flex;align-items:center;justify-content:space-between;}
+.exigencias-body{padding:8px 12px;background:var(--s1);display:none;}
+.exigencias-body.open{display:block;}
+.exigencias-body li{font-size:11px;color:var(--text2);margin-bottom:3px;line-height:1.4;}
+/* Score de risco */
+.score-widget{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+.score-circle{
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;flex-shrink:0;
+  border:2.5px solid currentColor;
+}
+.score-circle.baixo{color:#41f36a;background:rgba(65,243,106,.1);}
+.score-circle.medio{color:#f9c02e;background:rgba(249,192,46,.1);}
+.score-circle.alto{color:#f97316;background:rgba(249,115,22,.1);}
+.score-critico{color:#e55;background:rgba(229,85,85,.1);}
+.score-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+.score-fatores{padding:8px 14px 12px;display:none;border-bottom:1px solid var(--border);}
+.score-fatores.open{display:block;}
+.score-fator-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);}
+.score-fator-item:last-child{border-bottom:none;}
+.score-fator-pts{font-size:11px;font-weight:700;color:#e55;min-width:28px;text-align:right;flex-shrink:0;}
+.score-fator-info{flex:1;}
+.score-fator-desc{font-size:11px;color:var(--text);}
+.score-fator-fix{font-size:10px;color:var(--muted);margin-top:1px;}
 </style>
 </head>
 <body>
@@ -1132,8 +1174,25 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
                   <div class="proc-meta-item"><span class="k">Valor est.</span><span class="v" id="proc-valor">—</span></div>
                   <div class="proc-meta-item"><span class="k">Etapa</span><span class="v" id="proc-etapa-num">—</span></div>
                   <div class="proc-meta-item"><span class="k">Status</span><span id="proc-status-badge">—</span></div>
+                  <div class="proc-meta-item" id="proc-cat-row" style="display:none;">
+                    <span class="k">Categoria</span>
+                    <span id="proc-cat-badge"></span>
+                  </div>
+                  <div class="proc-meta-item" id="proc-modal-row" style="display:none;">
+                    <span class="k">Modalidade</span>
+                    <span id="proc-modal-chip"></span>
+                  </div>
                 </div>
               </div>
+              <!-- [INTELIGÊNCIA] Score de Risco -->
+              <div id="score-widget" class="score-widget" onclick="toggleScoreFatores()" style="display:none;" title="Score de risco processual">
+                <div class="score-circle baixo" id="score-circle">0</div>
+                <div>
+                  <div class="score-label" id="score-nivel-label">BAIXO RISCO</div>
+                  <div style="font-size:10px;color:var(--muted);">clique para ver fatores</div>
+                </div>
+              </div>
+              <div class="score-fatores" id="score-fatores-body"></div>
               <div class="etapa-list" id="proc-etapa-list"></div>
             </div>
             <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Expandir/recolher etapas">‹</button>
@@ -4324,7 +4383,7 @@ async function salvarEdicaoDFD() {
     // Atualizar objeto no processo
     await sb.from('processos').update({ objeto: dados.objeto, atualizado_em: new Date().toISOString() }).eq('id', proc.id);
     toast('✅ DFD salvo com sucesso!', 'success');
-    setTimeout(() => rodarDetectorInconsistencias(), 200);
+    setTimeout(() => { rodarDetectorInconsistencias(); if(_processoAtual) renderScoreRisco(_processoAtual); }, 200);
     await abrirProcesso(proc.id);
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'error');
@@ -6581,6 +6640,129 @@ function abrirImportarSV() {
   modal.classList.add('show');
 }
 
+
+// [INTELIGÊNCIA] F3 — Score de Risco Processual (100% local, sem API)
+function calcularScoreRisco(proc) {
+  if (!proc) return { score:0, nivel:'baixo', fatores:[] };
+  const docs   = proc.docs || [];
+  const dfdDoc = docs.find(d=>d.tipo==='DFD');
+  const trDoc  = docs.find(d=>d.tipo==='TR');
+  const ppDoc  = docs.find(d=>d.tipo==='PP');
+  const mrDoc  = docs.find(d=>d.tipo==='MAPA_RISCO');
+  const parDoc = docs.find(d=>d.tipo==='PARECER');
+  const dfd    = dfdDoc?.dados || {};
+  const tr     = trDoc?.dados  || {};
+  const pp     = ppDoc?.dados  || {};
+  const mr     = mrDoc?.dados  || {};
+  const pref   = _perfil?._prefeitura || {};
+
+  let score = 0;
+  const fatores = [];
+
+  // +20 — PP com < 3 fornecedores
+  if (ppDoc) {
+    const fontes = pp.fontes || [];
+    const comVal = fontes.filter(f=>parseFloat(String(f.valor||'0').replace(/\./g,'').replace(',','.'))||0 > 0);
+    if (comVal.length < 3) {
+      const pts = 20; score += pts;
+      fatores.push({ pts, desc:`Pesquisa de preços com apenas ${comVal.length} fornecedor${comVal.length!==1?'es':''} com valor`, fix:'Adicione cotações de pelo menos 3 fontes distintas' });
+    }
+  }
+
+  // +15 — Justificativa fraca
+  const palavras = (dfd.justificativa||'').trim().split(/\s+/).filter(Boolean).length;
+  if (dfdDoc && palavras < 80) {
+    const pts = 15; score += pts;
+    fatores.push({ pts, desc:`Justificativa com ${palavras} palavra${palavras!==1?'s':''}`, fix:'Expanda a justificativa para no mínimo 80 palavras, incluindo impacto social e legal' });
+  }
+
+  // +10 por item sem CATMAT (máx +30)
+  try {
+    const itens = typeof dfd.itens==='string' ? JSON.parse(dfd.itens) : (dfd.itens||[]);
+    const semCat = itens.filter(it=>!it.catmat);
+    if (semCat.length > 0) {
+      const pts = Math.min(semCat.length * 10, 30); score += pts;
+      fatores.push({ pts, desc:`${semCat.length} item${semCat.length!==1?'s':''} sem código CATMAT`, fix:'Informe o código CATMAT/CATSER de cada item para padronização nacional' });
+    }
+  } catch(e) {}
+
+  // +25 — Valor divergente >15%
+  try {
+    const itens = typeof dfd.itens==='string' ? JSON.parse(dfd.itens) : (dfd.itens||[]);
+    const totalItens = itens.reduce((s,it)=>s+(parseFloat(it.valor_unitario||0)*parseFloat(it.quantidade||1)),0);
+    const valorProc  = parseFloat(String(proc.valor_estimado||dfd.valor||'0').replace(/[R$\s]/g,'').replace(/\./g,'').replace(',','.'));
+    if (totalItens > 0 && valorProc > 0 && Math.abs(totalItens-valorProc)/valorProc > 0.15) {
+      const pts = 25; score += pts;
+      fatores.push({ pts, desc:'Valor estimado diverge >15% do somatório dos itens', fix:'Alinhe o valor estimado com a soma (qtd × valor unitário) de cada item' });
+    }
+  } catch(e) {}
+
+  // +15 — Mapa de riscos vazio ou genérico
+  if (!mrDoc) {
+    const pts = 15; score += pts;
+    fatores.push({ pts, desc:'Mapa de riscos não preenchido', fix:'Preencha o mapa de riscos na etapa 3 (ETP+TR), aba "Mapa de Risco"' });
+  } else {
+    try {
+      const riscos = mr.riscos || [];
+      const semDesc = riscos.filter(r=>!r.risco || r.risco.length < 10);
+      if (semDesc.length === riscos.length && riscos.length > 0) {
+        const pts = 10; score += pts;
+        fatores.push({ pts, desc:'Riscos com descrição insuficiente', fix:'Detalhe cada risco com pelo menos uma frase descritiva' });
+      }
+    } catch(e) {}
+  }
+
+  // +10 — Parecer jurídico pendente (processo na etapa 8 ou além sem parecer)
+  if (proc.etapa_atual >= 8 && !parDoc) {
+    const pts = 10; score += pts;
+    fatores.push({ pts, desc:'Parecer jurídico ainda não emitido', fix:'Solicite ao setor jurídico o parecer de regularidade do processo' });
+  }
+
+  // +5 — Cadastro institucional incompleto
+  if (!pref.cnpj || !pref.endereco) {
+    const pts = 5; score += pts;
+    fatores.push({ pts, desc:'Cadastro da prefeitura incompleto (CNPJ ou endereço)', fix:'Complete o cadastro da prefeitura no painel do Super Admin' });
+  }
+
+  const nivel = score <= 20 ? 'baixo' : score <= 45 ? 'medio' : score <= 70 ? 'alto' : 'critico';
+  return { score: Math.min(score, 100), nivel, fatores };
+}
+
+function renderScoreRisco(proc) {
+  const widget  = document.getElementById('score-widget');
+  const circle  = document.getElementById('score-circle');
+  const nivelLb = document.getElementById('score-nivel-label');
+  const fatBody = document.getElementById('score-fatores-body');
+  if (!widget || !circle || !nivelLb || !fatBody) return;
+
+  const { score, nivel, fatores } = calcularScoreRisco(proc);
+
+  widget.style.display = 'flex';
+  circle.textContent   = score;
+  circle.className     = `score-circle ${nivel === 'critico' ? 'score-critico' : nivel}`;
+
+  const nivelTexto = { baixo:'BAIXO RISCO', medio:'RISCO MÉDIO', alto:'ALTO RISCO', critico:'RISCO CRÍTICO' };
+  nivelLb.textContent  = nivelTexto[nivel];
+  nivelLb.style.color  = { baixo:'var(--green)', medio:'#f9c02e', alto:'#f97316', critico:'#e55' }[nivel];
+
+  if (!fatores.length) {
+    fatBody.innerHTML = '<div style="padding:8px 14px 12px;font-size:12px;color:var(--muted);">✅ Nenhum fator de risco identificado.</div>';
+    return;
+  }
+  fatBody.innerHTML = fatores.map(f=>`
+    <div class="score-fator-item">
+      <div class="score-fator-pts">+${f.pts}</div>
+      <div class="score-fator-info">
+        <div class="score-fator-desc">${f.desc}</div>
+        <div class="score-fator-fix">💡 ${f.fix}</div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleScoreFatores() {
+  document.getElementById('score-fatores-body')?.classList.toggle('open');
+}
+
 // Toggle da sidebar no modo split
 function toggleSidebar() {
   const layout = document.querySelector('.proc-layout');
@@ -7494,14 +7676,115 @@ const RISCOS_POR_CATEGORIA = {
 };
 
 // Detecta categoria pelo texto do objeto
+// [INTELIGÊNCIA] Classificador expandido com meta-dados por categoria
+const CATEGORIA_META = {
+  medicamento:       { icon:'💊', label:'Medicamentos',       modalidade:'pregao_eletronico', exigencias:['Registro ANVISA obrigatório (RDC 204/2017)','Responsável técnico farmacêutico','Prazo de validade mínimo de 12 meses','Lote e fabricante na nota fiscal','Temperatura de armazenamento especificada'] },
+  obra:              { icon:'🏗️', label:'Obra/Engenharia',     modalidade:'concorrencia',      exigencias:['ART/RRT do responsável técnico','Planilha SINAPI atualizada','BDI justificado (máx. 25%)','Cronograma físico-financeiro','Licença ambiental/urbanística se aplicável'] },
+  software:          { icon:'💻', label:'Software/TI',         modalidade:'pregao_eletronico', exigencias:['LGPD: DPA (Data Processing Agreement)','Cláusula de portabilidade de dados','SLA mínimo de 99,5%','Garantia contra lock-in','Código-fonte ou escrow se desenvolvido sob demanda'] },
+  limpeza:           { icon:'🧹', label:'Limpeza/Conservação', modalidade:'pregao_eletronico', exigencias:['Serviço continuado: vigência de 12 meses prorrogável','Planilha de custos com encargos sociais','Acordo coletivo da categoria','Fiscalização mensal obrigatória','PPRA/PCMSO da contratada'] },
+  combustivel:       { icon:'⛽', label:'Combustível',          modalidade:'pregao_eletronico', exigencias:['ANP: autorização do posto fornecedor','Controle por abastecedor (lei seca institucional)','Medição por hodômetro/horímetro','Nota fiscal com placa e condutor','Preço máximo ANP como referência'] },
+  alimentacao:       { icon:'🍽️', label:'Alimentação',          modalidade:'pregao_eletronico', exigencias:['Vigilância sanitária do fornecedor','APPCC — análise de perigos e pontos críticos','Temperatura de transporte monitorada','Nutricionista responsável técnico','Cardápio aprovado por nutricionista'] },
+  mobiliario:        { icon:'🪑', label:'Mobiliário',           modalidade:'pregao_eletronico', exigencias:['INMETRO: certificação compulsória se aplicável','Laudo de resistência estrutural','Especificação técnica: dimensões, material, carga','Garantia mínima de 12 meses','Montagem inclusa no objeto'] },
+  equipamento:       { icon:'⚙️', label:'Equipamentos',         modalidade:'pregao_eletronico', exigencias:['Certificação ANATEL se eletrônico','Manual em português obrigatório','Assistência técnica na região','Peças de reposição por 5 anos','Treinamento de operação incluso'] },
+  servico_continuado:{ icon:'🔄', label:'Serviço Continuado',   modalidade:'pregao_eletronico', exigencias:['Vigência: 12 meses prorrogável até 60','Planilha de custos e formação de preços','IN 05/2017 SEGES se federal','Fiscalização técnica e administrativa','Nota de empenho parcial por exercício'] },
+  consultoria:       { icon:'📋', label:'Consultoria',           modalidade:'pregao_eletronico', exigencias:['Comprovação de acervo técnico (CAT)','Vedação de subcontratação total','Sigilo e confidencialidade','Entregáveis com cronograma definido','Inexigibilidade se notório saber'] },
+  generico:          { icon:'📦', label:'Bem/Serviço',           modalidade:'pregao_eletronico', exigencias:['Especificação técnica detalhada','Critério de julgamento: menor preço','Prazo de entrega definido','Garantia conforme CDC se bem','Fiscalização do contrato designada'] },
+};
+
 function detectarCategoriaObjeto(objeto) {
   const o = (objeto || '').toLowerCase();
-  if (/medicament|farmac|hospital|saude|anvisa|remedio|ampola|comprimido|injet/.test(o)) return 'medicamento';
-  if (/obra|constru|reforma|paviment|engenharia|sinapi|sicro|planta|projeto/.test(o)) return 'obra';
-  if (/software|sistem|tecnologia|ti\b|aplicat|plataforma|cloud|dados|rede|servidor/.test(o)) return 'software';
-  if (/limpeza|conserv|higieniz|varr|lavag|zeladoria/.test(o)) return 'limpeza';
+  if (/medicament|farmac|hospital|remedio|ampola|comprimido|injet|vacina|seringa|curativo/.test(o)) return 'medicamento';
+  if (/obra|constru|reforma|paviment|engenharia|sinapi|sicro|planta|projeto|calçada|drenagem/.test(o)) return 'obra';
+  if (/software|sistem|tecnologia|\bti\b|aplicat|plataforma|cloud|dados|rede|servidor|erp|crm/.test(o)) return 'software';
+  if (/limpeza|conserv|higieniz|varr|lavag|zeladoria|portaria|vigilância/.test(o)) return 'limpeza';
   if (/combustivel|gasolina|diesel|etanol|abastecimento|frota/.test(o)) return 'combustivel';
+  if (/alimenta|merenda|refeição|marmit|gênero|alimento|carnes|hortifruti/.test(o)) return 'alimentacao';
+  if (/mobiliário|mobili|cadeira|mesa|armário|estante|sofá|cadeirão/.test(o)) return 'mobiliario';
+  if (/equipament|máquina|aparelho|dispositivo|instrumento|eletro/.test(o)) return 'equipamento';
+  if (/manutenção|predial|elétric|hidráulic|ar.condicionado|elevador/.test(o)) return 'servico_continuado';
+  if (/consultoria|assessoria|auditoria|capacita|treinament|formação/.test(o)) return 'consultoria';
   return 'generico';
+}
+
+// [INTELIGÊNCIA] Classificação com IA para objetos ambíguos
+async function classificarObjetoComIA(objeto) {
+  const palavras = (objeto || '').trim().split(/\s+/).length;
+  const catRegex = detectarCategoriaObjeto(objeto);
+  // Só chama IA se objeto ambíguo (>5 palavras e retornou generico, ou objeto curto demais)
+  if (catRegex !== 'generico' && palavras <= 12) return { categoria: catRegex, _origem: 'regex' };
+  try {
+    const resp = await fetch('/api/ia', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        prompt: `Classifique este objeto de licitação pública brasileira em UMA das categorias: medicamento, obra, software, limpeza, combustivel, alimentacao, mobiliario, equipamento, servico_continuado, consultoria, generico.\nResponda APENAS com JSON válido sem markdown: {"categoria":"...","modalidade_provavel":"dispensa|pregao_eletronico|concorrencia","exigencias":["...","..."],"riscos_principais":["...","..."]}\nObjeto: "${objeto.slice(0,200)}"`,
+        max_tokens: 300
+      })
+    });
+    const data = await resp.json();
+    const raw = (data.content || '').replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    return { ...parsed, _origem: 'ia' };
+  } catch(e) {
+    return { categoria: catRegex, _origem: 'regex_fallback' };
+  }
+}
+
+// [INTELIGÊNCIA] Exibir badge de categoria + chip de modalidade + exigências
+async function exibirClassificacaoObjeto(proc) {
+  const objeto = proc.objeto || proc.docs?.find(d=>d.tipo==='DFD')?.dados?.objeto || '';
+  if (!objeto) return;
+  let resultado;
+  try {
+    resultado = await classificarObjetoComIA(objeto);
+  } catch(e) {
+    resultado = { categoria: detectarCategoriaObjeto(objeto), _origem: 'regex' };
+  }
+  const cat  = resultado.categoria || 'generico';
+  const meta = CATEGORIA_META[cat] || CATEGORIA_META.generico;
+  const modalidade = resultado.modalidade_provavel || meta.modalidade;
+  const MODAL_LABELS = { pregao_eletronico:'Pregão Eletrônico', concorrencia:'Concorrência', dispensa:'Dispensa por Valor', inexigibilidade:'Inexigibilidade' };
+  const exigencias = resultado.exigencias || meta.exigencias;
+
+  // Badge de categoria
+  const catRow = document.getElementById('proc-cat-row');
+  const catBadge = document.getElementById('proc-cat-badge');
+  if (catRow && catBadge) {
+    catBadge.innerHTML = `<span class="cat-badge">${meta.icon} ${meta.label}</span>`;
+    catRow.style.display = '';
+  }
+
+  // Chip de modalidade
+  const modalRow = document.getElementById('proc-modal-row');
+  const modalChip = document.getElementById('proc-modal-chip');
+  if (modalRow && modalChip) {
+    modalChip.innerHTML = `<span class="modalidade-chip">⚖️ ${MODAL_LABELS[modalidade]||modalidade}</span>`;
+    modalRow.style.display = '';
+  }
+
+  // Painel de exigências — injetar abaixo do integrity-bar
+  const intBar = document.getElementById('proc-integrity-bar');
+  if (intBar && exigencias?.length) {
+    let exEl = document.getElementById('proc-exigencias-panel');
+    if (!exEl) {
+      exEl = document.createElement('div');
+      exEl.id = 'proc-exigencias-panel';
+      exEl.className = 'exigencias-panel';
+      exEl.style.cssText = 'margin:0 -18px;border-radius:0;border-left:none;border-right:none;border-top:none;';
+      intBar.parentNode.insertBefore(exEl, intBar.nextSibling);
+    }
+    exEl.innerHTML = `
+      <button class="exigencias-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('span').textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">
+        <span style="color:var(--blue);">📋 Exigências legais — ${meta.label}</span>
+        <span style="font-size:10px;">▼</span>
+      </button>
+      <div class="exigencias-body">
+        <ul style="margin:0;padding-left:16px;">
+          ${exigencias.map(e=>`<li>${e}</li>`).join('')}
+        </ul>
+        ${resultado._origem==='ia'?'<div style="font-size:10px;color:var(--muted);margin-top:6px;">✨ Análise por IA</div>':''}
+      </div>`;
+  }
 }
 
 // Pré-popula mapa de risco com riscos contextuais
@@ -7980,6 +8263,12 @@ const _abrirProcessoConfianca = abrirProcesso;
 async function abrirProcesso(id) {
   await _abrirProcessoConfianca(id);
   if (_processoAtual) renderStatusIntegridade(_processoAtual).catch(() => {});
+  // [INTELIGÊNCIA] F2 + F3
+  if (_processoAtual) {
+    renderScoreRisco(_processoAtual);
+    exibirClassificacaoObjeto(_processoAtual).catch(()=>{});
+    setTimeout(() => rodarDetectorInconsistencias(), 300);
+  }
 }
 
 // ══════════════════════════════════════════════════════════
