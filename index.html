@@ -555,6 +555,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
   .proc-layout{grid-template-columns:1fr;}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -1379,8 +1380,18 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 const SUPA_URL = 'https://vhgeibeudnshbrahsjui.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZ2VpYmV1ZG5zaGJyYWhzanVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTE5OTcsImV4cCI6MjA5NTEyNzk5N30.3EGjtjsNBT8Cc9JIIl6R9EphERIblxOpHjGyhFJeaPs';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-const DEEPSEEK_KEY = 'sk-e289ba7d38e8418d9cbc14c2c5509da8';
-const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
+// DeepSeek chamado via proxy seguro — chave nunca exposta no frontend
+const DEEPSEEK_URL = '/api/ia';
+async function chamarDeepSeek(prompt, max_tokens = 800) {
+  const resp = await fetch('/api/ia', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, max_tokens })
+  });
+  if (!resp.ok) throw new Error('Erro na API de IA: ' + resp.status);
+  const data = await resp.json();
+  return data.content || data.choices?.[0]?.message?.content || '';
+}
 
 // ══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
@@ -1947,9 +1958,12 @@ async function criarProcesso() {
     const prefId = _perfil?.prefeitura_id;
     if (!prefId) throw new Error('Perfil sem prefeitura vinculada. Contate o administrador.');
 
-    // Gerar número de protocolo
+    // Gerar número de protocolo único por prefeitura+ano
     const ano = new Date().getFullYear();
-    const { count } = await sb.from('processos').select('*', { count: 'exact', head: true }).eq('prefeitura_id', prefId);
+    const { count } = await sb.from('processos')
+      .select('*', { count: 'exact', head: true })
+      .eq('prefeitura_id', prefId)
+      .like('numero_protocolo', `%/${ano}`);
     const num = String((count || 0) + 1).padStart(4, '0');
     const protocolo = `${num}/${ano}`;
 
@@ -1962,7 +1976,7 @@ async function criarProcesso() {
       telefone:      document.getElementById('dfd-telefone').value.trim(),
       justificativa: document.getElementById('dfd-justificativa').value.trim(),
       objeto:        document.getElementById('dfd-objeto').value.trim(),
-      itens:         document.getElementById('dfd-itens-json')?.value || '[]',
+      itens:         (() => { try { return JSON.parse(document.getElementById('dfd-itens-json')?.value || '[]'); } catch(e) { return []; } })(),
       quantidade:    document.getElementById('dfd-quantidade').value.trim(),
       valor:         document.getElementById('dfd-valor').value.trim(),
       prazo:         document.getElementById('dfd-prazo').value.trim(),
@@ -2829,13 +2843,11 @@ INSTRUÇÕES:
 Texto:`;
 
   try {
-    const resp = await fetch(DEEPSEEK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DEEPSEEK_KEY },
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await resp.json();
-    _iaTextoGerado = data.choices?.[0]?.message?.content || 'Erro ao gerar texto.';
+    try {
+      _iaTextoGerado = await chamarDeepSeek(prompt, 800);
+    } catch(e) {
+      _iaTextoGerado = 'Erro ao gerar texto: ' + e.message;
+    }
     document.getElementById('modal-ia-resultado').textContent = _iaTextoGerado;
     document.getElementById('modal-ia-resultado').style.display = 'block';
     document.getElementById('btn-ia-usar').style.display = 'inline-flex';
@@ -3046,19 +3058,8 @@ RETORNE APENAS este JSON (sem markdown, sem backticks):
 {"objeto_profissional":"...","justificativa":"..."}`;
 
   try {
-    const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
-    const DURL = typeof DEEPSEEK_URL !== 'undefined' ? DEEPSEEK_URL : 'https://api.deepseek.com/v1/chat/completions';
-    const resp = await fetch(DURL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DKEY },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        max_tokens: 900,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await resp.json();
-    let raw = data.choices?.[0]?.message?.content || '';
+    let raw = '';
+    try { raw = await chamarDeepSeek(prompt, 900); } catch(e) { raw = ''; }
 
     // Strip markdown fences if present
     raw = raw.replace(/```json|```/g, '').trim();
@@ -3104,15 +3105,35 @@ async function gerarPDFDoc(tipo) {
   if (!proc) return;
   const doc = proc.docs?.find(d => d.tipo === tipo);
   const dados = doc?.dados || {};
+  const nomes = {DFD:'DFD',ETP:'ETP',TR:'Termo_de_Referencia',PP:'Pesquisa_de_Precos',DO:'Dotacao_Orcamentaria',AUTH:'Autorizacao',PARECER:'Parecer_Juridico'};
+  const fileName = `${nomes[tipo]||tipo}_${proc.numero_protocolo?.replace('/','_')}.pdf`;
 
   toast('Gerando PDF...', 'info');
 
-  // Build HTML para impressão
   const html = buildPDFHtml(tipo, dados, proc);
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => w.print(), 800);
+
+  // Usar html2pdf para gerar PDF real
+  if (typeof html2pdf !== 'undefined') {
+    const container = document.createElement('div');
+    container.innerHTML = html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<body[^>]*>|<\/body>/gi, '');
+    container.style.cssText = 'font-family:Times New Roman,serif;font-size:12pt;color:#000;background:#fff;';
+    document.body.appendChild(container);
+    await html2pdf().set({
+      margin: [25, 20, 25, 20],
+      filename: fileName,
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(container).save();
+    document.body.removeChild(container);
+    toast('PDF salvo com sucesso!', 'success');
+  } else {
+    // Fallback para impressão do navegador
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 800);
+  }
 }
 
 function buildPDFHtml(tipo, dados, proc) {
