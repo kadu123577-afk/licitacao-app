@@ -4108,30 +4108,70 @@ function setDFDItens(arr) {
 
 function renderDFDItens() {
   const lista = document.getElementById('dfd-itens-lista');
-  const vazio = document.getElementById('dfd-itens-vazio');
   if (!lista) return;
   const itens = getDFDItens();
   if (itens.length === 0) {
     lista.innerHTML = '<div id="dfd-itens-vazio" style="color:var(--text2);font-size:12px;padding:8px;">Nenhum item adicionado. Use os botões acima para inserir os produtos/serviços.</div>';
     return;
   }
-  lista.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-    <thead><tr style="background:var(--surface);">
-      <th style="padding:4px 6px;text-align:center;width:4%;border-bottom:1px solid var(--border);">Nº</th>
-      <th style="padding:4px 6px;text-align:left;border-bottom:1px solid var(--border);">Descrição</th>
-      <th style="padding:4px 6px;text-align:center;width:8%;border-bottom:1px solid var(--border);">Unid.</th>
-      <th style="padding:4px 6px;text-align:center;width:10%;border-bottom:1px solid var(--border);">Qtd.</th>
-      <th style="padding:4px 6px;text-align:center;width:6%;border-bottom:1px solid var(--border);">✕</th>
-    </tr></thead><tbody>
-    ${itens.map((it,i) => `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:3px 6px;text-align:center;">${i+1}</td>
-      <td style="padding:3px 6px;">${it.descricao||it.nome||'—'}</td>
-      <td style="padding:3px 6px;text-align:center;">${it.unidade||'UN'}</td>
-      <td style="padding:3px 6px;text-align:center;">${it.quantidade||1}</td>
-      <td style="padding:3px 6px;text-align:center;"><button type="button" onclick="removerItemDFD(${i})" style="background:none;border:none;color:#e55;cursor:pointer;font-size:14px;padding:0;">✕</button></td>
-    </tr>`).join('')}
-    </tbody></table>
-    <div style="font-size:11px;color:var(--text2);padding:4px 6px;text-align:right;">${itens.length} item(s)</div>`;
+  lista.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--s2);">
+        <th style="padding:5px 6px;text-align:center;width:3%;border-bottom:1px solid var(--border);">Nº</th>
+        <th style="padding:5px 6px;text-align:left;border-bottom:1px solid var(--border);">Descrição</th>
+        <th style="padding:5px 6px;text-align:center;width:9%;border-bottom:1px solid var(--border);">Unid.</th>
+        <th style="padding:5px 6px;text-align:center;width:11%;border-bottom:1px solid var(--border);">
+          Qtd. <span style="font-weight:400;font-size:10px;color:var(--muted);">(editável)</span>
+        </th>
+        <th style="padding:5px 6px;text-align:center;width:5%;border-bottom:1px solid var(--border);">✕</th>
+      </tr></thead>
+      <tbody>
+        ${itens.map((it,i) => `<tr style="border-bottom:1px solid var(--border);" id="item-row-${i}">
+          <td style="padding:3px 6px;text-align:center;color:var(--muted);">${i+1}</td>
+          <td style="padding:3px 6px;">${it.descricao||it.nome||'—'}</td>
+          <td style="padding:3px 6px;text-align:center;color:var(--text2);">${it.unidade||'UN'}</td>
+          <td style="padding:2px 4px;text-align:center;">
+            <input
+              type="number"
+              min="0.001"
+              step="any"
+              value="${it.quantidade||1}"
+              oninput="atualizarQtdItem(${i}, this.value)"
+              style="
+                width:100%;text-align:center;
+                background:var(--s3);
+                border:1px solid var(--border2);
+                border-radius:4px;
+                padding:3px 4px;
+                color:var(--text);
+                font-size:12px;
+                outline:none;
+              "
+              onfocus="this.style.borderColor='var(--green)'"
+              onblur="this.style.borderColor='var(--border2)'"
+            >
+          </td>
+          <td style="padding:3px 6px;text-align:center;">
+            <button type="button" onclick="removerItemDFD(${i})"
+              style="background:none;border:none;color:#e55;cursor:pointer;font-size:14px;padding:0;line-height:1;">✕</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:var(--text2);padding:5px 6px;text-align:right;border-top:1px solid var(--border);">
+      ${itens.length} item(s) &nbsp;·&nbsp; Total: <strong>${itens.reduce((s,i)=>s+(parseFloat(i.quantidade)||0),0).toLocaleString('pt-BR')}</strong> unid.
+    </div>`;
+}
+
+function atualizarQtdItem(idx, valor) {
+  const itens = getDFDItens();
+  if (!itens[idx]) return;
+  const qtd = parseFloat(String(valor).replace(',','.'));
+  itens[idx].quantidade = isNaN(qtd) || qtd <= 0 ? 1 : qtd;
+  // Salvar sem re-renderizar (não mexe no DOM, só no JSON)
+  const el = document.getElementById('dfd-itens-json');
+  if (el) el.value = JSON.stringify(itens);
+  atualizarQuantidadeTotal();
 }
 
 function removerItemDFD(idx) {
