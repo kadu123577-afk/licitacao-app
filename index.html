@@ -7,26 +7,6 @@
 if (new URLSearchParams(location.search).has('validar')) {
   document.documentElement.setAttribute('data-validacao', '1');
 }
-function toggleHistorico() {
-  const card = document.getElementById('proc-historico-card');
-  if (!card) return;
-  card.classList.toggle('collapsed');
-  // Se abrindo pela primeira vez, carregar linha do tempo
-  if (!card.classList.contains('collapsed')) {
-    const proc = _processoAtual;
-    if (proc && !card.dataset.loaded) {
-      card.dataset.loaded = '1';
-      // já foi renderizado pelo abrirProcesso, não precisa recarregar
-    }
-  }
-}
-
-function atualizarContadorMovs(movs) {
-  const el = document.getElementById('proc-mov-count');
-  if (el && movs) el.textContent = movs.length ? `· ${movs.length} movimentaç${movs.length!==1?'ões':'ão'}` : '';
-}
-
-
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Licite.ai — Gestão Licitatória</title>
@@ -648,29 +628,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 /* ── Histórico no fundo ── */
 .proc-historico-card{
   margin:0;
+  margin-top:-5px;
   border-top:1px solid var(--border);
   border-radius:0;
   background:var(--s1);
   flex-shrink:0;
-  transition:max-height .25s ease;
 }
-.proc-historico-card.collapsed .proc-historico-body{display:none;}
-.proc-historico-toggle{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:9px 18px;cursor:pointer;
-  border-bottom:1px solid var(--border);
-  user-select:none;
-}
-.proc-historico-toggle:hover{background:var(--s2);}
-.proc-historico-toggle-label{
-  font-size:11px;font-weight:600;color:var(--text2);
-  display:flex;align-items:center;gap:8px;
-}
-.proc-historico-toggle-icon{
-  font-size:10px;color:var(--muted);
-  transition:transform .2s;
-}
-.proc-historico-card:not(.collapsed) .proc-historico-toggle-icon{transform:rotate(180deg);}
 .proc-tabs{
   display:flex;gap:0;
   border-bottom:1px solid var(--border);
@@ -1504,28 +1467,17 @@ html[data-validacao] #view-validacao-publica {
             </div>
 
             <!-- HISTÓRICO: abas discretas -->
-            <div class="proc-historico-card collapsed" id="proc-historico-card">
-              <!-- Toggle colapsável -->
-              <div class="proc-historico-toggle" onclick="toggleHistorico()">
-                <span class="proc-historico-toggle-label">
-                  📋 Histórico &amp; Conformidade
-                  <span id="proc-mov-count" style="font-size:10px;color:var(--muted);font-weight:400;"></span>
-                </span>
-                <span class="proc-historico-toggle-icon">▲</span>
+            <div class="proc-historico-card">
+              <div class="proc-tabs">
+                <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">Linha do Tempo</div>
+                <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">Versões</div>
+                <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">Auditoria</div>
+                <div class="proc-tab" id="tab-tcm" onclick="switchProcTab('tcm')">Conformidade TCM</div>
               </div>
-              <!-- Corpo colapsável -->
-              <div class="proc-historico-body">
-                <div class="proc-tabs">
-                  <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">Linha do Tempo</div>
-                  <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">Versões</div>
-                  <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">Auditoria</div>
-                  <div class="proc-tab" id="tab-tcm" onclick="switchProcTab('tcm')">Conformidade TCM</div>
-                </div>
-                <div id="tab-content-mov" style="padding:4px 18px 16px;max-height:280px;overflow-y:auto;"></div>
-                <div id="tab-content-snaps" style="display:none;padding:4px 18px 16px;max-height:280px;overflow-y:auto;"></div>
-                <div id="tab-content-audit" style="display:none;padding:4px 18px 16px;max-height:280px;overflow-y:auto;"></div>
-                <div id="tab-content-tcm" style="display:none;padding:4px 18px 16px;max-height:280px;overflow-y:auto;"></div>
-              </div>
+              <div id="tab-content-mov" style="padding:4px 18px 16px;"></div>
+              <div id="tab-content-snaps" style="display:none;padding:4px 18px 16px;"></div>
+              <div id="tab-content-audit" style="display:none;padding:4px 18px 16px;"></div>
+              <div id="tab-content-tcm" style="display:none;padding:4px 18px 16px;"></div>
             </div>
 
           </div>
@@ -2726,10 +2678,6 @@ async function abrirProcesso(id) {
 
   // Histórico
   renderHistorico(movs || []);
-  atualizarContadorMovs(movs);
-  // Resetar historico colapsado ao abrir novo processo
-  const _hcard = document.getElementById('proc-historico-card');
-  if (_hcard) { _hcard.classList.add('collapsed'); delete _hcard.dataset.loaded; }
 
   // Ações disponíveis
   renderAcoesProcesso(proc, etapaAtual);
