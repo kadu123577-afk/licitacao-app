@@ -795,48 +795,13 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
     </div>
     <div class="modal-body">
 
-      <!-- PASSO 1: Tipo de contratação -->
-      <div id="novo-passo1">
-        <div class="form-section-title">Passo 1 de 2 — Tipo de Contratação</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Selecione o tipo de objeto. Isso define quais documentos serão exigidos no processo.</p>
-        <div class="tipo-grid">
-          <div class="tipo-card" onclick="selecionarTipo('aquisicao_bens')">
-            <div class="tipo-ico">🛒</div>
-            <div class="tipo-label">Aquisição de Bens</div>
-            <div class="tipo-desc">Materiais, equipamentos, produtos</div>
-          </div>
-          <div class="tipo-card" onclick="selecionarTipo('servicos_comuns')">
-            <div class="tipo-ico">🔧</div>
-            <div class="tipo-label">Serviços Comuns</div>
-            <div class="tipo-desc">Limpeza, vigilância, TI, etc.</div>
-          </div>
-          <div class="tipo-card" onclick="selecionarTipo('obras_engenharia')">
-            <div class="tipo-ico">🏗️</div>
-            <div class="tipo-label">Obras e Engenharia</div>
-            <div class="tipo-desc">Construção, reforma, infraestrutura</div>
-          </div>
-          <div class="tipo-card" onclick="selecionarTipo('locacao_maquinas')">
-            <div class="tipo-ico">🚜</div>
-            <div class="tipo-label">Locação de Máquinas</div>
-            <div class="tipo-desc">Veículos, equipamentos, maquinário</div>
-          </div>
-          <div class="tipo-card" onclick="selecionarTipo('dispensa')">
-            <div class="tipo-ico">⚡</div>
-            <div class="tipo-label">Dispensa de Licitação</div>
-            <div class="tipo-desc">Art. 75 LLC — contratação direta</div>
-          </div>
-          <div class="tipo-card" onclick="selecionarTipo('inexigibilidade')">
-            <div class="tipo-ico">🔒</div>
-            <div class="tipo-label">Inexigibilidade</div>
-            <div class="tipo-desc">Art. 74 LLC — exclusividade</div>
-          </div>
-        </div>
-      </div>
+      <!-- PASSO 1: oculto — não exibir para requisitante -->
+      <div id="novo-passo1" style="display:none;"></div>
 
-      <!-- PASSO 2: DFD -->
-      <div id="novo-passo2" style="display:none;">
-        <div class="form-section-title">Passo 2 de 2 — Documento de Formalização de Demanda (DFD)</div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Art. 7º, Inciso I da IN-009/23 TCM-GO | Art. 12, VII LLC — Preencha os campos abaixo. A IA irá gerar os textos técnicos automaticamente.</p>
+      <!-- PASSO 2: DFD — abre direto -->
+      <div id="novo-passo2">
+        <div class="form-section-title">Documento de Formalização de Demanda — DFD</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Preencha os campos abaixo para formalizar sua necessidade. O setor de licitações cuidará das etapas seguintes.</p>
 
         <!-- IDENTIFICAÇÃO -->
         <div class="form-grid">
@@ -1495,14 +1460,29 @@ function renderAcoesProcesso(proc, etapa) {
 //  NOVO PROCESSO
 // ══════════════════════════════════════════════════════════
 function abrirNovoProcesso() {
-  _tipoSelecionado = null;
-  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('novo-passo1').style.display = 'block';
-  document.getElementById('novo-passo2').style.display = 'none';
+  // Tipo definido pelo setor de licitações — requisitante vai direto para DFD
+  _tipoSelecionado = 'aquisicao_bens'; // padrão inicial, ajustável pela licitação
+  document.getElementById('novo-passo1').style.display = 'none';
+  document.getElementById('novo-passo2').style.display = 'block';
   document.getElementById('btn-avancar-passo').style.display = 'none';
-  document.getElementById('btn-criar-processo').style.display = 'none';
+  document.getElementById('btn-criar-processo').style.display = 'inline-flex';
   document.getElementById('novo-form-erro').style.display = 'none';
+  // Reset itens
+  const jel = document.getElementById('dfd-itens-json');
+  if (jel) jel.value = '[]';
+  renderDFDItens();
+  atualizarPCAPreview();
   document.getElementById('modal-novo').classList.add('show');
+  // Limpar campos
+  ['dfd-unidade','dfd-responsavel','dfd-cargo','dfd-email','dfd-telefone',
+   'dfd-objeto','dfd-justificativa','dfd-valor','dfd-quantidade','dfd-prazo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('dfd-prioridade').value = '';
+  document.getElementById('dfd-pca').value = 'na';
+  document.getElementById('dfd-ia-area').style.display = 'none';
+  document.getElementById('dfd-ia-status').textContent = '';
 }
 
 function selecionarTipo(tipo) {
@@ -1589,7 +1569,7 @@ async function criarProcesso() {
     const { data: proc, error: procErr } = await sb.from('processos').insert({
       prefeitura_id:      prefId,
       numero_protocolo:   protocolo,
-      tipo_contratacao:   _tipoSelecionado,
+      tipo_contratacao:   _tipoSelecionado || 'pendente', // definido pelo setor de licitações
       objeto:             dadosDFD.objeto,
       setor_requisitante: dadosDFD.unidade,
       etapa_atual:        1,
