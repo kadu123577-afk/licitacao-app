@@ -3889,10 +3889,12 @@ async function carregarUsuariosAdmin() {
     <td><span class="badge-perfil">${PERFIL_LABELS[u.perfil] || u.perfil || '—'}</span></td>
     <td style="color:var(--text2);">${u.setor || '—'}</td>
     <td><span class="badge-status ${u.ativo !== false ? 'ativo' : 'inativo'}">${u.ativo !== false ? 'Ativo' : 'Inativo'}</span></td>
-    <td>
+    <td style="text-align:right;">
+      <button class="btn btn-ghost btn-sm" onclick="editarUsuario('${u.id}')" style="color:var(--blue);">✏️</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleUsuarioAtivo('${u.id}',${!(u.ativo !== false)})" style="color:${u.ativo!==false?'var(--red)':'var(--green)'};">
         ${u.ativo !== false ? 'Desativar' : 'Ativar'}
       </button>
+      <button class="btn btn-ghost btn-sm" onclick="excluirUsuario('${u.id}','${u.nome||u.email}')" style="color:var(--red);">🗑️</button>
     </td>
   </tr>`).join('');
 }
@@ -3922,6 +3924,9 @@ function abrirModalNovoUsuario() {
   document.getElementById('nu-erro').style.display = 'none';
   document.getElementById('nu-ok').style.display = 'none';
   document.getElementById('modal-user-titulo').textContent = 'Novo Usuário';
+  document.getElementById('nu-senha').placeholder = 'Mínimo 6 caracteres';
+  document.getElementById('btn-salvar-usuario').textContent = 'Criar usuário';
+  document.getElementById('btn-salvar-usuario').onclick = salvarNovoUsuario;
   document.getElementById('modal-novo-usuario').classList.add('show');
 }
 
@@ -3980,6 +3985,61 @@ async function salvarNovoUsuario() {
 async function toggleUsuarioAtivo(id, ativo) {
   await sb.from('usuarios').update({ ativo }).eq('id', id);
   toast(ativo ? 'Usuário ativado' : 'Usuário desativado', ativo ? 'success' : 'info');
+  carregarUsuariosAdmin();
+}
+
+function editarUsuario(id) {
+  const u = _apUsuarios.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('nu-id').value = u.id;
+  document.getElementById('nu-nome').value = u.nome || '';
+  document.getElementById('nu-email').value = u.email || '';
+  document.getElementById('nu-senha').value = '';
+  document.getElementById('nu-perfil').value = u.perfil || 'requisitante';
+  document.getElementById('nu-setor').value = u.setor || '';
+  document.getElementById('nu-erro').style.display = 'none';
+  document.getElementById('nu-ok').style.display = 'none';
+  document.getElementById('modal-user-titulo').textContent = 'Editar Usuário';
+  // Senha opcional na edição
+  document.getElementById('nu-senha').placeholder = 'Deixe em branco para manter a senha atual';
+  document.getElementById('btn-salvar-usuario').textContent = 'Salvar alterações';
+  document.getElementById('btn-salvar-usuario').onclick = salvarEdicaoUsuario;
+  document.getElementById('modal-novo-usuario').classList.add('show');
+}
+
+async function salvarEdicaoUsuario() {
+  const id    = document.getElementById('nu-id').value;
+  const nome  = document.getElementById('nu-nome').value.trim();
+  const perfil = document.getElementById('nu-perfil').value;
+  const setor  = document.getElementById('nu-setor').value.trim();
+  const senha  = document.getElementById('nu-senha').value;
+  const erroEl = document.getElementById('nu-erro');
+  const okEl   = document.getElementById('nu-ok');
+  const btn    = document.getElementById('btn-salvar-usuario');
+  erroEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!nome) { erroEl.textContent = 'Nome é obrigatório.'; erroEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const { error } = await sb.from('usuarios').update({ nome, perfil, setor }).eq('id', id);
+  // Atualizar senha se preenchida
+  if (senha && senha.length >= 6) {
+    await sb.rpc('atualizar_senha_usuario', { p_user_id: id, p_nova_senha: senha });
+  }
+  btn.disabled = false; btn.textContent = 'Salvar alterações';
+  if (error) { erroEl.textContent = error.message; erroEl.style.display = 'block'; return; }
+  okEl.textContent = '✅ Usuário atualizado!';
+  okEl.style.display = 'block';
+  toast('Usuário atualizado!', 'success');
+  carregarUsuariosAdmin();
+  setTimeout(() => fecharModal('modal-novo-usuario'), 1500);
+}
+
+async function excluirUsuario(id, nome) {
+  if (!confirm(`Excluir o usuário "${nome}"?
+
+Esta ação não pode ser desfeita.`)) return;
+  const { error } = await sb.from('usuarios').delete().eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('Usuário excluído', 'info');
   carregarUsuariosAdmin();
 }
 
