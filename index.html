@@ -946,6 +946,60 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
 .score-fator-info{flex:1;}
 .score-fator-desc{font-size:11px;color:var(--text);}
 .score-fator-fix{font-size:10px;color:var(--muted);margin-top:1px;}
+
+/* ── [PRODUTO] Painel Executivo + Conformidade + Validação ── */
+#view-validacao-publica{
+  display:none;min-height:100vh;background:#fff;
+  align-items:center;justify-content:center;flex-direction:column;
+}
+#view-validacao-publica.active{display:flex;}
+.valid-card{
+  max-width:540px;width:100%;padding:48px 40px;
+  border-radius:12px;text-align:center;
+  box-shadow:0 4px 32px rgba(0,0,0,.1);
+}
+.valid-card.ok{border-top:6px solid #22c55e;}
+.valid-card.fail{border-top:6px solid #ef4444;}
+.valid-logo{font-size:22px;font-weight:800;color:#111;margin-bottom:32px;letter-spacing:-1px;}
+.valid-icon{font-size:48px;margin-bottom:16px;}
+.valid-title{font-size:20px;font-weight:800;margin-bottom:16px;}
+.valid-title.ok{color:#16a34a;}
+.valid-title.fail{color:#dc2626;}
+.valid-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px;}
+.valid-row .k{color:#888;}
+.valid-row .v{font-weight:600;color:#111;}
+.valid-hash{font-family:monospace;font-size:11px;color:#555;word-break:break-all;background:#f9f9f9;padding:8px 12px;border-radius:6px;margin-top:12px;}
+.valid-footer{margin-top:40px;font-size:11px;color:#aaa;}
+
+/* Painel Executivo */
+#page-painel-executivo .exec-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.exec-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.exec-card .ec-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;}
+.exec-card .ec-value{font-size:24px;font-weight:800;font-family:var(--font-display);}
+.exec-card .ec-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+.exec-section{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;}
+.exec-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px;}
+.exec-proc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--r-sm);background:var(--s2);margin-bottom:6px;gap:10px;}
+.exec-proc-row:last-child{margin-bottom:0;}
+.exec-proc-info{flex:1;min-width:0;}
+.exec-proc-obj{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.exec-proc-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.exec-bar-chart{overflow:visible;}
+.exec-bar-label{font-size:10px;fill:var(--text2);}
+.exec-bar-value{font-size:10px;font-weight:700;fill:var(--text);}
+
+/* Conformidade TCM */
+.conf-circle-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0 16px;}
+.conf-circle{width:90px;height:90px;}
+.conf-pct-text{font-size:20px;font-weight:800;}
+.conf-nivel{font-size:11px;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
+.conf-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.conf-item:last-child{border-bottom:none;}
+.conf-item-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.conf-item-body{flex:1;}
+.conf-item-label{font-size:12px;font-weight:600;}
+.conf-item-meta{font-size:10px;color:var(--muted);margin-top:1px;}
+.conf-corrigir-btn{font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid rgba(26,184,255,.3);background:rgba(26,184,255,.08);color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -1041,6 +1095,12 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
         </div>
         <div class="nav-item" id="nav-novo" onclick="abrirNovoProcesso()">
           <svg><use href="#ic-plus"/></svg> Novo Processo
+        </div>
+      </div>
+      <div class="sidebar-section" id="nav-section-painel" style="display:none;">
+        <div class="sidebar-label">Gestão</div>
+        <div class="nav-item" id="nav-painel-executivo" onclick="navigate('painel-executivo')">
+          📊 Painel Executivo
         </div>
       </div>
       <div style="margin-top:auto;padding:12px 8px;border-top:1px solid rgba(255,255,255,.06);">
@@ -1224,13 +1284,24 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
                 <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">📋 Linha do Tempo</div>
                 <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">🔒 Versões</div>
                 <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">🔍 Auditoria</div>
+                <div class="proc-tab" id="tab-tcm" onclick="switchProcTab('tcm')">✅ Conformidade TCM</div>
               </div>
               <div id="tab-content-mov" style="padding:4px 18px;"></div>
               <div id="tab-content-snaps" style="display:none;padding:4px 18px;"></div>
               <div id="tab-content-audit" style="display:none;padding:4px 18px;"></div>
+              <div id="tab-content-tcm" style="display:none;padding:4px 18px;"></div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- [PRODUTO] Painel Executivo -->
+      <div class="page" id="page-painel-executivo" style="padding:20px;">
+        <div class="page-head">
+          <div><div class="page-title">📊 Painel Executivo</div><div class="page-sub">Visão geral das contratações do município</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="carregarPainelExecutivo()">🔄 Atualizar</button>
+        </div>
+        <div id="exec-content"><div style="color:var(--muted);text-align:center;padding:40px;">Carregando...</div></div>
       </div>
 
     </main>
@@ -1942,6 +2013,9 @@ const TIPO_LABELS = {
 //  AUTH
 // ══════════════════════════════════════════════════════════
 (async () => {
+  // [PRODUTO] Validação pública antes do auth
+  const _isVal = await verificarValidacaoPublica().catch(()=>false);
+  if (_isVal) return;
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     await carregarPerfil(session.user);
@@ -2198,6 +2272,7 @@ function navigate(page) {
   if (pageEl) pageEl.classList.add('active');
   if (navEl)  navEl.classList.add('active');
   document.title = PAGE_TITLES[page] || 'Licite.ai';
+  if (page === 'painel-executivo') carregarPainelExecutivo();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -5089,6 +5164,16 @@ function buildPDFHtml(tipo, dados, proc) {
   </div>
 </div>
 
+
+<!-- [PRODUTO] Página pública de validação de documentos -->
+<div id="view-validacao-publica" class="view">
+  <div class="valid-card" id="valid-card-inner">
+    <div class="valid-logo">Licite.ai</div>
+    <div style="font-size:14px;color:#888;">Verificando autenticidade...</div>
+  </div>
+  <div class="valid-footer">Licite.ai — Sistema de Gestão de Contratações Públicas</div>
+</div>
+
 </body></html>`;
   }
 
@@ -6761,6 +6846,235 @@ function renderScoreRisco(proc) {
 
 function toggleScoreFatores() {
   document.getElementById('score-fatores-body')?.classList.toggle('open');
+}
+
+
+// ══════════════════════════════════════════════════════════
+// [PRODUTO] F1 — PAINEL EXECUTIVO MUNICIPAL
+// ══════════════════════════════════════════════════════════
+async function carregarPainelExecutivo() {
+  const container = document.getElementById('exec-content');
+  if (!container) return;
+  container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;">⏳ Carregando dados...</div>';
+  if (!_perfil?.prefeitura_id) return;
+  const anoAtual = new Date().getFullYear();
+  const { data: procs, error } = await sb.from('processos')
+    .select('id,objeto,etapa_atual,status,valor_estimado,criado_em,atualizado_em,tipo_contratacao')
+    .eq('prefeitura_id', _perfil.prefeitura_id);
+  if (error || !procs) { container.innerHTML = '<div style="color:#e55;padding:20px;">Erro ao carregar processos.</div>'; return; }
+  const ativos     = procs.filter(p => p.status === 'em_andamento');
+  const concluidos = procs.filter(p => p.status === 'concluido');
+  const valorTotal = procs.filter(p => (p.criado_em||'').startsWith(anoAtual)).reduce((s,p)=>s+(parseFloat(p.valor_estimado)||0),0);
+  let tempoMedio = 0;
+  if (concluidos.length) {
+    const dias = concluidos.map(p=>Math.max(0,Math.round((new Date(p.atualizado_em)-new Date(p.criado_em))/86400000)));
+    tempoMedio = Math.round(dias.reduce((s,d)=>s+d,0)/dias.length);
+  }
+  const scores = ativos.map(p=>{ const f=_processos?.find(x=>x.id===p.id); return f?.docs?calcularScoreRisco(f).score:0; });
+  const scoreMedio = scores.length ? Math.round(scores.reduce((s,x)=>s+x,0)/scores.length) : 0;
+  const nivelScore = scoreMedio<=20?'baixo':scoreMedio<=45?'medio':scoreMedio<=70?'alto':'critico';
+  const corScore   = {baixo:'var(--green)',medio:'#f9c02e',alto:'#f97316',critico:'#e55'}[nivelScore];
+  const comScore   = ativos.map(p=>{ const f=_processos?.find(x=>x.id===p.id); const r=f?.docs?calcularScoreRisco(f):{score:0,nivel:'baixo'}; return {...p,_score:r.score,_nivel:r.nivel}; }).sort((a,b)=>b._score-a._score).slice(0,5);
+  const agora = Date.now();
+  const parados = ativos.filter(p=>{ p._dias=Math.floor((agora-new Date(p.atualizado_em))/86400000); return p._dias>15; }).sort((a,b)=>b._dias-a._dias).slice(0,5);
+  const porEtapa = {};
+  ativos.forEach(p=>{ porEtapa[p.etapa_atual]=(porEtapa[p.etapa_atual]||0)+1; });
+  const etapaLbl = {1:'DFD',2:'Protocolo',3:'ETP/TR',4:'Pesquisa P.',5:'Dotação',6:'Autorização',7:'Edital',8:'Parecer',9:'Ed. Final',10:'Publicação'};
+  const barEntries = Object.entries(porEtapa).sort((a,b)=>parseInt(a[0])-parseInt(b[0]));
+  const maxVal = Math.max(...barEntries.map(e=>e[1]),1);
+  const barW=36,barGap=14,chartH=80,chartPad=30;
+  const chartW = Math.max(300,barEntries.length*(barW+barGap)+chartPad*2);
+  const svgBars = barEntries.map(([et,cnt],i)=>{
+    const x=chartPad+i*(barW+barGap), bH=Math.max(4,Math.round((cnt/maxVal)*chartH)), y=chartH-bH+10;
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${bH}" rx="4" fill="rgba(65,243,106,.6)"/>
+      <text x="${x+barW/2}" y="${y-4}" text-anchor="middle" class="exec-bar-value">${cnt}</text>
+      <text x="${x+barW/2}" y="${chartH+26}" text-anchor="middle" class="exec-bar-label">${etapaLbl[et]||('E'+et)}</text>`;
+  }).join('');
+  const fmt = v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',notation:'compact',maximumFractionDigits:1}).format(v);
+  const nivelIcon={baixo:'🟢',medio:'🟡',alto:'🟠',critico:'🔴'};
+  const nivelLabel={baixo:'BAIXO',medio:'MÉDIO',alto:'ALTO',critico:'CRÍTICO'};
+  container.innerHTML = `
+  <div class="exec-cards">
+    <div class="exec-card"><div class="ec-label">Processos Ativos</div><div class="ec-value">${ativos.length}</div><div class="ec-sub">${concluidos.length} concluídos</div></div>
+    <div class="exec-card"><div class="ec-label">Valor Total ${anoAtual}</div><div class="ec-value" style="font-size:18px;">${fmt(valorTotal)}</div><div class="ec-sub">${procs.filter(p=>(p.criado_em||'').startsWith(anoAtual)).length} processos</div></div>
+    <div class="exec-card"><div class="ec-label">Tempo Médio</div><div class="ec-value">${tempoMedio>0?tempoMedio+'d':'—'}</div><div class="ec-sub">${concluidos.length} concluídos</div></div>
+    <div class="exec-card"><div class="ec-label">Score de Risco Médio</div><div class="ec-value" style="color:${corScore};">${scores.length?scoreMedio:'—'}</div><div class="ec-sub" style="color:${corScore};">${scores.length?nivelLabel[nivelScore]:'sem dados'}</div></div>
+  </div>
+  <div class="exec-section">
+    <div class="exec-section-title">🚨 Atenção Imediata</div>
+    ${comScore.filter(p=>p._score>0).length?comScore.filter(p=>p._score>0).map(p=>`
+      <div class="exec-proc-row">
+        <span>${nivelIcon[p._nivel]}</span>
+        <div class="exec-proc-info"><div class="exec-proc-obj">${p.objeto||'—'}</div><div class="exec-proc-meta">Risco: <b>${nivelLabel[p._nivel]} (${p._score}pts)</b> · Etapa ${p.etapa_atual}/10</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="abrirProcesso('${p.id}');navigate('processo')">Abrir</button>
+      </div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:8px 0;">✅ Nenhum processo com risco crítico</div>'}
+  </div>
+  <div class="exec-section">
+    <div class="exec-section-title">⏰ Parados há mais de 15 dias</div>
+    ${parados.length?parados.map(p=>`
+      <div class="exec-proc-row">
+        <span>⏰</span>
+        <div class="exec-proc-info"><div class="exec-proc-obj">${p.objeto||'—'}</div><div class="exec-proc-meta"><b>${p._dias} dias</b> na etapa ${etapaLbl[p.etapa_atual]||('E'+p.etapa_atual)}</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="abrirProcesso('${p.id}');navigate('processo')">Abrir</button>
+      </div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:8px 0;">✅ Nenhum processo parado</div>'}
+  </div>
+  <div class="exec-section"><div class="exec-section-title">📅 Vencimentos</div><div style="color:var(--muted);font-size:12px;padding:8px 0;">Configure datas de vencimento nos processos para monitorar aqui.</div></div>
+  ${barEntries.length?`<div class="exec-section"><div class="exec-section-title">📊 Processos por Etapa</div><div style="overflow-x:auto;">
+    <svg class="exec-bar-chart" width="${chartW}" height="${chartH+50}" viewBox="0 0 ${chartW} ${chartH+50}">${svgBars}</svg></div></div>`:''}`;
+}
+
+function mostrarNavPainelExecutivo() {
+  const secao = document.getElementById('nav-section-painel');
+  const role  = _perfil?.role;
+  if (secao && (role==='admin'||role==='super_admin')) secao.style.display='';
+}
+
+// ══════════════════════════════════════════════════════════
+// [PRODUTO] F2 — CONFORMIDADE TCM-GO
+// ══════════════════════════════════════════════════════════
+function calcularConformidadeTCM(proc) {
+  const docs   = proc?.docs||[];
+  const dfdDoc = docs.find(d=>d.tipo==='DFD');
+  const etpDoc = docs.find(d=>d.tipo==='ETP');
+  const trDoc  = docs.find(d=>d.tipo==='TR');
+  const ppDoc  = docs.find(d=>d.tipo==='PP');
+  const mrDoc  = docs.find(d=>d.tipo==='MAPA_RISCO');
+  const doDoc  = docs.find(d=>d.tipo==='DOTACAO'||d.tipo==='DO');
+  const dfd    = dfdDoc?.dados||{};
+  const pp     = ppDoc?.dados||{};
+  const mr     = mrDoc?.dados||{};
+  const pref   = _perfil?._prefeitura||{};
+  const snaps  = proc._snapshots||[];
+  const criterios = [
+    {id:'dfd',       label:'DFD preenchido',                  peso:15, ok:!!dfdDoc,         meta:'Documento de Formalização de Demanda deve existir',         campo:'sv-objeto',etapa:1},
+    {id:'just',      label:'Justificativa ≥ 80 palavras',     peso:10, ok:(()=>{const t=dfd.justificativa||'';return t.trim().split(/\s+/).filter(Boolean).length>=80;})(), meta:'Justificativa com mínimo 80 palavras',campo:'sv-justificativa',etapa:1},
+    {id:'catmat',    label:'Itens com código CATMAT',          peso:10, ok:(()=>{try{const its=typeof dfd.itens==='string'?JSON.parse(dfd.itens):(dfd.itens||[]);return its.length>0&&its.every(i=>i.catmat);}catch(e){return false;}})(), meta:'Todos os itens com CATMAT/CATSER',campo:'sv-itens-container',etapa:1},
+    {id:'pp',        label:'PP ≥ 3 fornecedores com valor',   peso:15, ok:(()=>{if(!ppDoc)return false;return (pp.fontes||[]).filter(f=>parseFloat(String(f.valor||'0').replace(/\./g,'').replace(',','.'))||0 > 0).length>=3;})(), meta:'Pesquisa de preços com ≥ 3 fontes',campo:'pp-inline-table',etapa:4},
+    {id:'etp',       label:'ETP preenchido',                  peso:10, ok:!!etpDoc,         meta:'Estudo Técnico Preliminar deve existir',                    campo:null,etapa:3},
+    {id:'tr',        label:'TR preenchido',                   peso:10, ok:!!trDoc,          meta:'Termo de Referência deve existir',                          campo:null,etapa:3},
+    {id:'mapa',      label:'Mapa de riscos ≥ 3 riscos',       peso:10, ok:(()=>{if(!mrDoc)return false;return (mr.riscos||[]).filter(r=>r.risco&&r.risco.length>5).length>=3;})(), meta:'Mapa de riscos com ≥ 3 entradas',campo:null,etapa:3},
+    {id:'dotacao',   label:'Dotação orçamentária informada',  peso:10, ok:(()=>{if(!doDoc)return false;const d=doDoc.dados||{};return !!(d.natureza||d.unidade_gestora||d.reserva);})(), meta:'Campos de dotação preenchidos',campo:'do-natureza',etapa:5},
+    {id:'cabecalho', label:'Cadastro institucional completo', peso:5,  ok:!!(pref.cnpj&&pref.endereco&&(pref.nome||pref.municipio)), meta:'CNPJ, endereço e nome da prefeitura',campo:null,etapa:null},
+    {id:'snapshot',  label:'Snapshot com hash válido',        peso:5,  ok:!!(snaps[0]?.snapshot_hash), meta:'Processo deve ter snapshot gerado',campo:null,etapa:null},
+  ];
+  const total = criterios.reduce((s,cr)=>s+cr.peso,0);
+  const ok    = criterios.filter(cr=>cr.ok).reduce((s,cr)=>s+cr.peso,0);
+  return { pct:Math.round((ok/total)*100), criterios };
+}
+
+function renderConformidadeTCM(proc) {
+  const body = document.getElementById('tab-content-tcm');
+  if (!body) return;
+  const { pct, criterios } = calcularConformidadeTCM(proc);
+  const cor   = pct>=80?'#22c55e':pct>=60?'#f9c02e':'#ef4444';
+  const nivel = pct>=80?'CONFORME':pct>=60?'ATENÇÃO':'CRÍTICO';
+  const r=36, circ=2*Math.PI*r, dash=(pct/100)*circ;
+  body.innerHTML = `
+  <div style="padding:8px 0;">
+    <div class="conf-circle-wrap">
+      <svg class="conf-circle" viewBox="0 0 90 90">
+        <circle cx="45" cy="45" r="${r}" fill="none" stroke="var(--border)" stroke-width="8"/>
+        <circle cx="45" cy="45" r="${r}" fill="none" stroke="${cor}" stroke-width="8"
+          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+          stroke-linecap="round" transform="rotate(-90 45 45)"/>
+        <text x="45" y="48" text-anchor="middle" dominant-baseline="middle" class="conf-pct-text" fill="${cor}">${pct}%</text>
+      </svg>
+      <div class="conf-nivel" style="color:${cor};">${nivel}</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px;">${criterios.filter(c=>c.ok).length}/${criterios.length} critérios atendidos</div>
+    ${criterios.map(cr=>`
+      <div class="conf-item">
+        <span class="conf-item-icon">${cr.ok?'✅':'❌'}</span>
+        <div class="conf-item-body">
+          <div class="conf-item-label">${cr.label} <span style="color:var(--muted);font-size:10px;">(${cr.peso}%)</span></div>
+          ${!cr.ok?`<div class="conf-item-meta">${cr.meta}</div>`:''}
+        </div>
+        ${!cr.ok&&(cr.campo||cr.etapa)?`<button class="conf-corrigir-btn" onclick="irParaCampoIncons('${cr.campo||''}',${cr.etapa||0})">Corrigir →</button>`:''}
+      </div>`).join('')}
+    <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="exportarRelatorioConformidade()">📄 Exportar Relatório</button>
+    </div>
+  </div>`;
+}
+
+function exportarRelatorioConformidade() {
+  const proc = _processoAtual;
+  if (!proc) return;
+  const { pct, criterios } = calcularConformidadeTCM(proc);
+  const pref = _perfil?._prefeitura||{};
+  const municipio = pref.municipio||pref.nome?.replace(/Prefeitura Municipal de /i,'').trim()||'—';
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const cor = pct>=80?'#16a34a':pct>=60?'#ca8a04':'#dc2626';
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Relatório Conformidade TCM-GO</title>
+<style>body{font-family:Arial,sans-serif;font-size:12pt;color:#111;max-width:700px;margin:0 auto;padding:40px;}
+h1{font-size:16pt;text-align:center;border-bottom:2px solid #111;padding-bottom:8px;}
+.score{text-align:center;font-size:28pt;font-weight:800;color:${cor};margin:16px 0;}
+table{width:100%;border-collapse:collapse;margin-top:16px;}
+th{background:#333;color:#fff;padding:6px 10px;text-align:left;}
+td{padding:6px 10px;border-bottom:1px solid #ddd;}
+tr:nth-child(even) td{background:#f9f9f9;}
+.ok{color:#16a34a;font-weight:700;}.nok{color:#dc2626;font-weight:700;}
+.footer{margin-top:40px;font-size:9pt;color:#888;text-align:center;border-top:1px solid #ddd;padding-top:12px;}</style>
+</head><body>
+<h1>Relatório de Conformidade TCM-GO</h1>
+<p><b>Prefeitura:</b> ${pref.nome||municipio}<br><b>Processo:</b> ${proc.numero_protocolo||'—'}<br><b>Objeto:</b> ${proc.objeto||'—'}<br><b>Data:</b> ${hoje}</p>
+<div class="score">${pct}%</div>
+<table><thead><tr><th>Critério</th><th>Peso</th><th>Status</th></tr></thead><tbody>
+${criterios.map(cr=>`<tr><td>${cr.label}</td><td>${cr.peso}%</td><td class="${cr.ok?'ok':'nok'}">${cr.ok?'✓ Atendido':'✗ Pendente'}</td></tr>`).join('')}
+</tbody></table>
+<div class="footer">Licite.ai — Gerado em ${hoje}</div></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`conformidade_tcm_${(proc.numero_protocolo||'processo').replace('/','_')}.html`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast('Relatório exportado!','success');
+}
+
+// ══════════════════════════════════════════════════════════
+// [PRODUTO] F3 — VALIDAÇÃO PÚBLICA DE DOCUMENTOS
+// ══════════════════════════════════════════════════════════
+async function verificarValidacaoPublica() {
+  const params = new URLSearchParams(window.location.search);
+  const hash   = params.get('validar');
+  if (!hash) return false;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const view = document.getElementById('view-validacao-publica');
+  if (view) view.classList.add('active');
+  const card = document.getElementById('valid-card-inner');
+  if (!card) return true;
+  try {
+    const { data, error } = await sb.from('process_snapshots')
+      .select('snapshot_hash,generated_at,version,document_type,processos(objeto,numero_protocolo)')
+      .eq('snapshot_hash', hash).single();
+    if (error||!data) throw new Error('not_found');
+    const proc = data.processos||{};
+    const dt = new Date(data.generated_at);
+    const dtStr = dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const hashShort = hash.match(/.{1,4}/g)?.slice(0,8).join('-')||hash;
+    card.className='valid-card ok';
+    card.innerHTML=`
+      <div class="valid-logo">Licite.ai</div>
+      <div class="valid-icon">✅</div>
+      <div class="valid-title ok">DOCUMENTO AUTÊNTICO</div>
+      <div class="valid-row"><span class="k">Processo</span><span class="v">${proc.numero_protocolo||'—'}</span></div>
+      <div class="valid-row"><span class="k">Documento</span><span class="v">${data.document_type||'—'}</span></div>
+      <div class="valid-row"><span class="k">Versão</span><span class="v">v${data.version||'1'}</span></div>
+      <div class="valid-row"><span class="k">Gerado em</span><span class="v">${dtStr}</span></div>
+      <div class="valid-hash">Hash SHA-256: ${hashShort}...</div>
+      <div style="margin-top:16px;font-size:11px;color:#555;line-height:1.5;">Este documento consta nos registros oficiais do Licite.ai e não foi alterado após sua geração.</div>`;
+  } catch(e) {
+    card.className='valid-card fail';
+    card.innerHTML=`
+      <div class="valid-logo">Licite.ai</div>
+      <div class="valid-icon">❌</div>
+      <div class="valid-title fail">DOCUMENTO NÃO ENCONTRADO</div>
+      <div style="font-size:13px;color:#555;margin-top:12px;line-height:1.6;">O hash informado não consta nos registros.<br>Isso pode indicar adulteração ou geração fora do sistema oficial.</div>
+      <div style="margin-top:12px;font-size:11px;color:#aaa;font-family:monospace;word-break:break-all;">${hash}</div>`;
+  }
+  return true;
 }
 
 // Toggle da sidebar no modo split
