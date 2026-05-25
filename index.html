@@ -840,6 +840,48 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
 /* ── [INSTITUCIONAL] BRASÃO UPLOAD ── */
 .brasao-preview{width:72px;height:72px;border-radius:8px;object-fit:contain;background:var(--s3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;overflow:hidden;}
 .brasao-preview img{width:100%;height:100%;object-fit:contain;}
+
+/* ── [CONFIANÇA] LINHA DO TEMPO FORENSE ── */
+.tl-wrap{padding:16px 18px;}
+.tl-item{display:flex;gap:12px;position:relative;padding-bottom:18px;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-item::before{content:'';position:absolute;left:15px;top:28px;bottom:0;width:1px;background:var(--border);z-index:0;}
+.tl-item:last-child::before{display:none;}
+.tl-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;z-index:1;border:2px solid var(--border);background:var(--s2);}
+.tl-body{flex:1;min-width:0;padding-top:4px;}
+.tl-title{font-size:13px;font-weight:600;color:var(--text);}
+.tl-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.tl-diff{font-size:11px;margin-top:4px;padding:4px 8px;background:var(--s3);border-radius:4px;font-family:monospace;}
+.tl-hash{font-size:10px;font-family:monospace;color:var(--purple);background:var(--purple-l);padding:2px 6px;border-radius:3px;margin-top:3px;display:inline-block;}
+
+/* ── [CONFIANÇA] CENTRAL DE VERSIONAMENTO ── */
+.snap-table{width:100%;border-collapse:collapse;font-size:12px;}
+.snap-table th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:var(--s2);border-bottom:1px solid var(--border);}
+.snap-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.snap-table tr:last-child td{border-bottom:none;}
+.snap-table tr:hover td{background:rgba(255,255,255,.015);}
+.snap-hash-cell{font-family:monospace;font-size:11px;color:var(--purple);cursor:pointer;}
+.snap-hash-cell:hover{text-decoration:underline;}
+
+/* ── [CONFIANÇA] STATUS DE INTEGRIDADE ── */
+.integrity-bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--s2);}
+.integrity-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;cursor:default;position:relative;border:1px solid transparent;}
+.integrity-pill.ok{background:rgba(65,243,106,.08);color:var(--green);border-color:rgba(65,243,106,.2);}
+.integrity-pill.warn{background:rgba(255,200,87,.08);color:var(--gold);border-color:rgba(255,200,87,.2);}
+.integrity-pill.err{background:rgba(255,92,106,.08);color:var(--red);border-color:rgba(255,92,106,.2);}
+.integrity-pill.neutral{background:var(--s3);color:var(--muted);border-color:var(--border);}
+.integrity-pill .tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);color:var(--text2);font-size:10px;font-weight:400;padding:5px 9px;border-radius:5px;white-space:nowrap;z-index:50;box-shadow:var(--shadow);}
+.integrity-pill:hover .tip{display:block;}
+
+/* ── [CONFIANÇA] MODAL COMPARAÇÃO ── */
+.diff-panel{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.diff-col{background:var(--s2);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.diff-col-head{padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);}
+.diff-row{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;font-size:11px;border-bottom:1px solid var(--border);}
+.diff-row:last-child{border-bottom:none;}
+.diff-row.changed{background:rgba(255,200,87,.08);}
+.diff-key{color:var(--muted);flex-shrink:0;max-width:40%;}
+.diff-val{font-weight:500;word-break:break-all;text-align:right;}
 </style>
 </head>
 <body>
@@ -1059,6 +1101,8 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
             <div class="proc-sidebar">
               <div class="proc-info">
                 <div class="proc-num" id="proc-num">—</div>
+                <!-- [CONFIANÇA] Barra de integridade -->
+                <div class="integrity-bar" id="proc-integrity-bar" style="display:none;margin:0 -18px 10px;"></div>
                 <div class="proc-obj" id="proc-obj">—</div>
                 <div class="proc-meta">
                   <div class="proc-meta-item"><span class="k">Tipo</span><span class="v" id="proc-tipo-label">—</span></div>
@@ -1096,8 +1140,8 @@ body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; 
               </div>
               <!-- [INSTITUCIONAL] Tabs: movimentações | snapshots | auditoria -->
               <div class="proc-tabs">
-                <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">Movimentações</div>
-                <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">📸 Versões</div>
+                <div class="proc-tab active" id="tab-mov" onclick="switchProcTab('mov')">📋 Linha do Tempo</div>
+                <div class="proc-tab" id="tab-snaps" onclick="switchProcTab('snaps')">🔒 Versões</div>
                 <div class="proc-tab" id="tab-audit" onclick="switchProcTab('audit')">🔍 Auditoria</div>
               </div>
               <div id="tab-content-mov" style="padding:4px 18px;"></div>
@@ -7605,6 +7649,294 @@ window.formMapaRisco = function(dados, readonly) {
 
 // Helper de escape — usa a função existente no arquivo
 
+// ══════════════════════════════════════════════════════════
+// [CONFIANÇA] FUNCIONALIDADE 1 — Linha do Tempo Forense
+// ══════════════════════════════════════════════════════════
+
+const TL_TIPOS = {
+  criacao:    { ico: '📄', cor: 'var(--blue)',   label: 'Processo criado' },
+  avanco:     { ico: '➡️', cor: 'var(--green)',  label: 'Etapa avançada' },
+  devolucao:  { ico: '⬅️', cor: 'var(--red)',    label: 'Etapa retrocedida' },
+  aprovacao:  { ico: '✅', cor: 'var(--green)',  label: 'Aprovado' },
+  rejeicao:   { ico: '❌', cor: 'var(--red)',    label: 'Rejeitado' },
+  edicao:     { ico: '✏️', cor: 'var(--gold)',   label: 'Campo alterado' },
+  snapshot:   { ico: '🔒', cor: 'var(--purple)', label: 'Snapshot criado' },
+  rascunho:   { ico: '💾', cor: 'var(--teal)',   label: 'Documento salvo' },
+  acesso:     { ico: '👤', cor: 'var(--muted)',  label: 'Acesso ao processo' },
+  documento:  { ico: '📄', cor: 'var(--blue)',   label: 'Documento gerado' },
+};
+
+function formatDataForense(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' às ' +
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function renderLinhaDoTempoForense(proc, movs) {
+  const cont = document.getElementById('tab-content-mov');
+  if (!cont) return;
+  cont.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">⏳ Carregando...</div>`;
+
+  const eventos = (movs || []).map(m => ({
+    ts: m.criado_em, tipo: m.acao || 'criacao',
+    titulo: labelAcaoForense(m), usuario: m.usuarios?.nome || '—',
+    obs: m.observacao || '', hash: null, diff: null, fonte: 'mov',
+  }));
+
+  try {
+    const { data: audits, error } = await sb.from('audit_logs')
+      .select('*').eq('process_id', proc.id).order('created_at');
+    if (!error && audits?.length) {
+      audits.forEach(a => {
+        const isDup = eventos.some(e =>
+          e.fonte === 'mov' &&
+          Math.abs(new Date(e.ts) - new Date(a.created_at)) < 5000 &&
+          e.tipo === a.action);
+        if (!isDup) eventos.push({
+          ts: a.created_at,
+          tipo: a.action === 'edicao' ? 'edicao' : (a.action || 'edicao'),
+          titulo: a.field_changed
+            ? `Campo alterado: ${a.field_changed.replace(/\./g,' › ')}`
+            : (a.action || 'Ação'),
+          usuario: a.user_name || '—', obs: '', hash: null,
+          diff: (a.old_value || a.new_value)
+            ? { campo: a.field_changed, de: a.old_value, para: a.new_value }
+            : null,
+          fonte: 'audit',
+        });
+      });
+    }
+  } catch(e) { /* degradação graciosa */ }
+
+  if (proc._snapshots?.length) {
+    proc._snapshots.forEach(s => eventos.push({
+      ts: s.generated_at, tipo: 'snapshot',
+      titulo: `Snapshot criado — ${s.document_type} v${s.version}`,
+      usuario: s.generated_by_name || '—',
+      obs: '', hash: s.snapshot_hash, diff: null, fonte: 'snap',
+    }));
+  }
+
+  eventos.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+  if (!eventos.length) {
+    cont.innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Nenhum evento registrado.</div>`;
+    return;
+  }
+
+  cont.innerHTML = `<div class="tl-wrap">` + eventos.map(ev => {
+    const cfg = TL_TIPOS[ev.tipo] || TL_TIPOS.edicao;
+    const hashHtml = ev.hash
+      ? `<div class="tl-hash" title="${ev.hash}">${formatarHash(ev.hash).slice(0,19)}…</div>` : '';
+    const diffHtml = ev.diff
+      ? `<div class="tl-diff"><span style="color:var(--muted);">${ev.diff.campo}:</span> `+
+        `<span style="color:var(--red);text-decoration:line-through;">${(ev.diff.de||'').slice(0,40)||'(vazio)'}</span> → `+
+        `<span style="color:var(--green);">${(ev.diff.para||'').slice(0,40)||'(vazio)'}</span></div>` : '';
+    const obsHtml = ev.obs
+      ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic;">"${ev.obs}"</div>` : '';
+    return `<div class="tl-item">
+      <div class="tl-dot" style="background:${cfg.cor}22;border-color:${cfg.cor}44;">${cfg.ico}</div>
+      <div class="tl-body">
+        <div class="tl-title">${ev.titulo}</div>
+        <div class="tl-meta">${ev.usuario} · ${formatDataForense(ev.ts)}</div>
+        ${obsHtml}${diffHtml}${hashHtml}
+      </div></div>`;
+  }).join('') + `</div>`;
+}
+
+function labelAcaoForense(m) {
+  const etapas = ETAPAS[_processoAtual?.tipo_contratacao] || ETAPAS.aquisicao_bens;
+  const nomeEtapa = n => etapas.find(e => e.n === n)?.nome || `Etapa ${n}`;
+  return {
+    criacao:   `📄 Processo criado — DFD enviado ao Protocolo`,
+    avanco:    `➡️ Avançado: ${nomeEtapa(m.de_etapa)} → ${nomeEtapa(m.para_etapa)}`,
+    devolucao: `⬅️ Devolvido: ${nomeEtapa(m.de_etapa)} → ${nomeEtapa(m.para_etapa)}`,
+    aprovacao: `✅ Aprovado e publicado`,
+    rejeicao:  `❌ Rejeitado`,
+  }[m.acao] || m.acao || 'Movimentação';
+}
+
+// Override renderHistorico => Linha do Tempo Forense
+const _renderHistoricoConfianca = window.renderHistorico;
+window.renderHistorico = function(movs) {
+  const proc = _processoAtual;
+  if (!proc) { if (_renderHistoricoConfianca) _renderHistoricoConfianca(movs); return; }
+  renderLinhaDoTempoForense(proc, movs);
+};
+
+// ══════════════════════════════════════════════════════════
+// [CONFIANÇA] FUNCIONALIDADE 2 — Central de Versionamento
+// ══════════════════════════════════════════════════════════
+
+async function carregarCentralVersionamento(procId) {
+  const cont = document.getElementById('tab-content-snaps');
+  if (!cont) return;
+  cont.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);">⏳ Carregando versões...</div>`;
+  try {
+    const { data, error } = await sb.from('process_snapshots')
+      .select('*').eq('process_id', procId)
+      .order('generated_at', { ascending: false });
+    if (_processoAtual) _processoAtual._snapshots = data || [];
+    if (error || !data?.length) {
+      cont.innerHTML = `<div class="empty" style="padding:30px;">
+        <h4>Nenhuma versão registrada</h4>
+        <p>Versões são criadas ao salvar documentos ou avançar etapas.</p></div>`;
+      return;
+    }
+    cont.style.padding = '0';
+    cont.innerHTML = `<div style="overflow-x:auto;"><table class="snap-table">
+      <thead><tr>
+        <th>Versão</th><th>Documento</th><th>Data/Hora</th>
+        <th>Hash</th><th style="text-align:right;">Ações</th>
+      </tr></thead><tbody>
+      ${data.map(s => `<tr>
+        <td><span class="snapshot-badge">v${s.version}</span></td>
+        <td style="font-weight:500;">${s.document_type||'—'}</td>
+        <td style="color:var(--text2);font-size:11px;">${formatDataForense(s.generated_at)}</td>
+        <td><span class="snap-hash-cell" title="Clique para copiar o hash completo"
+          onclick="copiarHash('${s.snapshot_hash||''}')">
+          ${s.snapshot_hash ? formatarHash(s.snapshot_hash).slice(0,14)+'…' : '—'}
+        </span></td>
+        <td style="text-align:right;">
+          <div style="display:flex;gap:6px;justify-content:flex-end;">
+            <button class="btn btn-secondary btn-sm"
+              onclick="verSnapshot(${JSON.stringify(s).replace(/"/g,'&quot;')})">👁 Ver</button>
+            <button class="btn btn-ghost btn-sm"
+              onclick="compararComAtual(${JSON.stringify(s).replace(/"/g,'&quot;')})">⟳ Comparar</button>
+          </div>
+        </td>
+      </tr>`).join('')}
+      </tbody></table></div>`;
+  } catch(e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--red);font-size:12px;">
+      Tabela de snapshots indisponível. Execute o SQL no console do Supabase.</div>`;
+  }
+}
+
+function copiarHash(hash) {
+  if (!hash) return;
+  navigator.clipboard.writeText(hash).then(() => toast('Hash copiado!', 'success'));
+}
+
+function compararComAtual(snap) {
+  if (typeof snap === 'string') snap = JSON.parse(snap.replace(/&quot;/g, '"'));
+  const proc = _processoAtual;
+  if (!proc) return;
+  let snapDados = {};
+  try { snapDados = JSON.parse(snap.snapshot_json || '{}'); } catch(e) {}
+  const snapProc = snapDados.processo || snapDados;
+  const camposChave = ['objeto','tipo_contratacao','etapa_atual','status','valor_estimado','setor_requisitante'];
+  const diffs = camposChave.map(campo => ({
+    campo, snap: String(snapProc[campo] ?? ''), atual: String(proc[campo] ?? ''),
+    changed: String(snapProc[campo] ?? '') !== String(proc[campo] ?? ''),
+  }));
+  const changedCount = diffs.filter(d => d.changed).length;
+  const renderColuna = (titulo, cor, getter) => `<div class="diff-col">
+    <div class="diff-col-head" style="background:${cor}11;color:${cor};">${titulo}</div>
+    ${diffs.map(d => `<div class="diff-row ${d.changed?'changed':''}">
+      <span class="diff-key">${d.campo}</span>
+      <span class="diff-val" style="${d.changed?'color:var(--gold);':''}">${(getter(d)||'—').toString().slice(0,55)}</span>
+    </div>`).join('')}</div>`;
+  document.getElementById('modal-comparar-titulo').textContent =
+    `⟳ ${snap.document_type} v${snap.version} vs. Estado Atual`;
+  document.getElementById('modal-comparar-desc').textContent =
+    `${changedCount} campo(s) divergente(s) · Snapshot de ${formatDataForense(snap.generated_at)}`;
+  document.getElementById('modal-comparar-content').innerHTML =
+    `<div class="diff-panel">` +
+    renderColuna(`📸 Versão v${snap.version}`, 'var(--purple)', d => d.snap) +
+    renderColuna('📋 Estado Atual', 'var(--green)', d => d.atual) +
+    `</div>`;
+  document.getElementById('modal-comparar').classList.add('show');
+}
+
+// Override switchProcTab para usar central de versionamento
+const _switchProcTabOrig = switchProcTab;
+function switchProcTab(tab) {
+  ['mov','snaps','audit'].forEach(t => {
+    document.getElementById('tab-' + t)?.classList.toggle('active', t === tab);
+    const cont = document.getElementById('tab-content-' + t);
+    if (cont) cont.style.display = t === tab ? '' : 'none';
+  });
+  const proc = _processoAtual;
+  if (!proc) return;
+  if (tab === 'snaps') carregarCentralVersionamento(proc.id);
+  if (tab === 'audit') carregarAuditLog(proc.id);
+  if (tab === 'mov')   renderLinhaDoTempoForense(proc, proc.movs || []);
+}
+
+// ══════════════════════════════════════════════════════════
+// [CONFIANÇA] FUNCIONALIDADE 3 — Status de Integridade
+// ══════════════════════════════════════════════════════════
+
+async function renderStatusIntegridade(proc) {
+  const bar = document.getElementById('proc-integrity-bar');
+  if (!bar) return;
+  const pref = _perfil?._prefeitura || {};
+  const etapas = ETAPAS[proc.tipo_contratacao] || ETAPAS.aquisicao_bens;
+  const icones = { ok:'🟢', warn:'🟡', err:'🔴', neutral:'⚪' };
+  const indicadores = [];
+
+  // 1 + 2: Snapshot + Hash (uma única query leve)
+  let ultimoSnap = proc._snapshots?.[0] || null;
+  if (!ultimoSnap) {
+    try {
+      const { data } = await sb.from('process_snapshots')
+        .select('snapshot_hash,snapshot_json,generated_at,version,document_type')
+        .eq('process_id', proc.id).order('generated_at',{ascending:false}).limit(1);
+      ultimoSnap = data?.[0] || null;
+      if (!proc._snapshots) proc._snapshots = data || [];
+    } catch(e) {}
+  }
+
+  if (ultimoSnap?.snapshot_hash) {
+    indicadores.push({ estado:'ok', texto:`Snapshot v${ultimoSnap.version}`,
+      tip:`${ultimoSnap.document_type} · ${formatDataForense(ultimoSnap.generated_at)}` });
+    try {
+      const calc = (await gerarHashSHA256(ultimoSnap.snapshot_json||'')).toUpperCase();
+      const salvo = (ultimoSnap.snapshot_hash||'').toUpperCase();
+      const ok = calc === salvo;
+      indicadores.push({ estado: ok?'ok':'err',
+        texto: ok ? 'Hash íntegro' : 'Hash divergente',
+        tip: ok ? `SHA-256: ${formatarHash(salvo).slice(0,19)}…`
+                : 'Hash salvo difere do calculado — possível adulteração' });
+    } catch(e) { indicadores.push({estado:'neutral',texto:'Hash (erro)',tip:e.message}); }
+  } else {
+    indicadores.push({estado:'neutral',texto:'Sem snapshot',tip:'Nenhum snapshot registrado ainda.'});
+  }
+
+  // 3: Cadastro institucional
+  const faltando = ['nome','cnpj','endereco','brasao_base64','prefeito'].filter(c => !pref[c]);
+  indicadores.push(faltando.length === 0
+    ? {estado:'ok',  texto:'Cadastro completo',  tip:'Todos os dados institucionais preenchidos.'}
+    : faltando.some(f => f==='nome'||f==='cnpj')
+      ? {estado:'err', texto:'Cadastro incompleto', tip:`Obrigatórios ausentes: ${faltando.join(', ')}`}
+      : {estado:'warn',texto:'Cadastro parcial',    tip:`Recomendados ausentes: ${faltando.join(', ')}`});
+
+  // 4: Assinatura (sempre pendente por ora)
+  indicadores.push({estado:'err',texto:'Sem assinatura',tip:'Assinatura eletrônica: em implementação.'});
+
+  // 5: Parecer jurídico
+  const etapaParecer = etapas.find(e => e.nome === 'Parecer Jurídico');
+  const temParecer = proc.docs?.some(d => d.tipo === 'PARECER') || (etapaParecer && proc.etapa_atual > etapaParecer.n);
+  indicadores.push(!etapaParecer
+    ? {estado:'neutral',texto:'Sem parecer',tip:'Processo não exige Parecer Jurídico.'}
+    : temParecer
+      ? {estado:'ok',  texto:'Parecer emitido', tip:'Etapa de Parecer Jurídico concluída.'}
+      : {estado:'warn',texto:'Parecer pendente',tip:`Etapa ${proc.etapa_atual}/${etapas.length} — parecer ainda não emitido.`});
+
+  bar.innerHTML = indicadores.map(i =>
+    `<div class="integrity-pill ${i.estado}">${icones[i.estado]} ${i.texto}<span class="tip">${i.tip}</span></div>`
+  ).join('');
+  bar.style.display = 'flex';
+}
+
+// Hook em abrirProcesso para renderizar integridade
+const _abrirProcessoConfianca = abrirProcesso;
+async function abrirProcesso(id) {
+  await _abrirProcessoConfianca(id);
+  if (_processoAtual) renderStatusIntegridade(_processoAtual).catch(() => {});
+}
 
 // ══════════════════════════════════════════════════════════
 // [SOBREVIVÊNCIA] FUNÇÃO 1 — Health Check do Sistema
@@ -7958,6 +8290,24 @@ async function checklist_forcePDF() {
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-item-dfd')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarItemDFD()">Salvar Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ [CONFIANÇA] MODAL: COMPARAR VERSÕES ══ -->
+<div class="modal-overlay" id="modal-comparar">
+  <div class="modal" style="max-width:800px;max-height:90vh;">
+    <div class="modal-header">
+      <div><h3 id="modal-comparar-titulo">⟳ Comparar com Versão Atual</h3>
+        <p id="modal-comparar-desc">Campos alterados destacados em amarelo</p></div>
+      <button class="modal-close" onclick="fecharModal('modal-comparar')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;">
+      <div class="diff-panel" id="modal-comparar-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-comparar')">Fechar</button>
     </div>
   </div>
 </div>
