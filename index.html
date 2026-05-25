@@ -884,9 +884,14 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
       <div class="admin-brand-text">Licite.ai</div>
       <span id="admin-pref-nome" style="font-size:13px;color:var(--text2);font-weight:500;">· Administrador</span>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
-      <svg width="14" height="14"><use href="#ic-logout"/></svg> Sair
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="mostrarDashboardAdmin()" title="Ver processos da prefeitura">
+        📋 Ver Processos
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
+        <svg width="14" height="14"><use href="#ic-logout"/></svg> Sair
+      </button>
+    </div>
   </header>
   <div class="admin-layout">
     <aside class="admin-sidebar">
@@ -1510,11 +1515,7 @@ function mostrarApp() {
 
   // ── Nível 2: Admin da Prefeitura ──
   if (role === 'admin') {
-    document.getElementById('view-admin-pref').classList.add('active');
-    const prefNome = _perfil?._prefeitura?.nome || 'Prefeitura';
-    document.getElementById('admin-pref-nome').textContent = '· ' + prefNome;
-    carregarUsuariosAdmin();
-    carregarProcessosAdmin();
+    mostrarPainelAdmin();
     return;
   }
 
@@ -1533,6 +1534,41 @@ function mostrarApp() {
   const h = new Date().getHours();
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
+  carregarDados();
+}
+
+function mostrarPainelAdmin() {
+  ['view-login','view-app','view-superadmin','view-admin-pref'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  document.getElementById('view-admin-pref').classList.add('active');
+  const prefNome = _perfil?._prefeitura?.nome || 'Prefeitura';
+  document.getElementById('admin-pref-nome').textContent = '· ' + prefNome;
+  carregarUsuariosAdmin();
+  carregarProcessosAdmin();
+}
+
+function mostrarDashboardAdmin() {
+  ['view-login','view-superadmin','view-admin-pref'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  document.getElementById('view-app').classList.add('active');
+  const nome = _perfil?.nome || _user?.email || '?';
+  const setor = _perfil?.setor || '—';
+  const letra = nome[0].toUpperCase();
+  const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
+  const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
+  document.getElementById('user-avatar').textContent = letra;
+  document.getElementById('user-avatar').style.background = bg;
+  document.getElementById('user-avatar').style.color = fg;
+  document.getElementById('user-name').textContent = nome;
+  document.getElementById('user-setor').textContent = setor;
+  const h = new Date().getHours();
+  const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
+  // Show admin button if user is admin
+  const btnAdmin = document.getElementById('btn-painel-admin');
+  if (btnAdmin) btnAdmin.style.display = (_perfil?.role === 'admin') ? 'inline-flex' : 'none';
   carregarDados();
 }
 
