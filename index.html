@@ -781,6 +781,204 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
   </div>
 </div>
 
+<!-- ══ VIEW: SUPER ADMIN (Nível 1 — Carlos Eduardo) ══ -->
+<div id="view-superadmin" class="view">
+  <div class="admin-header">
+    <div class="brand"><div class="app-logo" style="width:28px;height:28px;font-size:13px;">L</div> Licite.ai <span>· Super Admin</span></div>
+    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">Sair</button>
+  </div>
+  <div class="admin-body">
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:20px;font-weight:700;">Painel de Administração</h2>
+      <p style="color:var(--text2);font-size:13px;">Gerencie as prefeituras e planos da plataforma.</p>
+    </div>
+    <div class="admin-tabs">
+      <div class="admin-tab active" onclick="adminTab('prefeituras')">🏛️ Prefeituras</div>
+      <div class="admin-tab" onclick="adminTab('financeiro')">💰 Financeiro</div>
+    </div>
+
+    <!-- PREFEITURAS -->
+    <div class="admin-section active" id="admin-sec-prefeituras">
+      <div class="admin-toolbar">
+        <div style="font-size:13px;color:var(--text2);" id="sa-pref-count">Carregando...</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalPrefeitura()">+ Nova Prefeitura</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr>
+            <th>Prefeitura</th><th>Município/UF</th><th>Plano</th><th>Vencimento</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="sa-pref-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div class="admin-section" id="admin-sec-financeiro">
+      <div style="color:var(--text2);font-size:13px;padding:24px;text-align:center;">
+        Módulo financeiro em desenvolvimento. Em breve: controle de pagamentos, vencimentos e histórico.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VIEW: ADMIN DA PREFEITURA (Nível 2) ══ -->
+<div id="view-admin-pref" class="view">
+  <div class="admin-header">
+    <div class="brand"><div class="app-logo" style="width:28px;height:28px;font-size:13px;">L</div> Licite.ai <span id="admin-pref-nome">· Administrador</span></div>
+    <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">Sair</button>
+  </div>
+  <div class="admin-body">
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:20px;font-weight:700;">Administração da Prefeitura</h2>
+      <p style="color:var(--text2);font-size:13px;">Gerencie usuários e acompanhe os processos.</p>
+    </div>
+    <div class="admin-tabs">
+      <div class="admin-tab active" onclick="adminPrefTab('usuarios')">👥 Usuários</div>
+      <div class="admin-tab" onclick="adminPrefTab('processos')">📋 Processos</div>
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div class="admin-section active" id="ap-sec-usuarios">
+      <div class="admin-toolbar">
+        <div style="font-size:13px;color:var(--text2);" id="ap-user-count">Carregando...</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr>
+            <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="ap-users-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROCESSOS -->
+    <div class="admin-section" id="ap-sec-processos">
+      <div style="overflow-x:auto;margin-top:8px;">
+        <table class="admin-table">
+          <thead><tr>
+            <th>Protocolo</th><th>Objeto</th><th>Setor</th><th>Etapa</th><th>Status</th>
+          </tr></thead>
+          <tbody id="ap-proc-tbody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2);">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: NOVA PREFEITURA ══ -->
+<div class="modal-overlay" id="modal-prefeitura">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div><h3 id="modal-pref-titulo">Nova Prefeitura</h3><p>Cadastro de cliente na plataforma</p></div>
+      <button class="modal-close" onclick="fecharModal('modal-prefeitura')"><svg width="16" height="16"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pref-id">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Nome da Prefeitura <span class="req">*</span></label>
+          <input type="text" id="pref-nome" placeholder="Prefeitura Municipal de Nova Crixás">
+        </div>
+        <div class="form-field">
+          <label>Município <span class="req">*</span></label>
+          <input type="text" id="pref-municipio" placeholder="Nova Crixás">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>UF</label>
+          <input type="text" id="pref-uf" value="GO" maxlength="2" style="text-transform:uppercase;">
+        </div>
+        <div class="form-field">
+          <label>CNPJ</label>
+          <input type="text" id="pref-cnpj" placeholder="00.000.000/0001-00">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Plano</label>
+          <select id="pref-plano">
+            <option value="basico">Básico</option>
+            <option value="profissional" selected>Profissional</option>
+            <option value="municipal">Municipal</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Validade</label>
+          <input type="date" id="pref-validade">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <select id="pref-ativo">
+          <option value="true">✅ Ativo</option>
+          <option value="false">🔒 Bloqueado</option>
+        </select>
+      </div>
+      <div id="pref-erro" style="color:var(--red);font-size:12px;margin-top:8px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-prefeitura')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-pref" onclick="salvarPrefeitura()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: NOVO USUÁRIO (admin da prefeitura) ══ -->
+<div class="modal-overlay" id="modal-novo-usuario">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div><h3 id="modal-user-titulo">Novo Usuário</h3><p>Cadastrar acesso à plataforma</p></div>
+      <button class="modal-close" onclick="fecharModal('modal-novo-usuario')"><svg width="16" height="16"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="nu-id">
+      <div class="form-field">
+        <label>Nome completo <span class="req">*</span></label>
+        <input type="text" id="nu-nome" placeholder="Nome do servidor">
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>E-mail <span class="req">*</span></label>
+          <input type="email" id="nu-email" placeholder="servidor@prefeitura.gov.br">
+        </div>
+        <div class="form-field">
+          <label>Senha <span class="req">*</span></label>
+          <input type="password" id="nu-senha" placeholder="Mínimo 8 caracteres">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Perfil <span class="req">*</span></label>
+          <select id="nu-perfil">
+            <option value="requisitante">Requisitante</option>
+            <option value="protocolo">Protocolo</option>
+            <option value="compras">Compras</option>
+            <option value="contabilidade">Contabilidade</option>
+            <option value="secretaria">Secretaria</option>
+            <option value="licitacao">Licitação</option>
+            <option value="juridico">Jurídico</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Setor</label>
+          <input type="text" id="nu-setor" placeholder="Ex: Secretaria de Saúde">
+        </div>
+      </div>
+      <div id="nu-erro" style="color:var(--red);font-size:12px;margin-top:8px;display:none;"></div>
+      <div id="nu-ok" style="color:var(--green);font-size:12px;margin-top:8px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-novo-usuario')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-usuario" onclick="salvarNovoUsuario()">Criar usuário</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL: NOVO PROCESSO ══ -->
 <div class="modal-overlay" id="modal-novo">
   <div class="modal">
@@ -1163,33 +1361,53 @@ async function carregarPerfil(user, usuario = null) {
 }
 
 function mostrarApp() {
-  document.getElementById('view-login').classList.remove('active');
-  document.getElementById('view-app').classList.add('active');
+  // Hide all views
+  ['view-login','view-app','view-superadmin','view-admin-pref'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
 
-  // Preencher header
+  const role = _perfil?.role || 'usuario';
+
+  // ── Nível 1: Super Admin (Carlos Eduardo) ──
+  if (role === 'super_admin') {
+    document.getElementById('view-superadmin').classList.add('active');
+    carregarPrefeiturasSA();
+    return;
+  }
+
+  // ── Nível 2: Admin da Prefeitura ──
+  if (role === 'admin') {
+    document.getElementById('view-admin-pref').classList.add('active');
+    const prefNome = _perfil?._prefeitura?.nome || 'Prefeitura';
+    document.getElementById('admin-pref-nome').textContent = '· ' + prefNome;
+    carregarUsuariosAdmin();
+    carregarProcessosAdmin();
+    return;
+  }
+
+  // ── Nível 3: Usuário comum ──
+  document.getElementById('view-app').classList.add('active');
   const nome = _perfil?.nome || _user?.email || '?';
-  const setor = _perfil?.setor || _perfil?.setor || '—';
+  const setor = _perfil?.setor || '—';
   const letra = nome[0].toUpperCase();
   const cores = [['#1AB8FF','rgba(26,184,255,.15)'],['#41F36A','rgba(65,243,106,.15)'],['#A87EFF','rgba(168,126,255,.15)'],['#FFC857','rgba(255,200,87,.15)'],['#FF8C42','rgba(255,140,66,.15)']];
   const [fg, bg] = cores[letra.charCodeAt(0) % cores.length];
-
   document.getElementById('user-avatar').textContent = letra;
   document.getElementById('user-avatar').style.background = bg;
   document.getElementById('user-avatar').style.color = fg;
   document.getElementById('user-name').textContent = nome;
   document.getElementById('user-setor').textContent = setor;
-
-  // Saudação
   const h = new Date().getHours();
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
-
   carregarDados();
 }
 
 async function fazerLogout() {
   await sb.auth.signOut();
-  document.getElementById('view-app').classList.remove('active');
+  ['view-app','view-superadmin','view-admin-pref'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
   document.getElementById('view-login').classList.add('active');
   _user = null; _perfil = null; _processos = [];
 }
@@ -3222,6 +3440,230 @@ function salvarContato() {
   if (nome && tel)   localStorage.setItem('licite_tel_' + nome, tel);
 }
 
+
+
+// ══════════════════════════════════════════════════════════
+//  SUPER ADMIN — Nível 1
+// ══════════════════════════════════════════════════════════
+let _saPrefeituras = [];
+
+function adminTab(tab) {
+  document.querySelectorAll('#view-superadmin .admin-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['prefeituras','financeiro'][i] === tab);
+  });
+  document.querySelectorAll('#view-superadmin .admin-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('admin-sec-' + tab)?.classList.add('active');
+}
+
+async function carregarPrefeiturasSA() {
+  const { data, error } = await sb.from('prefeituras').select('*').order('municipio');
+  if (error) { console.error(error); return; }
+  _saPrefeituras = data || [];
+  document.getElementById('sa-pref-count').textContent = _saPrefeituras.length + ' prefeitura(s) cadastrada(s)';
+  renderTabelaPrefeituras();
+}
+
+function renderTabelaPrefeituras() {
+  const tbody = document.getElementById('sa-pref-tbody');
+  if (!_saPrefeituras.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Nenhuma prefeitura cadastrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _saPrefeituras.map(p => {
+    const venc = p.validade ? new Date(p.validade).toLocaleDateString('pt-BR') : '—';
+    const vencido = p.validade && new Date(p.validade) < new Date();
+    const statusClass = p.ativo && !vencido ? 'ativo' : 'inativo';
+    const statusLabel = p.ativo && !vencido ? '✅ Ativo' : vencido ? '⚠️ Vencido' : '🔒 Bloqueado';
+    const planoClass = p.plano || 'basico';
+    return `<tr>
+      <td><strong>${p.nome}</strong></td>
+      <td>${p.municipio}/${p.uf || 'GO'}</td>
+      <td><span class="badge-plano ${planoClass}">${(p.plano||'básico').charAt(0).toUpperCase()+(p.plano||'básico').slice(1)}</span></td>
+      <td style="color:${vencido?'var(--red)':'var(--text2)'};">${venc}</td>
+      <td><span class="badge-status ${statusClass}">${statusLabel}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="editarPrefeitura('${p.id}')">✏️ Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="togglePrefeitura('${p.id}',${!p.ativo})" style="color:${p.ativo?'var(--red)':'var(--green)'};">
+          ${p.ativo ? '🔒 Bloquear' : '✅ Ativar'}
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalPrefeitura() {
+  document.getElementById('pref-id').value = '';
+  document.getElementById('pref-nome').value = '';
+  document.getElementById('pref-municipio').value = '';
+  document.getElementById('pref-uf').value = 'GO';
+  document.getElementById('pref-cnpj').value = '';
+  document.getElementById('pref-plano').value = 'profissional';
+  document.getElementById('pref-validade').value = '';
+  document.getElementById('pref-ativo').value = 'true';
+  document.getElementById('pref-erro').style.display = 'none';
+  document.getElementById('modal-pref-titulo').textContent = 'Nova Prefeitura';
+  document.getElementById('modal-prefeitura').classList.add('show');
+}
+
+function editarPrefeitura(id) {
+  const p = _saPrefeituras.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('pref-id').value = p.id;
+  document.getElementById('pref-nome').value = p.nome;
+  document.getElementById('pref-municipio').value = p.municipio;
+  document.getElementById('pref-uf').value = p.uf || 'GO';
+  document.getElementById('pref-cnpj').value = p.cnpj || '';
+  document.getElementById('pref-plano').value = p.plano || 'profissional';
+  document.getElementById('pref-validade').value = p.validade ? p.validade.slice(0,10) : '';
+  document.getElementById('pref-ativo').value = String(p.ativo !== false);
+  document.getElementById('pref-erro').style.display = 'none';
+  document.getElementById('modal-pref-titulo').textContent = 'Editar Prefeitura';
+  document.getElementById('modal-prefeitura').classList.add('show');
+}
+
+async function salvarPrefeitura() {
+  const id = document.getElementById('pref-id').value;
+  const nome = document.getElementById('pref-nome').value.trim();
+  const municipio = document.getElementById('pref-municipio').value.trim();
+  const erroEl = document.getElementById('pref-erro');
+  if (!nome || !municipio) { erroEl.textContent = 'Nome e município são obrigatórios.'; erroEl.style.display = 'block'; return; }
+  const btn = document.getElementById('btn-salvar-pref');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const payload = {
+    nome, municipio,
+    uf: document.getElementById('pref-uf').value.toUpperCase(),
+    cnpj: document.getElementById('pref-cnpj').value.trim() || null,
+    plano: document.getElementById('pref-plano').value,
+    validade: document.getElementById('pref-validade').value || null,
+    ativo: document.getElementById('pref-ativo').value === 'true'
+  };
+  const { error } = id
+    ? await sb.from('prefeituras').update(payload).eq('id', id)
+    : await sb.from('prefeituras').insert(payload);
+  btn.disabled = false; btn.textContent = 'Salvar';
+  if (error) { erroEl.textContent = error.message; erroEl.style.display = 'block'; return; }
+  fecharModal('modal-prefeitura');
+  toast(id ? 'Prefeitura atualizada!' : 'Prefeitura criada!', 'success');
+  carregarPrefeiturasSA();
+}
+
+async function togglePrefeitura(id, ativo) {
+  const { error } = await sb.from('prefeituras').update({ ativo }).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast(ativo ? 'Prefeitura ativada!' : 'Prefeitura bloqueada!', ativo ? 'success' : 'info');
+  carregarPrefeiturasSA();
+}
+
+// ══════════════════════════════════════════════════════════
+//  ADMIN DA PREFEITURA — Nível 2
+// ══════════════════════════════════════════════════════════
+let _apUsuarios = [];
+
+function adminPrefTab(tab) {
+  document.querySelectorAll('#view-admin-pref .admin-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['usuarios','processos'][i] === tab);
+  });
+  document.querySelectorAll('#view-admin-pref .admin-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('ap-sec-' + tab)?.classList.add('active');
+}
+
+const PERFIL_LABELS = {
+  requisitante:'Requisitante', protocolo:'Protocolo', compras:'Compras',
+  contabilidade:'Contabilidade', secretaria:'Secretaria', licitacao:'Licitação',
+  juridico:'Jurídico', admin:'Administrador', pregoeiro:'Pregoeiro'
+};
+
+async function carregarUsuariosAdmin() {
+  const prefId = _perfil?.prefeitura_id;
+  if (!prefId) return;
+  const { data } = await sb.from('usuarios').select('*').eq('prefeitura_id', prefId).order('nome');
+  _apUsuarios = data || [];
+  document.getElementById('ap-user-count').textContent = _apUsuarios.length + ' usuário(s)';
+  const tbody = document.getElementById('ap-users-tbody');
+  if (!_apUsuarios.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Nenhum usuário cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _apUsuarios.map(u => `<tr>
+    <td><strong>${u.nome || '—'}</strong></td>
+    <td style="color:var(--text2);">${u.email}</td>
+    <td><span class="badge-perfil">${PERFIL_LABELS[u.perfil] || u.perfil || '—'}</span></td>
+    <td style="color:var(--text2);">${u.setor || '—'}</td>
+    <td><span class="badge-status ${u.ativo !== false ? 'ativo' : 'inativo'}">${u.ativo !== false ? 'Ativo' : 'Inativo'}</span></td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="toggleUsuarioAtivo('${u.id}',${!(u.ativo !== false)})" style="color:${u.ativo!==false?'var(--red)':'var(--green)'};">
+        ${u.ativo !== false ? 'Desativar' : 'Ativar'}
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+async function carregarProcessosAdmin() {
+  const prefId = _perfil?.prefeitura_id;
+  if (!prefId) return;
+  const { data } = await sb.from('processos').select('*').eq('prefeitura_id', prefId).order('criado_em', { ascending: false });
+  const tbody = document.getElementById('ap-proc-tbody');
+  const ETAPA_LABELS = ['','DFD','Protocolo','ETP + TR','Pesquisa de Preços','Dotação Orç.','Autorização','Minuta Edital','Parecer Jurídico','Edital','Publicação'];
+  if (!data?.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2);">Nenhum processo encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(p => `<tr>
+    <td><strong>${p.numero_protocolo}</strong></td>
+    <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.objeto || '—'}</td>
+    <td style="color:var(--text2);">${p.setor_requisitante || '—'}</td>
+    <td><span class="badge-perfil">${ETAPA_LABELS[p.etapa_atual] || 'Etapa ' + p.etapa_atual}</span></td>
+    <td><span class="badge-status ${p.status === 'concluido' ? 'ativo' : 'inativo'}">${p.status || '—'}</span></td>
+  </tr>`).join('');
+}
+
+function abrirModalNovoUsuario() {
+  ['nu-id','nu-nome','nu-email','nu-senha','nu-setor'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('nu-perfil').value = 'requisitante';
+  document.getElementById('nu-erro').style.display = 'none';
+  document.getElementById('nu-ok').style.display = 'none';
+  document.getElementById('modal-user-titulo').textContent = 'Novo Usuário';
+  document.getElementById('modal-novo-usuario').classList.add('show');
+}
+
+async function salvarNovoUsuario() {
+  const nome  = document.getElementById('nu-nome').value.trim();
+  const email = document.getElementById('nu-email').value.trim();
+  const senha = document.getElementById('nu-senha').value;
+  const perfil = document.getElementById('nu-perfil').value;
+  const setor = document.getElementById('nu-setor').value.trim();
+  const erroEl = document.getElementById('nu-erro');
+  const okEl   = document.getElementById('nu-ok');
+  const btn    = document.getElementById('btn-salvar-usuario');
+  erroEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!nome || !email || !senha) { erroEl.textContent = 'Nome, e-mail e senha são obrigatórios.'; erroEl.style.display = 'block'; return; }
+  if (senha.length < 8) { erroEl.textContent = 'A senha deve ter ao menos 8 caracteres.'; erroEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Criando...';
+  // Create auth user
+  const { data: authData, error: authError } = await sb.auth.admin
+    ? await sb.auth.admin.createUser({ email, password: senha, email_confirm: true })
+    : await sb.auth.signUp({ email, password: senha });
+  if (authError) { erroEl.textContent = 'Erro Auth: ' + authError.message; erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Criar usuário'; return; }
+  const uid = authData?.user?.id;
+  if (uid) {
+    await sb.from('usuarios').insert({
+      id: uid, nome, email, perfil, setor,
+      prefeitura_id: _perfil?.prefeitura_id,
+      role: perfil === 'admin' ? 'admin' : 'usuario',
+      ativo: true
+    });
+  }
+  btn.disabled = false; btn.textContent = 'Criar usuário';
+  okEl.textContent = 'Usuário criado! Credenciais: ' + email + ' / ' + senha;
+  okEl.style.display = 'block';
+  carregarUsuariosAdmin();
+}
+
+async function toggleUsuarioAtivo(id, ativo) {
+  await sb.from('usuarios').update({ ativo }).eq('id', id);
+  toast(ativo ? 'Usuário ativado' : 'Usuário desativado', ativo ? 'success' : 'info');
+  carregarUsuariosAdmin();
+}
 
 
 </script>
