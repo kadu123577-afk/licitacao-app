@@ -1594,16 +1594,22 @@ function mostrarDashboardAdmin() {
 
 async function carregarTodosProcessosAdmin() {
   if (!_perfil?.prefeitura_id) return;
-  // Admin vê TODOS os processos da prefeitura, não só os seus
-  const { data, error } = await sb
-    .from('processos')
-    .select('*')
-    .eq('prefeitura_id', _perfil.prefeitura_id)
-    .order('criado_em', { ascending: false });
-  if (error) { console.error(error); carregarDados(); return; }
-  _processos = data || [];
-  renderProcessos();
-  renderDashboardStats();
+  try {
+    const { data, error } = await sb
+      .from('processos')
+      .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
+      .eq('prefeitura_id', _perfil.prefeitura_id)
+      .order('criado_em', { ascending: false });
+    if (error) throw error;
+    _processos = data || [];
+  } catch(e) {
+    console.error('Erro ao carregar processos admin:', e);
+    _processos = [];
+  }
+  const navEl = document.getElementById('nav-count-proc');
+  if (navEl) navEl.textContent = _processos.length || '';
+  renderDashboard();
+  renderTabelaProcessos();
 }
 
 async function fazerLogout() {
