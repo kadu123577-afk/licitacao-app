@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Licite.ai — Gestão Licitatória</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2341F36A'/><text x='50%25' y='50%25' font-family='Arial' font-weight='800' font-size='18' fill='%23000' dominant-baseline='middle' text-anchor='middle'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -555,7 +556,6 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
   .proc-layout{grid-template-columns:1fr;}
 }
 </style>
-<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 </head>
 <body>
 
@@ -622,8 +622,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
           <div class="user-setor" id="user-setor">—</div>
         </div>
       </div>
-      <button class="btn btn-secondary btn-sm" id="btn-painel-admin" onclick="mostrarPainelAdmin()" style="display:none;">
-        ⚙️ Admin
+      <button class="btn btn-primary btn-sm" id="btn-painel-admin" onclick="mostrarPainelAdmin()" style="display:none;background:rgba(255,200,87,.15);border:1px solid rgba(255,200,87,.3);color:#FFC857;">
+        ⚙️ Painel Admin
       </button>
       <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
         <svg><use href="#ic-logout"/></svg> Sair
@@ -1546,7 +1546,9 @@ function mostrarPainelAdmin() {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById('view-admin-pref').classList.add('active');
-  const prefNome = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace('Prefeitura Municipal de ','').replace('Prefeitura de ','') || 'Prefeitura';
+  const prefNome = _perfil?._prefeitura?.municipio
+    || (_perfil?._prefeitura?.nome || '').replace(/^Prefeitura Municipal (de |do |da )?/i,'').replace(/^Prefeitura (de |do |da )?/i,'').trim()
+    || 'Prefeitura';
   document.getElementById('admin-pref-nome').textContent = '· ' + prefNome;
   carregarUsuariosAdmin();
   carregarProcessosAdmin();
@@ -1617,22 +1619,51 @@ document.getElementById('login-senha').addEventListener('keydown', e => {
 //  DADOS
 // ══════════════════════════════════════════════════════════
 async function carregarDados() {
+  // Mostrar estado de carregamento temporário
+  ['s-ativos','s-minha-acao','s-devolvidos','s-concluidos'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
   await carregarProcessos();
   renderDashboard();
   renderTabelaProcessos();
 }
 
 async function carregarProcessos() {
-  if (!_perfil?.prefeitura_id) { _processos = []; return; }
+  if (!_perfil?.prefeitura_id) {
+    _processos = [];
+    renderEmptyStates();
+    return;
+  }
 
-  const { data, error } = await sb.from('processos')
-    .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
-    .eq('prefeitura_id', _perfil.prefeitura_id)
-    .order('atualizado_em', { ascending: false });
+  try {
+    const { data, error } = await sb.from('processos')
+      .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
+      .eq('prefeitura_id', _perfil.prefeitura_id)
+      .order('atualizado_em', { ascending: false });
 
-  if (error) { console.error(error); _processos = []; return; }
-  _processos = data || [];
-  document.getElementById('nav-count-proc').textContent = _processos.length;
+    if (error) throw error;
+    _processos = data || [];
+  } catch(e) {
+    console.error('Erro ao carregar processos:', e);
+    _processos = [];
+  }
+
+  const navEl = document.getElementById('nav-count-proc');
+  if (navEl) navEl.textContent = _processos.length || '';
+}
+
+function renderEmptyStates() {
+  ['s-ativos','s-minha-acao','s-devolvidos','s-concluidos'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '0';
+  });
+  const tbodyEl = document.getElementById('tbody-processos');
+  if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text2);">
+    <div style="font-size:32px;margin-bottom:8px;">📋</div>
+    <div style="font-weight:600;margin-bottom:4px;">Nenhum processo ainda</div>
+    <div style="font-size:13px;">Clique em <strong>+ Novo Processo</strong> para começar</div>
+  </td></tr>`;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1651,17 +1682,18 @@ function navigate(page) {
 //  DASHBOARD
 // ══════════════════════════════════════════════════════════
 function renderDashboard() {
-  const ativos   = _processos.filter(p => p.status === 'em_andamento').length;
+  if (_processos.length === 0) { renderEmptyStates(); return; }
+
+  const ativos    = _processos.filter(p => p.status === 'em_andamento').length;
   const devolvidos = _processos.filter(p => p.status === 'devolvido').length;
   const concluidos = _processos.filter(p => p.status === 'concluido').length;
+  const minhaAcao  = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
 
-  document.getElementById('s-ativos').textContent    = ativos;
-  document.getElementById('s-devolvidos').textContent = devolvidos;
-  document.getElementById('s-concluidos').textContent = concluidos;
-
-  // Minha ação (simplificado: todos em andamento são "minha ação" por ora)
-  const minhaAcao = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
-  document.getElementById('s-minha-acao').textContent = minhaAcao.length;
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('s-ativos', ativos);
+  set('s-devolvidos', devolvidos);
+  set('s-concluidos', concluidos);
+  set('s-minha-acao', minhaAcao.length);
 
   renderListaProcessos('dash-minha-acao-list', minhaAcao.slice(0, 3));
   renderListaProcessos('dash-recentes-list', _processos.slice(0, 5));
@@ -1669,6 +1701,11 @@ function renderDashboard() {
 
 function renderListaProcessos(containerId, lista) {
   const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!lista || lista.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px;">Nenhum processo no momento</div>';
+    return;
+  }
   if (!lista.length) {
     el.innerHTML = `<div class="empty" style="padding:30px;"><svg><use href="#ic-file"/></svg><h4>Nenhum processo</h4><p>Crie o primeiro processo acima</p></div>`;
     return;
@@ -2686,7 +2723,7 @@ function renderDFDView(dados) {
   </div>
   ${dados.hipotese ? `<div style="padding:10px;background:var(--gold-l);border-radius:var(--r-sm);border:1px solid rgba(255,200,87,.2);"><div style="font-size:11px;color:var(--gold);">Hipótese legal — Contratação Direta</div><div style="font-size:13px;margin-top:2px;">${dados.hipotese}</div></div>` : ''}
   <div style="margin-top:14px;display:flex;gap:8px;">
-    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar DOCX do DFD</button>
+    <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Gerar PDF do DFD</button>
   </div>`;
 }
 
@@ -3103,134 +3140,17 @@ RETORNE APENAS este JSON (sem markdown, sem backticks):
 async function gerarPDFDoc(tipo) {
   const proc = _processoAtual;
   if (!proc) return;
-  const docObj = proc.docs?.find(d => d.tipo === tipo);
-  const dados = docObj?.dados || {};
-  await gerarDOCX(tipo, dados, proc);
-}
+  const doc = proc.docs?.find(d => d.tipo === tipo);
+  const dados = doc?.dados || {};
 
-async function gerarDOCX(tipo, dados, proc) {
-  const D = window.docx;
-  if (!D) { toast('Biblioteca DOCX não carregada, tente recarregar a página', 'error'); return; }
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-          AlignmentType, BorderStyle, WidthType, ShadingType } = D;
+  toast('Gerando PDF...', 'info');
 
-  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
-  const municipio = dados.municipio || proc.municipio || _perfil?._prefeitura?.municipio || 'município';
-  const orgao = dados.unidade || proc.setor_requisitante || '—';
-  const responsavel = dados.responsavel || '—';
-  const cargo = dados.cargo || '—';
-  const objeto = dados.objeto || proc.objeto || '—';
-  const justificativa = dados.justificativa || '—';
-  const email = dados.email || '—';
-  const telefone = dados.telefone || '—';
-  const matricula = dados.matricula || '___________';
-  const valor = dados.valor ? 'R$ ' + parseFloat(String(dados.valor).replace(/\./g,'').replace(',','.')).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
-  const ano = new Date().getFullYear();
-  const pcaVal = dados.pca || 'na';
-  const pcaTexto = pcaVal === 'sim'
-    ? 'A presente contratação está prevista no Plano de Contratações Anual – PCA do exercício ' + ano + ', em conformidade com o art. 12, inciso VII, da Lei nº 14.133/2021.'
-    : pcaVal === 'nao'
-    ? 'A presente contratação não consta no Plano de Contratações Anual – PCA do exercício ' + ano + ', sendo necessária sua inclusão por meio de revisão ou aditamento, conforme faculdade prevista na Lei nº 14.133/2021.'
-    : 'Não foi adotado o Plano de Contratações Anual – PCA para o exercício ' + ano + ', conforme faculdade prevista no inciso VII do artigo 12 da Lei nº 14.133/2021, ficando a presente contratação dispensada de tal alinhamento.';
-
-  let itensArray = [];
-  try { itensArray = typeof dados.itens === 'string' ? JSON.parse(dados.itens) : (dados.itens || []); } catch(e) {}
-
-  const b1 = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
-  const borders = { top: b1, bottom: b1, left: b1, right: b1 };
-  const tnr = (text, opts={}) => new TextRun({ text, font: 'Times New Roman', size: 24, ...opts });
-  const tnrSm = (text, opts={}) => new TextRun({ text, font: 'Times New Roman', size: 20, ...opts });
-  const para = (text, align) => new Paragraph({
-    alignment: align || AlignmentType.JUSTIFIED,
-    spacing: { before: 0, after: 120 },
-    children: [tnr(text)]
-  });
-  const secao = (num, text) => new Paragraph({
-    spacing: { before: 240, after: 100 },
-    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
-    children: [tnr(num + '. ' + text.toUpperCase(), { bold: true })]
-  });
-  const vazio = () => new Paragraph({ spacing: { before: 100, after: 100 }, children: [new TextRun('')] });
-  const cell = (children, width, shade) => new TableCell({
-    borders, width: { size: width, type: WidthType.DXA },
-    shading: shade ? { fill: shade, type: ShadingType.CLEAR } : undefined,
-    margins: { top: 80, bottom: 80, left: 100, right: 100 },
-    children
-  });
-
-  // Header table
-  const tId = new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [9360], rows: [
-    new TableRow({ children: [cell([new Paragraph({ children: [tnr('Órgão: ', {bold:true}), tnr(orgao)] })], 9360)] }),
-    new TableRow({ children: [cell([new Paragraph({ children: [tnr('Setor Requisitante: ', {bold:true}), tnr(orgao)] })], 9360)] }),
-    new TableRow({ children: [cell([new Paragraph({ children: [tnr('Responsável: ', {bold:true}), tnr(responsavel), tnr('     Matrícula: ', {bold:true}), tnr(matricula)] })], 9360)] }),
-    new TableRow({ children: [cell([new Paragraph({ children: [tnr('E-mail: ', {bold:true}), tnr(email), tnr('     Telefone: ', {bold:true}), tnr(telefone)] })], 9360)] }),
-  ]});
-
-  const tTitulo = new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [9360], rows: [
-    new TableRow({ children: [cell([new Paragraph({ alignment: AlignmentType.CENTER, children: [tnr('DOCUMENTO DE FORMALIZAÇÃO DE DEMANDA – DFD', {bold:true})] })], 9360)] })
-  ]});
-
-  const children = [
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 60 }, children: [tnr('PREFEITURA MUNICIPAL', {bold:true, size:28})] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 60 }, children: [tnr('Documento de Formalização de Demanda', {bold:true, size:24})] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 200 }, children: [tnr('Processo nº ' + proc.numero_protocolo + ' | Aquisição de Bens', {size:22})] }),
-    tId, vazio(), tTitulo, vazio(),
-    secao(1, 'Descrição do Objeto'), para(objeto),
-    secao(2, 'Justificativa da Necessidade'), para(justificativa),
-    secao(3, 'Descrição e Quantidades'),
-  ];
-
-  if (itensArray.length > 0) {
-    const hRow = new TableRow({ tableHeader: true, children: [
-      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm('Nº',{bold:true})]})], 500, 'E8E8E8'),
-      cell([new Paragraph({children:[tnrSm('Nome do Produto / Descrição',{bold:true})]})], 5860, 'E8E8E8'),
-      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm('Unid. Medida',{bold:true})]})], 1500, 'E8E8E8'),
-      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm('Quantidade',{bold:true})]})], 1500, 'E8E8E8'),
-    ]});
-    const dRows = itensArray.map((it,i) => new TableRow({ children: [
-      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm(String(i+1))]})], 500),
-      cell([new Paragraph({children:[tnrSm(it.descricao||it.nome||'—')]})], 5860),
-      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm(it.unidade||'UN')]})], 1500),
-      cell([new Paragraph({alignment:AlignmentType.CENTER, children:[tnrSm(String(it.quantidade||1))]})], 1500),
-    ]}));
-    children.push(new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[500,5860,1500,1500], rows:[hRow,...dRows] }));
-    children.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing:{before:60,after:60}, children:[new TextRun({text:'Total: '+itensArray.length+' item(s)', italics:true, size:20, font:'Times New Roman'})] }));
-  } else {
-    children.push(para('Conforme relação de itens constante nos autos do processo administrativo licitatório.'));
-  }
-
-  children.push(
-    secao(4, 'Valor Estimado Preliminar para a Contratação'), para(valor),
-    secao(5, 'Alinhamento ao Plano de Contratação Anual – PCA'), para(pcaTexto),
-    secao(6, 'Encaminhamento'),
-    para('Em conformidade com a legislação que rege o tema, especialmente a Lei nº 14.133/2021 e as normas expedidas pelo Tribunal de Contas dos Municípios do Estado de Goiás, encaminhe-se à autoridade competente para análise de conveniência e oportunidade para a presente contratação e demais providências cabíveis.'),
-    para(municipio + ', ' + hoje + '.'),
-    vazio(), vazio(), vazio(),
-    new Paragraph({ alignment: AlignmentType.CENTER, border: { top: { style: BorderStyle.SINGLE, size: 6, color: '000000' } }, spacing: { before: 0, after: 60 }, children: [tnr('')] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 60 }, children: [tnr(responsavel, {bold:true})] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 200 }, children: [tnr(cargo)] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 40 }, children: [new TextRun({text:'Gerado pelo Licite.ai | Processo '+proc.numero_protocolo+' | '+hoje, size:18, color:'666666', font:'Times New Roman'})] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new TextRun({text:'Documento gerado eletronicamente — autenticidade verificável em licitacao-app.vercel.app | ID: '+(proc.id?.slice(0,8).toUpperCase()||'—'), size:16, color:'888888', font:'Times New Roman'})] }),
-  );
-
-  const document = new Document({
-    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1134, bottom: 1440, left: 1701 } } }, children }]
-  });
-
-  toast('Gerando documento Word...', 'info');
-  try {
-    const blob = await Packer.toBlob(document);
-    const url = URL.createObjectURL(blob);
-    const link = window.document.createElement('a');
-    link.href = url;
-    link.download = 'DFD_' + (proc.numero_protocolo?.replace('/','_') || 'documento') + '.docx';
-    link.click();
-    URL.revokeObjectURL(url);
-    toast('✅ Documento Word baixado!', 'success');
-  } catch(e) {
-    console.error(e);
-    toast('Erro ao gerar DOCX: ' + e.message, 'error');
-  }
+  // Build HTML para impressão
+  const html = buildPDFHtml(tipo, dados, proc);
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 800);
 }
 
 function buildPDFHtml(tipo, dados, proc) {
@@ -3989,6 +3909,22 @@ const PERFIL_LABELS = {
   contabilidade:'Contabilidade', secretaria:'Secretaria', licitacao:'Licitação',
   juridico:'Jurídico', admin:'Administrador', pregoeiro:'Pregoeiro'
 };
+const PERFIL_COLORS = {
+  requisitante: 'background:rgba(26,184,255,.12);color:#1AB8FF;',
+  protocolo:    'background:rgba(255,200,87,.12);color:#FFC857;',
+  compras:      'background:rgba(65,243,106,.12);color:#41F36A;',
+  contabilidade:'background:rgba(168,126,255,.12);color:#A87EFF;',
+  secretaria:   'background:rgba(255,140,66,.12);color:#FF8C42;',
+  licitacao:    'background:rgba(26,184,255,.12);color:#1AB8FF;',
+  juridico:     'background:rgba(255,92,106,.12);color:#FF5C6A;',
+  admin:        'background:rgba(255,200,87,.12);color:#FFC857;',
+  pregoeiro:    'background:rgba(65,243,106,.12);color:#41F36A;',
+};
+function perfilBadge(perfil) {
+  const label = PERFIL_LABELS[perfil] || perfil || '—';
+  const style = PERFIL_COLORS[perfil] || 'background:var(--s2);color:var(--text2);';
+  return `<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;${style}">${label}</span>`;
+}
 
 async function carregarUsuariosAdmin() {
   const prefId = _perfil?.prefeitura_id;
@@ -4004,7 +3940,7 @@ async function carregarUsuariosAdmin() {
   tbody.innerHTML = _apUsuarios.map(u => `<tr>
     <td><strong>${u.nome || '—'}</strong></td>
     <td style="color:var(--text2);">${u.email}</td>
-    <td><span class="badge-perfil">${PERFIL_LABELS[u.perfil] || u.perfil || '—'}</span></td>
+    <td>${perfilBadge(u.perfil)}</td>
     <td style="color:var(--text2);">${u.setor || '—'}</td>
     <td><span class="badge-status ${u.ativo !== false ? 'ativo' : 'inativo'}">${u.ativo !== false ? 'Ativo' : 'Inativo'}</span></td>
     <td style="text-align:right;">
@@ -4094,7 +4030,9 @@ async function salvarNovoUsuario() {
     erroEl.style.display = 'block'; return;
   }
 
-  okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha;
+  const credText = 'E-mail: ' + email + '\nSenha: ' + senha + '\nURL: licitacao-app.vercel.app';
+  okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha +
+    '<br><button onclick="navigator.clipboard.writeText(\`' + credText.replace(/`/g,"'") + '\`).then(()=>toast('Credenciais copiadas!','success'))" class="btn btn-secondary btn-sm" style="margin-top:6px;">📋 Copiar credenciais</button>';
   okEl.style.display = 'block';
   toast('Usuário criado com sucesso!', 'success');
   carregarUsuariosAdmin();
