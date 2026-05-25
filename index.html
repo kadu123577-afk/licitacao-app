@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Licite.ai — Gestão Licitatória</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2341F36A'/><text x='50%25' y='50%25' font-family='Arial' font-weight='800' font-size='18' fill='%23000' dominant-baseline='middle' text-anchor='middle'>L</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -622,8 +621,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
           <div class="user-setor" id="user-setor">—</div>
         </div>
       </div>
-      <button class="btn btn-primary btn-sm" id="btn-painel-admin" onclick="mostrarPainelAdmin()" style="display:none;background:rgba(255,200,87,.15);border:1px solid rgba(255,200,87,.3);color:#FFC857;">
-        ⚙️ Painel Admin
+      <button class="btn btn-secondary btn-sm" id="btn-painel-admin" onclick="mostrarPainelAdmin()" style="display:none;">
+        ⚙️ Admin
       </button>
       <button class="btn btn-ghost btn-sm" onclick="fazerLogout()">
         <svg><use href="#ic-logout"/></svg> Sair
@@ -651,6 +650,10 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
         <div class="nav-item" id="nav-novo" onclick="abrirNovoProcesso()">
           <svg><use href="#ic-plus"/></svg> Novo Processo
         </div>
+      </div>
+      <div style="margin-top:auto;padding:12px 8px;border-top:1px solid rgba(255,255,255,.06);">
+        <div style="font-size:10px;color:var(--muted);text-align:center;">Licite.ai v0.9 beta</div>
+        <div style="font-size:10px;color:var(--muted);text-align:center;">Lei 14.133/2021</div>
       </div>
     </aside>
 
@@ -739,7 +742,11 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
           <div class="table-wrap">
             <table id="tabela-processos">
               <thead><tr><th>Protocolo</th><th>Objeto</th><th>Tipo</th><th>Etapa</th><th>Status</th><th>Responsável atual</th><th>Atualizado</th></tr></thead>
-              <tbody id="tbody-processos"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted);">Carregando...</td></tr></tbody>
+              <tbody id="tbody-processos"><tr><td colspan="6" style="text-align:center;padding:48px;color:var(--text2);">
+  <div style="font-size:32px;margin-bottom:8px;">📋</div>
+  <div style="font-weight:600;margin-bottom:4px;">Nenhum processo ainda</div>
+  <div style="font-size:13px;">Clique em <strong>+ Novo Processo</strong> para começar</div>
+</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -852,7 +859,11 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
                 <th>Prefeitura</th><th>Município/UF</th><th>Plano</th><th>Vencimento</th><th>Status</th><th style="text-align:right;">Ações</th>
               </tr></thead>
               <tbody id="sa-pref-tbody">
-                <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text2);">Carregando...</td></tr>
+                <tr id="ap-users-empty"><td colspan="6" style="text-align:center;padding:48px;color:var(--text2);">
+  <div style="font-size:28px;margin-bottom:8px;">👥</div>
+  <div style="font-weight:600;margin-bottom:4px;">Nenhum usuário cadastrado</div>
+  <div style="font-size:13px;">Clique em <strong>+ Novo Usuário</strong> para adicionar sua equipe</div>
+</td></tr>
               </tbody>
             </table>
           </div>
@@ -1122,8 +1133,8 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 </div>
 
 <!-- ══ MODAL: NOVO PROCESSO ══ -->
-<div class="modal-overlay" id="modal-novo">
-  <div class="modal">
+<div class="modal-overlay" id="modal-novo" onclick="if(event.target===this){}">
+  <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
       <div>
         <h3>Novo Processo Licitatório</h3>
@@ -1546,9 +1557,7 @@ function mostrarPainelAdmin() {
     document.getElementById(id)?.classList.remove('active');
   });
   document.getElementById('view-admin-pref').classList.add('active');
-  const prefNome = _perfil?._prefeitura?.municipio
-    || (_perfil?._prefeitura?.nome || '').replace(/^Prefeitura Municipal (de |do |da )?/i,'').replace(/^Prefeitura (de |do |da )?/i,'').trim()
-    || 'Prefeitura';
+  const prefNome = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace('Prefeitura Municipal de ','').replace('Prefeitura de ','') || 'Prefeitura';
   document.getElementById('admin-pref-nome').textContent = '· ' + prefNome;
   carregarUsuariosAdmin();
   carregarProcessosAdmin();
@@ -1619,56 +1628,32 @@ document.getElementById('login-senha').addEventListener('keydown', e => {
 //  DADOS
 // ══════════════════════════════════════════════════════════
 async function carregarDados() {
-  // Mostrar estado de carregamento temporário
-  ['s-ativos','s-minha-acao','s-devolvidos','s-concluidos'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = '—';
-  });
   await carregarProcessos();
   renderDashboard();
   renderTabelaProcessos();
 }
 
 async function carregarProcessos() {
-  if (!_perfil?.prefeitura_id) {
-    _processos = [];
-    renderEmptyStates();
-    return;
-  }
+  if (!_perfil?.prefeitura_id) { _processos = []; return; }
 
-  try {
-    const { data, error } = await sb.from('processos')
-      .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
-      .eq('prefeitura_id', _perfil.prefeitura_id)
-      .order('atualizado_em', { ascending: false });
+  const { data, error } = await sb.from('processos')
+    .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
+    .eq('prefeitura_id', _perfil.prefeitura_id)
+    .order('atualizado_em', { ascending: false });
 
-    if (error) throw error;
-    _processos = data || [];
-  } catch(e) {
-    console.error('Erro ao carregar processos:', e);
-    _processos = [];
-  }
-
-  const navEl = document.getElementById('nav-count-proc');
-  if (navEl) navEl.textContent = _processos.length || '';
-}
-
-function renderEmptyStates() {
-  ['s-ativos','s-minha-acao','s-devolvidos','s-concluidos'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = '0';
-  });
-  const tbodyEl = document.getElementById('tbody-processos');
-  if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text2);">
-    <div style="font-size:32px;margin-bottom:8px;">📋</div>
-    <div style="font-weight:600;margin-bottom:4px;">Nenhum processo ainda</div>
-    <div style="font-size:13px;">Clique em <strong>+ Novo Processo</strong> para começar</div>
-  </td></tr>`;
+  if (error) { console.error(error); _processos = []; return; }
+  _processos = data || [];
+  document.getElementById('nav-count-proc').textContent = _processos.length;
 }
 
 // ══════════════════════════════════════════════════════════
 //  NAVEGAÇÃO
 // ══════════════════════════════════════════════════════════
+const PAGE_TITLES = {
+  dashboard: 'Licite.ai — Início',
+  processos: 'Licite.ai — Processos',
+  novo: 'Licite.ai — Novo Processo',
+};
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1676,24 +1661,24 @@ function navigate(page) {
   const navEl  = document.getElementById('nav-' + page);
   if (pageEl) pageEl.classList.add('active');
   if (navEl)  navEl.classList.add('active');
+  document.title = PAGE_TITLES[page] || 'Licite.ai';
 }
 
 // ══════════════════════════════════════════════════════════
 //  DASHBOARD
 // ══════════════════════════════════════════════════════════
 function renderDashboard() {
-  if (_processos.length === 0) { renderEmptyStates(); return; }
-
-  const ativos    = _processos.filter(p => p.status === 'em_andamento').length;
+  const ativos   = _processos.filter(p => p.status === 'em_andamento').length;
   const devolvidos = _processos.filter(p => p.status === 'devolvido').length;
   const concluidos = _processos.filter(p => p.status === 'concluido').length;
-  const minhaAcao  = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
 
-  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  set('s-ativos', ativos);
-  set('s-devolvidos', devolvidos);
-  set('s-concluidos', concluidos);
-  set('s-minha-acao', minhaAcao.length);
+  document.getElementById('s-ativos').textContent    = ativos;
+  document.getElementById('s-devolvidos').textContent = devolvidos;
+  document.getElementById('s-concluidos').textContent = concluidos;
+
+  // Minha ação (simplificado: todos em andamento são "minha ação" por ora)
+  const minhaAcao = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
+  document.getElementById('s-minha-acao').textContent = minhaAcao.length;
 
   renderListaProcessos('dash-minha-acao-list', minhaAcao.slice(0, 3));
   renderListaProcessos('dash-recentes-list', _processos.slice(0, 5));
@@ -1701,11 +1686,6 @@ function renderDashboard() {
 
 function renderListaProcessos(containerId, lista) {
   const el = document.getElementById(containerId);
-  if (!el) return;
-  if (!lista || lista.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px;">Nenhum processo no momento</div>';
-    return;
-  }
   if (!lista.length) {
     el.innerHTML = `<div class="empty" style="padding:30px;"><svg><use href="#ic-file"/></svg><h4>Nenhum processo</h4><p>Crie o primeiro processo acima</p></div>`;
     return;
@@ -1742,7 +1722,7 @@ function renderTabelaProcessos(lista = null) {
   const processos = lista || _processos;
   const tbody = document.getElementById('tbody-processos');
   if (!processos.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><svg><use href="#ic-file"/></svg><h4>Nenhum processo</h4><p>Crie o primeiro processo</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><svg><use href="#ic-file"/></svg><h4>Nenhum processo</h4><p>Crie o primeiro processo</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = processos.map(p => {
@@ -2000,7 +1980,7 @@ async function criarProcesso() {
       telefone:      document.getElementById('dfd-telefone').value.trim(),
       justificativa: document.getElementById('dfd-justificativa').value.trim(),
       objeto:        document.getElementById('dfd-objeto').value.trim(),
-      itens:         document.getElementById('dfd-itens-json')?.value || '[]',
+      itens:         (() => { try { const v = document.getElementById('dfd-itens-json')?.value || '[]'; JSON.parse(v); return v; } catch(e){return '[]';} })(),
       quantidade:    document.getElementById('dfd-quantidade').value.trim(),
       valor:         document.getElementById('dfd-valor').value.trim(),
       prazo:         document.getElementById('dfd-prazo').value.trim(),
@@ -2021,7 +2001,7 @@ async function criarProcesso() {
       setor_requisitante: dadosDFD.unidade,
       etapa_atual:        1,
       status:             'em_andamento',
-      valor_estimado:     parseFloat(dadosDFD.valor.replace(/\./g,'').replace(',','.')) || null,
+      valor_estimado:     (() => { try { const v = String(dadosDFD.valor||'').replace(/[R$\s]/g,'').replace(/\./g,'').replace(',','.'); return parseFloat(v)||null; } catch(e){return null;} })(),
       criado_por:         _user.id,
       atualizado_em:      new Date().toISOString(),
     }).select().single();
@@ -2049,9 +2029,11 @@ async function criarProcesso() {
     });
 
     fecharModal('modal-novo');
-    toast('Processo criado! Protocolo: ' + protocolo, 'success');
+    toast('✅ Processo ' + protocolo + ' criado com sucesso!', 'success');
     await carregarDados();
-    abrirProcesso(proc.id);
+    navigate('processos');
+    // Open process after a brief delay to let list render
+    setTimeout(() => abrirProcesso(proc.id), 300);
 
   } catch(e) {
     mostrarErroForm('novo-form-erro', e.message || 'Erro ao criar processo.');
@@ -3909,22 +3891,6 @@ const PERFIL_LABELS = {
   contabilidade:'Contabilidade', secretaria:'Secretaria', licitacao:'Licitação',
   juridico:'Jurídico', admin:'Administrador', pregoeiro:'Pregoeiro'
 };
-const PERFIL_COLORS = {
-  requisitante: 'background:rgba(26,184,255,.12);color:#1AB8FF;',
-  protocolo:    'background:rgba(255,200,87,.12);color:#FFC857;',
-  compras:      'background:rgba(65,243,106,.12);color:#41F36A;',
-  contabilidade:'background:rgba(168,126,255,.12);color:#A87EFF;',
-  secretaria:   'background:rgba(255,140,66,.12);color:#FF8C42;',
-  licitacao:    'background:rgba(26,184,255,.12);color:#1AB8FF;',
-  juridico:     'background:rgba(255,92,106,.12);color:#FF5C6A;',
-  admin:        'background:rgba(255,200,87,.12);color:#FFC857;',
-  pregoeiro:    'background:rgba(65,243,106,.12);color:#41F36A;',
-};
-function perfilBadge(perfil) {
-  const label = PERFIL_LABELS[perfil] || perfil || '—';
-  const style = PERFIL_COLORS[perfil] || 'background:var(--s2);color:var(--text2);';
-  return `<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;${style}">${label}</span>`;
-}
 
 async function carregarUsuariosAdmin() {
   const prefId = _perfil?.prefeitura_id;
@@ -3940,7 +3906,7 @@ async function carregarUsuariosAdmin() {
   tbody.innerHTML = _apUsuarios.map(u => `<tr>
     <td><strong>${u.nome || '—'}</strong></td>
     <td style="color:var(--text2);">${u.email}</td>
-    <td>${perfilBadge(u.perfil)}</td>
+    <td><span class="badge-perfil">${PERFIL_LABELS[u.perfil] || u.perfil || '—'}</span></td>
     <td style="color:var(--text2);">${u.setor || '—'}</td>
     <td><span class="badge-status ${u.ativo !== false ? 'ativo' : 'inativo'}">${u.ativo !== false ? 'Ativo' : 'Inativo'}</span></td>
     <td style="text-align:right;">
@@ -4030,18 +3996,10 @@ async function salvarNovoUsuario() {
     erroEl.style.display = 'block'; return;
   }
 
-  window._lastCredentials = email + '|' + senha;
-  okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha +
-    '<br><button onclick="copiarCredenciais()" class="btn btn-secondary btn-sm" style="margin-top:6px;">📋 Copiar credenciais</button>';
+  okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha;
   okEl.style.display = 'block';
   toast('Usuário criado com sucesso!', 'success');
   carregarUsuariosAdmin();
-}
-
-function copiarCredenciais() {
-  const parts = (window._lastCredentials || '').split('|');
-  const text = 'E-mail: ' + parts[0] + '\nSenha: ' + parts[1] + '\nURL: licitacao-app.vercel.app';
-  navigator.clipboard.writeText(text).then(() => toast('Credenciais copiadas!', 'success'));
 }
 
 async function toggleUsuarioAtivo(id, ativo) {
