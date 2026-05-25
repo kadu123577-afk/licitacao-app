@@ -988,7 +988,7 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
       <div class="form-grid">
         <div class="form-field">
           <label>Nome da Prefeitura <span class="req">*</span></label>
-          <input type="text" id="pref-nome" placeholder="Prefeitura Municipal de Nova Crixás">
+          <input type="text" id="pref-nome" placeholder="Prefeitura Municipal de Nova Crixás" oninput="autoPreencherMunicipio()">
         </div>
         <div class="form-field">
           <label>Município <span class="req">*</span></label>
@@ -1518,7 +1518,16 @@ async function carregarPerfil(user, usuario = null) {
   // Load prefeitura data for municipality name
   if (usuario?.prefeitura_id) {
     const { data: pref } = await sb.from('prefeituras').select('*').eq('id', usuario.prefeitura_id).single();
-    if (pref) _perfil._prefeitura = pref;
+    if (pref) {
+      // Derivar municipio do nome se vier vazio no banco
+      if (!pref.municipio && pref.nome) {
+        pref.municipio = pref.nome
+          .replace(/Prefeitura Municipal de /i, '')
+          .replace(/Prefeitura de /i, '')
+          .trim();
+      }
+      _perfil._prefeitura = pref;
+    }
   }
 }
 
@@ -4519,6 +4528,19 @@ Gere o JSON abaixo. Textos formais, técnicos, com referências à Lei 14.133/20
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '✨ Preencher tudo com IA'; }
   }
+}
+
+
+// Auto-preencher campo municipio a partir do nome da prefeitura
+function autoPreencherMunicipio() {
+  const nome = document.getElementById('pref-nome')?.value || '';
+  const municipioEl = document.getElementById('pref-municipio');
+  if (!municipioEl || municipioEl.value) return; // não sobrescreve se já preenchido
+  const derivado = nome
+    .replace(/Prefeitura Municipal de /i, '')
+    .replace(/Prefeitura de /i, '')
+    .trim();
+  if (derivado) municipioEl.value = derivado;
 }
 
 
