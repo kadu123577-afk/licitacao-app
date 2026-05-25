@@ -2614,34 +2614,47 @@ function mostrarBtnGerarIA() {
 async function gerarTextosIA() {
   const objeto = document.getElementById('dfd-objeto').value.trim();
   const unidade = document.getElementById('dfd-unidade').value.trim() || 'órgão público municipal';
+  const cargo = document.getElementById('dfd-cargo').value.trim() || 'responsável';
   const tipo = TIPO_LABELS[_tipoSelecionado] || 'Aquisição de Bens';
   const btn = document.getElementById('btn-gerar-ia-dfd');
   const status = document.getElementById('dfd-ia-status');
 
+  if (!objeto) { toast('Preencha o objeto primeiro', 'error'); return; }
+
   btn.disabled = true;
   btn.textContent = '⏳ Gerando...';
-  status.textContent = 'Consultando IA...';
+  status.textContent = 'Aguarde — a IA está redigindo o objeto e a justificativa...';
   status.style.color = 'var(--text2)';
 
   const municipioIA = _perfil?._prefeitura?.municipio || 'do Município';
-  const prompt = `Você é um servidor público experiente de prefeitura municipal do interior de Goiás, especialista na elaboração de documentos licitatórios conforme a Lei nº 14.133/2021.
+  const prefNome = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipioIA);
 
-Redija a JUSTIFICATIVA DA NECESSIDADE DA CONTRATAÇÃO para o Documento de Formalização de Demanda (DFD) com base nas informações abaixo:
+  const prompt = `Você é um servidor público experiente da ${prefNome}, especialista na elaboração de documentos licitatórios conforme a Lei nº 14.133/2021.
 
-- Objeto: ${objeto}
-- Secretaria/Órgão: ${unidade}
+Com base nas informações abaixo, execute DUAS tarefas obrigatórias e retorne SOMENTE um JSON válido, sem markdown, sem explicação:
+
+INFORMAÇÕES:
+- Objeto bruto informado pelo servidor: "${objeto}"
+- Secretaria/Órgão requisitante: ${unidade}
+- Cargo do responsável: ${cargo}
 - Município: ${municipioIA}
-- Tipo: ${tipo}
+- Tipo de contratação: ${tipo}
 
-MODELO DE REFERÊNCIA — o texto gerado deve soar exatamente como o exemplo abaixo:
-"A eventual aquisição de [objeto] é de suma importância, para a melhoria do atendimento aos cidadãos do Município de ${municipioIA}, propiciando qualidade [no serviço] dentro da Cidade de ${municipioIA} e distritos adjacentes ao Município. Além disso, a aquisição parcelada proporciona uma gestão financeira mais equilibrada, permitindo o planejamento adequado dos recursos públicos. Dessa forma, o fornecimento desses [itens] é fundamental para garantir a produtividade e a qualidade dos serviços prestados pela ${unidade}."
+TAREFA A — Campo "objeto_profissional":
+Reescreva o objeto bruto em linguagem oficial de prefeitura municipal, incluindo obrigatoriamente o nome do município. Deve soar como: "Aquisição de [itens] para atendimento das necessidades da ${unidade} do Município de ${municipioIA}". Máximo 120 caracteres. Sem ponto final.
 
-REGRAS ABSOLUTAS:
-1. Use OBRIGATORIAMENTE as seguintes expressões: "eventual fornecimento/aquisição", "de suma importância", "cidadãos do Município de ${municipioIA}", "distritos adjacentes ao Município", "aquisição parcelada proporciona uma gestão financeira mais equilibrada", "planejamento adequado dos recursos públicos", "qualidade dos serviços prestados"
-2. Estruture em exatamente 2 parágrafos corridos
-3. Linguagem: densa, formal, de secretaria municipal brasileira do interior. Sem expressões modernas ou corporativas
-4. Entre 180 e 280 palavras
-5. Escreva SOMENTE o texto final — sem título, sem prefácio, sem explicação`;
+TAREFA B — Campo "justificativa":
+Redija a justificativa da necessidade da contratação em 2 parágrafos corridos. Use OBRIGATORIAMENTE estas expressões do modelo oficial:
+- "eventual fornecimento/aquisição"
+- "de suma importância"
+- "cidadãos do Município de ${municipioIA} e distritos adjacentes"
+- "aquisição parcelada proporciona uma gestão financeira mais equilibrada"
+- "planejamento adequado dos recursos públicos"
+- "qualidade dos serviços prestados pela ${unidade}"
+Linguagem: densa, formal, de secretaria municipal brasileira. Entre 180 e 280 palavras.
+
+RETORNE APENAS este JSON (sem markdown, sem backticks):
+{"objeto_profissional":"...","justificativa":"..."}`;
 
   try {
     const DKEY = typeof DEEPSEEK_KEY !== 'undefined' ? DEEPSEEK_KEY : '';
@@ -2649,17 +2662,44 @@ REGRAS ABSOLUTAS:
     const resp = await fetch(DURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DKEY },
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 900,
+        messages: [{ role: 'user', content: prompt }]
+      })
     });
     const data = await resp.json();
-    const texto = data.choices?.[0]?.message?.content || '';
-    if (texto) {
-      document.getElementById('dfd-justificativa').value = texto.trim();
-      status.textContent = '✅ Gerado! Revise e ajuste se necessário.';
+    let raw = data.choices?.[0]?.message?.content || '';
+
+    // Strip markdown fences if present
+    raw = raw.replace(/```json|```/g, '').trim();
+
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch(e) { parsed = null; }
+
+    if (parsed?.justificativa) {
+      // Task A — update object field with professional version
+      if (parsed.objeto_profissional) {
+        const campoObjeto = document.getElementById('dfd-objeto');
+        campoObjeto.value = parsed.objeto_profissional;
+        campoObjeto.style.borderColor = 'var(--primary)';
+        setTimeout(() => campoObjeto.style.borderColor = '', 2000);
+      }
+      // Task B — fill justificativa
+      document.getElementById('dfd-justificativa').value = parsed.justificativa.trim();
+      status.textContent = '✅ Objeto e justificativa gerados! Revise antes de salvar.';
       status.style.color = 'var(--success,#4caf50)';
     } else {
-      status.textContent = '⚠️ Erro ao gerar. Escreva manualmente.';
-      status.style.color = 'var(--danger,#e55)';
+      // Fallback: treat as plain text justificativa
+      const texto = raw.replace(/^\{.*"justificativa"\s*:\s*"/, '').replace(/"?\s*\}$/, '');
+      if (texto.length > 50) {
+        document.getElementById('dfd-justificativa').value = texto.trim();
+        status.textContent = '✅ Justificativa gerada! Revise antes de salvar.';
+        status.style.color = 'var(--success,#4caf50)';
+      } else {
+        status.textContent = '⚠️ Resposta inesperada da IA. Tente novamente.';
+        status.style.color = 'var(--danger,#e55)';
+      }
     }
   } catch(e) {
     status.textContent = '⚠️ Erro: ' + e.message;
