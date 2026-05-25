@@ -1558,6 +1558,9 @@ function mostrarApp() {
   const h = new Date().getHours();
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
+  // Exibir setor/perfil no subtítulo do header do usuário
+  const perfilLabel = PERFIL_LABELS[_perfil?.perfil] || _perfil?.setor || '—';
+  document.getElementById('user-setor').textContent = perfilLabel;
   carregarDados();
 }
 
@@ -1590,6 +1593,8 @@ function mostrarDashboardAdmin() {
   const h = new Date().getHours();
   const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('dash-title').textContent = `${saud}, ${nome.split(' ')[0]}!`;
+  const perfilLabelA = PERFIL_LABELS[_perfil?.perfil] || _perfil?.setor || 'Administrador';
+  document.getElementById('user-setor').textContent = perfilLabelA;
   // Mostrar botão ⚙️ Admin para admin da prefeitura
   const btnAdmin = document.getElementById('btn-painel-admin');
   if (btnAdmin) btnAdmin.style.display = (_perfil?.role === 'admin') ? 'inline-flex' : 'none';
@@ -1648,17 +1653,43 @@ async function carregarDados() {
   renderTabelaProcessos();
 }
 
+// Mapeamento perfil → etapa(s) de responsabilidade
+const PERFIL_ETAPA = {
+  requisitante:  null,       // filtrado por criado_por
+  protocolo:     [2],
+  compras:       [4],
+  contabilidade: [5],
+  secretaria:    [6],
+  licitacao:     [7, 9],
+  juridico:      [8],
+  pregoeiro:     [10],
+};
+
 async function carregarProcessos() {
   if (!_perfil?.prefeitura_id) { _processos = []; return; }
 
-  const { data, error } = await sb.from('processos')
-    .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
-    .eq('prefeitura_id', _perfil.prefeitura_id)
-    .order('atualizado_em', { ascending: false });
+  const perfil = _perfil.perfil;
+  const role   = _perfil.role;
 
+  let query = sb.from('processos')
+    .select('*, documentos(tipo,status,criado_em), movimentacoes(id)')
+    .eq('prefeitura_id', _perfil.prefeitura_id);
+
+  if (role === 'admin') {
+    // Admin vê tudo
+  } else if (perfil === 'requisitante') {
+    query = query.eq('criado_por', _user.id);
+  } else if (PERFIL_ETAPA[perfil]?.length === 1) {
+    query = query.eq('etapa_atual', PERFIL_ETAPA[perfil][0]);
+  } else if (PERFIL_ETAPA[perfil]?.length > 1) {
+    query = query.in('etapa_atual', PERFIL_ETAPA[perfil]);
+  }
+
+  const { data, error } = await query.order('atualizado_em', { ascending: false });
   if (error) { console.error(error); _processos = []; return; }
   _processos = data || [];
-  document.getElementById('nav-count-proc').textContent = _processos.length;
+  const navEl = document.getElementById('nav-count-proc');
+  if (navEl) navEl.textContent = _processos.length || '';
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1682,20 +1713,61 @@ function navigate(page) {
 // ══════════════════════════════════════════════════════════
 //  DASHBOARD
 // ══════════════════════════════════════════════════════════
+// Labels dos cards por perfil
+const DASH_CONFIG = {
+  requisitante:  { fila: 'Meus processos',            sub: 'criados por mim',           recentes: 'Meus processos recentes' },
+  protocolo:     { fila: 'Para protocolar',           sub: 'DFDs aguardando registro',  recentes: 'Últimos protocolados' },
+  compras:       { fila: 'Para pesquisar preço',      sub: 'aguardando cotação',        recentes: 'Últimas pesquisas' },
+  contabilidade: { fila: 'Para confirmar dotação',    sub: 'aguardando empenho',        recentes: 'Últimas dotações' },
+  secretaria:    { fila: 'Para autorizar',            sub: 'aguardando despacho',       recentes: 'Últimas autorizações' },
+  licitacao:     { fila: 'Para elaborar edital',      sub: 'minutas e editais',         recentes: 'Últimos editais' },
+  juridico:      { fila: 'Para emitir parecer',       sub: 'aguardando análise',        recentes: 'Últimos pareceres' },
+  pregoeiro:     { fila: 'Para publicar',             sub: 'prontos para o PNCP',       recentes: 'Últimas publicações' },
+  admin:         { fila: 'Aguardando ação',           sub: 'em todas as etapas',        recentes: 'Últimos atualizados' },
+};
+
 function renderDashboard() {
-  const ativos   = _processos.filter(p => p.status === 'em_andamento').length;
+  const perfil = _perfil?.perfil || (_perfil?.role === 'admin' ? 'admin' : 'requisitante');
+  const cfg    = DASH_CONFIG[perfil] || DASH_CONFIG.admin;
+
+  const ativos     = _processos.filter(p => p.status === 'em_andamento').length;
   const devolvidos = _processos.filter(p => p.status === 'devolvido').length;
   const concluidos = _processos.filter(p => p.status === 'concluido').length;
+  const minhaAcao  = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
 
-  document.getElementById('s-ativos').textContent    = ativos;
+  // Atualizar labels dos cards conforme perfil
+  const cardFila = document.querySelector('#page-dashboard .card:first-of-type .card-title');
+  const cardFilaSub = document.querySelector('#page-dashboard .card:first-of-type .card-sub');
+  const cardRec  = document.querySelector('#page-dashboard .card:last-of-type .card-title');
+  if (cardFila) cardFila.textContent = cfg.fila;
+  if (cardFilaSub) cardFilaSub.textContent = cfg.sub;
+  if (cardRec)  cardRec.textContent  = cfg.recentes;
+
+  // Atualizar subtítulo do dashboard
+  const subEl = document.querySelector('#page-dashboard .page-sub');
+  if (subEl) subEl.textContent = minhaAcao.length > 0
+    ? `Você tem ${minhaAcao.length} processo${minhaAcao.length > 1 ? 's' : ''} aguardando sua ação.`
+    : 'Nenhum processo aguardando sua ação no momento.';
+
+  // Botão Novo Processo — só para requisitante e admin
+  const btnNovo = document.querySelector('#page-dashboard .btn-primary');
+  if (btnNovo) btnNovo.style.display = ['requisitante','admin'].includes(perfil) ? '' : 'none';
+  const navNovo = document.getElementById('nav-novo');
+  if (navNovo) navNovo.style.display = ['requisitante','admin'].includes(perfil) ? '' : 'none';
+
+  // Cards de estatísticas
+  document.getElementById('s-ativos').textContent     = ativos;
   document.getElementById('s-devolvidos').textContent = devolvidos;
   document.getElementById('s-concluidos').textContent = concluidos;
-
-  // Minha ação (simplificado: todos em andamento são "minha ação" por ora)
-  const minhaAcao = _processos.filter(p => p.status === 'em_andamento' || p.status === 'devolvido');
   document.getElementById('s-minha-acao').textContent = minhaAcao.length;
 
-  renderListaProcessos('dash-minha-acao-list', minhaAcao.slice(0, 3));
+  // Label do card 'minha ação' por perfil
+  const labelMinhaAcao = document.querySelector('.stat:nth-child(2) .stat-label');
+  const changeMinhaAcao = document.querySelector('.stat:nth-child(2) .stat-change');
+  if (labelMinhaAcao) labelMinhaAcao.textContent = cfg.fila;
+  if (changeMinhaAcao) changeMinhaAcao.textContent = cfg.sub;
+
+  renderListaProcessos('dash-minha-acao-list', minhaAcao.slice(0, 5));
   renderListaProcessos('dash-recentes-list', _processos.slice(0, 5));
 }
 
