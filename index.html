@@ -807,6 +807,11 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 .etp-ac-chevron{font-size:11px;color:var(--muted);}
 .etp-acordeao-body{padding:14px 16px;background:var(--s1);border-top:1px solid var(--border);}
 
+/* ── [SOBREVIVÊNCIA] HEALTH BANNER — empurra conteúdo para baixo quando visível ── */
+body.health-banner-visible .app-header { margin-top: 42px; }
+body.health-banner-visible #view-superadmin > .admin-header,
+body.health-banner-visible #view-admin-pref > .admin-header { margin-top: 42px; }
+
 /* ── [INSTITUCIONAL] SNAPSHOTS ── */
 .snapshot-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;}
 .snapshot-item:last-child{border-bottom:none;}
@@ -1687,6 +1692,53 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 
 <!-- TOASTS -->
 <div class="toast-container" id="toasts"></div>
+
+<!-- [SOBREVIVÊNCIA] HEALTH BANNER -->
+<div id="health-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9000;
+  background:#92400e;color:#fef3c7;padding:10px 20px;font-size:13px;font-weight:500;
+  display:none;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.4);">
+  <span>⚠️</span>
+  <span id="health-banner-msg">Alguns componentes do sistema precisam de atenção.</span>
+  <button onclick="mostrarPainelSaude()" style="margin-left:auto;background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.3);color:#fef3c7;padding:4px 12px;border-radius:4px;
+    cursor:pointer;font-size:12px;font-weight:600;">Ver detalhes</button>
+  <button onclick="fecharHealthBanner()" style="background:transparent;border:none;color:#fef3c7;
+    cursor:pointer;font-size:18px;padding:0 4px;line-height:1;">×</button>
+</div>
+
+<!-- [SOBREVIVÊNCIA] PAINEL LATERAL DE SAÚDE -->
+<div id="health-panel" style="display:none;position:fixed;top:0;right:0;bottom:0;width:320px;
+  background:#0B1018;border-left:1px solid rgba(255,255,255,.08);z-index:9100;
+  box-shadow:-4px 0 20px rgba(0,0,0,.5);overflow-y:auto;">
+  <div style="padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-size:14px;font-weight:700;">🩺 Diagnóstico do Sistema</div>
+    <button onclick="fecharPainelSaude()" style="background:transparent;border:none;color:#8A9BAC;cursor:pointer;font-size:20px;">×</button>
+  </div>
+  <div id="health-panel-content" style="padding:16px 20px;"></div>
+  <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);">
+    <button class="btn btn-secondary btn-sm" onclick="executarHealthCheck(true)">🔄 Retestar</button>
+  </div>
+</div>
+
+<!-- [SOBREVIVÊNCIA] MODAL CHECKLIST -->
+<div class="modal-overlay" id="modal-checklist">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div><h3 id="modal-checklist-titulo">⚠️ Dados Institucionais Incompletos</h3>
+        <p>Complete o cadastro para gerar documentos oficiais</p></div>
+      <button class="modal-close" onclick="fecharModal('modal-checklist')">
+        <svg width="16" height="16"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-checklist-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-checklist')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="fecharModal('modal-checklist');abrirDadosInstitucionais()">🏛️ Completar Cadastro</button>
+      <button class="btn btn-primary" id="btn-checklist-gerar" style="display:none;" onclick="checklist_forcePDF()">Gerar Mesmo Assim</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════════════
@@ -4828,7 +4880,7 @@ function buildPDFHtml(tipo, dados, proc) {
     const itensCount  = itensArray.length;
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>DFD — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
-
+<div id="cabecalho-inst-placeholder"></div>
     <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
     <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'}</div>
     <div style="text-align:center;font-size:11pt;margin-bottom:2px;">${_perfil?._prefeitura?.endereco || 'Praça Três Poderes s/n, Centro'} — ${municipio}/${_perfil?._prefeitura?.uf || 'GO'} — CEP ${_perfil?._prefeitura?.cep || '76520-000'}</div>
@@ -4905,7 +4957,7 @@ function buildPDFHtml(tipo, dados, proc) {
     ];
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>ETP — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
-
+<div id="cabecalho-inst-placeholder"></div>
     <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
     <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'} | ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}</div>
     <h2>Estudo Técnico Preliminar – ETP</h2>
@@ -4978,7 +5030,7 @@ function buildPDFHtml(tipo, dados, proc) {
     const penalidades = dados.penalidades || `Pela inexecução total ou parcial do contrato, a Contratada ficará sujeita às penalidades previstas no art. 156 da Lei nº 14.133/2021: a) Advertência formal; b) Multa de até 10% sobre o valor do contrato inadimplido; c) Impedimento de licitar e contratar com a Administração Pública pelo prazo de até 03 (três) anos; d) Declaração de inidoneidade para licitar e contratar com a Administração Pública, enquanto perdurarem os motivos determinantes da punição. As penalidades serão aplicadas mediante processo administrativo, assegurado o contraditório e a ampla defesa.`;
     return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>TR — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
-
+<div id="cabecalho-inst-placeholder"></div>
     <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1>
     <div style="text-align:center;font-size:11pt;margin-bottom:2px;">CNPJ: ${_perfil?._prefeitura?.cnpj || '00.236.968/0001-11'} | ${municipio}/${_perfil?._prefeitura?.uf || 'GO'}</div>
     <h2>Termo de Referência</h2>
@@ -5032,6 +5084,7 @@ function buildPDFHtml(tipo, dados, proc) {
   const nomes = {PP:'Pesquisa de Preços',DO:'Dotação Orçamentária',AUTH:'Autorização do Gestor',PARECER:'Parecer Jurídico'};
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <title>${nomes[tipo]||tipo} — ${proc.numero_protocolo}</title><style>${CSS}</style></head><body>
+<div id="cabecalho-inst-placeholder"></div>
   <h1>PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}</h1><h2>${nomes[tipo]||tipo}</h2>
   <div class="subtitle">Processo nº ${proc.numero_protocolo}</div>
   ${Object.entries(dados).map(([k,v]) => v && typeof v === 'string' ? `<div class="secao"><div class="secao-titulo">${k.replace(/_/g,' ').toUpperCase()}</div><p>${v}</p></div>` : '').join('')}
@@ -6794,24 +6847,33 @@ function switchProcTab(tab) {
 // ══════════════════════════════════════════════════════════
 
 async function gerarPDFProfissional(tipo, dados, proc) {
-  // Gera snapshot antes
+  // [SOBREVIVÊNCIA] Correção 1+3: QR antes do html2pdf + fallback explícito
   const snap = await salvarSnapshotProcesso(proc, tipo);
   const hash = snap?.hash || '';
   const versao = snap?.version || 1;
 
   const htmlContent = buildPDFHtml(tipo, dados, proc, hash, versao);
-  const pref = _perfil?._prefeitura || {};
-  const municipio = pref.municipio || (pref.nome || '').replace(/Prefeitura (Municipal de |de )/i,'').trim() || 'município';
+  const nomeArq = `${tipo}_${(proc.numero_protocolo || 'doc').replace('/','_')}.pdf`;
 
-  // Cria elemento temporário
+  // Cria elemento temporário fora da tela
   const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;';
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;';
   container.innerHTML = htmlContent;
   document.body.appendChild(container);
 
-  toast('⏳ Gerando PDF profissional...', 'info');
+  // [SOBREVIVÊNCIA] Correção 1 — popular QR codes antes de capturar
+  if (typeof QRCode !== 'undefined') {
+    gerarQRCodesEmContainer(container);
+    await new Promise(r => setTimeout(r, 400)); // aguarda render do canvas
+  } else if (hash) {
+    // Fallback: substituir placeholder de QR por texto com URL
+    container.querySelectorAll('[id^="qr-"]').forEach(el => {
+      const url = `https://licite.ai/validar/${el.id.replace('qr-','')}`;
+      el.innerHTML = `<div style="font-size:7pt;font-family:monospace;color:#555;margin-top:4px;">${url}</div>`;
+    });
+  }
 
-  const nomeArq = `${tipo}_${(proc.numero_protocolo || 'doc').replace('/','_')}.pdf`;
+  toast('⏳ Gerando PDF profissional...', 'info');
 
   try {
     await html2pdf().set({
@@ -6825,10 +6887,30 @@ async function gerarPDFProfissional(tipo, dados, proc) {
     toast('✅ PDF ' + nomeArq + ' gerado!', 'success');
   } catch(e) {
     toast('Erro ao gerar PDF: ' + e.message, 'error');
-    console.error('[INSTITUCIONAL] PDF error:', e);
+    console.error('[SOBREVIVÊNCIA] PDF error:', e);
+    // Tenta modo degradado
+    await gerarDocumentoDegradado(tipo, dados, proc, e.message);
   } finally {
     document.body.removeChild(container);
   }
+}
+
+// [SOBREVIVÊNCIA] Versão de gerarQRCodes que opera dentro de um container específico
+function gerarQRCodesEmContainer(container) {
+  container.querySelectorAll('[id^="qr-"]').forEach(el => {
+    if (el.querySelector('canvas') || el.querySelector('img')) return;
+    const hash = el.id.replace('qr-', '');
+    const url = `https://licite.ai/validar/${hash}`;
+    try {
+      new QRCode(el, {
+        text: url, width: 72, height: 72,
+        colorDark: '#000000', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e) {
+      el.innerHTML = `<div style="font-size:7pt;font-family:monospace;color:#555;">${url}</div>`;
+    }
+  });
 }
 
 // Override gerarPDFDoc para usar html2pdf quando disponível
@@ -6839,18 +6921,28 @@ window.gerarPDFDoc = async function(tipo) {
   const doc = proc.docs?.find(d => d.tipo === tipo);
   const dados = doc?.dados || {};
 
-  if (typeof html2pdf !== 'undefined') {
-    await gerarPDFProfissional(tipo, dados, proc);
-  } else if (tipo === 'DFD') {
-    await gerarDOCX(tipo, dados, proc);
-  } else {
-    toast('Gerando documento...', 'info');
-    const html = buildPDFHtml(tipo, dados, proc);
-    const w = window.open('', '_blank');
-    w.document.write(html);
-    w.document.close();
-    setTimeout(() => w.print(), 800);
+  // [SOBREVIVÊNCIA] Correção 3 — fallback explícito sem window.print silencioso
+  // Checklist antes de gerar
+  const pendencias = verificarChecklistInstitucional();
+  const erros = pendencias.filter(p => p.status === 'erro');
+  if (pendencias.length) {
+    // Registrar callback para "Gerar Mesmo Assim" (só avisos)
+    _checklistCallback = erros.length ? null : () => gerarPDFProfissional(tipo, dados, proc);
+    if (erros.length || pendencias.some(p => p.status === 'aviso')) {
+      mostrarModalChecklist(pendencias);
+      if (erros.length) return; // bloqueia se há erros
+    }
   }
+
+  // Verificar saúde antes de prosseguir
+  const saude = await verificarSaudeSistema();
+  if (!saude.html2pdf) {
+    toast('⚠️ Gerador profissional indisponível. Usando modo simplificado.', 'info');
+    await gerarDocumentoDegradado(tipo, dados, proc, 'html2pdf não carregado');
+    return;
+  }
+
+  await gerarPDFProfissional(tipo, dados, proc);
 };
 
 
@@ -7395,16 +7487,22 @@ function prePopularRiscos() {
 // ══════════════════════════════════════════════════════════
 const _buildPDFHtmlOriginal = buildPDFHtml;
 window.buildPDFHtml = function(tipo, dados, proc, hash, versao) {
-  // Chama a função original
+  // [SOBREVIVÊNCIA] Correção 2 — cabeçalho institucional com fallback robusto
   let html = _buildPDFHtmlOriginal(tipo, dados, proc);
   const di = getDadosInstitucionais();
-
-  // Substitui o cabeçalho simples pelo cabeçalho institucional completo
   const cabecalhoInst = buildCabecalhoInstitucional(di);
 
-  // Substitui a primeira linha do H1 de PREFEITURA no HTML
-  html = html.replace(/<h1>PREFEITURA MUNICIPAL DE [^<]*<\/h1>/i,
-    `<div style="margin-bottom:0">${cabecalhoInst}</div>`);
+  // Estratégia 1: substituir placeholder explícito (confiável)
+  if (html.includes('id="cabecalho-inst-placeholder"')) {
+    html = html.replace('<div id="cabecalho-inst-placeholder"></div>',
+      `<div style="margin-bottom:0">${cabecalhoInst}</div>`);
+    // Remover H1 duplicado que fica depois do placeholder
+    html = html.replace(/<h1[^>]*>[^<]*[Pp][Rr][Ee][Ff][Ee][Ii][Tt][Uu][Rr][Aa][^<]*<\/h1>/g, '');
+  } else {
+    // Estratégia 2: fallback — prepend após <body> e remover H1 duplicado
+    html = html.replace('<body>', '<body>' + `<div style="margin-bottom:0">${cabecalhoInst}</div>`);
+    html = html.replace(/<h1[^>]*>[^<]*[Pp][Rr][Ee][Ff][Ee][Ii][Tt][Uu][Rr][Aa][^<]*<\/h1>/g, '');
+  }
 
   // Injeta bloco de integridade antes de </body>
   if (hash) {
@@ -7506,10 +7604,262 @@ window.formMapaRisco = function(dados, readonly) {
 // Helper de escape — usa a função existente no arquivo
 
 
+// ══════════════════════════════════════════════════════════
+// [SOBREVIVÊNCIA] FUNÇÃO 1 — Health Check do Sistema
+// ══════════════════════════════════════════════════════════
 
-</script>
+async function verificarSaudeSistema() {
+  const status = {
+    html2pdf:      typeof html2pdf !== 'undefined',
+    qrcode:        typeof QRCode !== 'undefined',
+    supabase:      false,
+    snapshots:     false,
+    institucional: false,
+  };
 
-<!-- ══ MODAL: IMPORTAR ITENS DFD ══ -->
+  // Testa Supabase com query leve
+  try {
+    const { error } = await sb.from('prefeituras').select('id').limit(1);
+    status.supabase = !error;
+  } catch(e) { status.supabase = false; }
+
+  // Testa tabela de snapshots
+  try {
+    const { error } = await sb.from('process_snapshots').select('id').limit(1);
+    status.snapshots = !error;
+  } catch(e) { status.snapshots = false; }
+
+  // Testa dados institucionais mínimos
+  const pref = _perfil?._prefeitura || {};
+  status.institucional = !!(pref.nome && pref.cnpj);
+
+  window._ultimaSaude = status;
+  return status;
+}
+
+// Executa health check e exibe banner se houver problemas
+async function executarHealthCheck(forcar = false) {
+  const status = await verificarSaudeSistema();
+  renderPainelSaude(status);
+
+  const problemas = Object.entries(status).filter(([k,v]) => !v);
+  if (problemas.length === 0) {
+    fecharHealthBanner();
+    if (forcar) toast('✅ Todos os componentes funcionando!', 'success');
+    return;
+  }
+
+  // Exibir banner âmbar não-bloqueante
+  const msgs = {
+    html2pdf: 'Gerador de PDF',
+    qrcode: 'QR Code',
+    supabase: 'Banco de dados',
+    snapshots: 'Tabela de snapshots',
+    institucional: 'Dados institucionais incompletos',
+  };
+  const nomes = problemas.map(([k]) => msgs[k] || k).join(', ');
+  document.getElementById('health-banner-msg').textContent =
+    `⚠️ Atenção: ${nomes} ${problemas.length === 1 ? 'precisa' : 'precisam'} de atenção.`;
+
+  const banner = document.getElementById('health-banner');
+  if (banner) { banner.style.display = 'flex'; document.body.classList.add('health-banner-visible'); }
+}
+
+function fecharHealthBanner() {
+  const banner = document.getElementById('health-banner');
+  if (banner) banner.style.display = 'none';
+  document.body.classList.remove('health-banner-visible');
+}
+
+function mostrarPainelSaude() {
+  const status = window._ultimaSaude || {};
+  renderPainelSaude(status);
+  document.getElementById('health-panel').style.display = 'block';
+}
+
+function fecharPainelSaude() {
+  document.getElementById('health-panel').style.display = 'none';
+}
+
+function renderPainelSaude(status) {
+  const itens = [
+    { key: 'html2pdf',      label: 'Gerador de PDF (html2pdf.js)', desc: 'Necessário para exportar documentos em PDF' },
+    { key: 'qrcode',        label: 'QR Code (qrcodejs)',            desc: 'Para validação digital nos documentos' },
+    { key: 'supabase',      label: 'Banco de dados (Supabase)',     desc: 'Armazenamento de processos e documentos' },
+    { key: 'snapshots',     label: 'Tabela de snapshots',           desc: 'Versionamento imutável dos documentos' },
+    { key: 'institucional', label: 'Dados institucionais',          desc: 'CNPJ e nome da prefeitura configurados' },
+  ];
+  const cont = document.getElementById('health-panel-content');
+  if (!cont) return;
+  cont.innerHTML = itens.map(item => {
+    const ok = status[item.key];
+    return `
+    <div style="display:flex;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+      <div style="font-size:18px;flex-shrink:0;margin-top:1px;">${ok ? '✅' : '⚠️'}</div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--gold)'};">${item.label}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${item.desc}</div>
+        ${!ok && item.key === 'institucional' ? `<button class="btn btn-ghost btn-sm" style="margin-top:6px;font-size:11px;" onclick="fecharPainelSaude();abrirDadosInstitucionais()">Completar cadastro</button>` : ''}
+        ${!ok && item.key === 'snapshots' ? `<div style="font-size:10px;color:var(--muted);margin-top:4px;">Execute o SQL no console do Supabase para criar a tabela.</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// [SOBREVIVÊNCIA] FUNÇÃO 2 — Modo de Degradação Controlada
+// ══════════════════════════════════════════════════════════
+
+async function gerarDocumentoDegradado(tipo, dados, proc, motivo) {
+  const saude = window._ultimaSaude || await verificarSaudeSistema();
+  const nomeBase = `${tipo}_${(proc?.numero_protocolo || 'doc').replace('/','_')}`;
+
+  // Modo Emergencial: Supabase offline OU ambas as libs ausentes
+  if (!saude.supabase || (!saude.html2pdf && !saude.qrcode)) {
+    // Exportar JSON do processo
+    const jsonBlob = new Blob([JSON.stringify(proc, null, 2)], { type: 'application/json' });
+    const jsonA = document.createElement('a');
+    jsonA.href = URL.createObjectURL(jsonBlob);
+    jsonA.download = `${nomeBase}_backup.json`;
+    jsonA.click();
+
+    // Exportar HTML bruto
+    try {
+      const html = buildPDFHtml(tipo, dados, proc);
+      const htmlBlob = new Blob([html], { type: 'text/html' });
+      const htmlA = document.createElement('a');
+      htmlA.href = URL.createObjectURL(htmlBlob);
+      htmlA.download = `${nomeBase}.html`;
+      setTimeout(() => htmlA.click(), 500);
+    } catch(e) {}
+
+    // Modal de modo emergencial
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:480px;">
+        <div class="modal-header">
+          <div><h3>🚨 Sistema em Modo Emergencial</h3>
+            <p>Motivo: ${motivo || 'Componentes indisponíveis'}</p></div>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;line-height:1.6;color:var(--text2);">Seus dados foram exportados localmente em dois arquivos:</p>
+          <ul style="font-size:13px;color:var(--text);margin:12px 0;padding-left:18px;line-height:2;">
+            <li><strong>${nomeBase}_backup.json</strong> — dados completos do processo</li>
+            <li><strong>${nomeBase}.html</strong> — documento para impressão</li>
+          </ul>
+          <p style="font-size:13px;color:var(--text2);">Salve os arquivos e reenvie quando a conexão for restaurada.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Entendido</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    return;
+  }
+
+  // Modo Simplificado: html2pdf falhou mas Supabase está OK
+  try {
+    const html = buildPDFHtml(tipo, dados, proc);
+    // Adiciona banner de modo simplificado
+    const htmlComBanner = html.replace('<body>',
+      `<body><div style="background:#dc2626;color:#fff;padding:8px 16px;font-size:9pt;font-weight:bold;text-align:center;margin-bottom:12px;">
+        DOCUMENTO GERADO EM MODO SIMPLIFICADO — ${motivo || 'gerador indisponível'}
+      </div>`);
+
+    const blob = new Blob([htmlComBanner], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${nomeBase}.html`;
+    a.click();
+
+    toast('📄 Documento exportado em HTML. Abra no navegador e use Ctrl+P para imprimir.', 'info');
+
+    // Snapshot mesmo no modo simplificado
+    if (typeof salvarSnapshotProcesso === 'function') {
+      await salvarSnapshotProcesso(proc, tipo);
+    }
+  } catch(e) {
+    toast('❌ Erro crítico na exportação: ' + e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// [SOBREVIVÊNCIA] FUNÇÃO 3 — Checklist Institucional
+// ══════════════════════════════════════════════════════════
+
+function verificarChecklistInstitucional() {
+  const pref = _perfil?._prefeitura || {};
+  const pendencias = [];
+  if (!pref.nome)
+    pendencias.push({ campo: 'Nome da Prefeitura', status: 'erro', desc: 'Obrigatório para documento oficial' });
+  if (!pref.cnpj)
+    pendencias.push({ campo: 'CNPJ', status: 'erro', desc: 'Obrigatório para documento oficial' });
+  if (!pref.endereco)
+    pendencias.push({ campo: 'Endereço', status: 'aviso', desc: 'Recomendado para cabeçalho completo' });
+  if (!pref.brasao_base64)
+    pendencias.push({ campo: 'Brasão oficial', status: 'aviso', desc: 'Recomendado para aparência institucional' });
+  if (!pref.prefeito)
+    pendencias.push({ campo: 'Nome do Prefeito', status: 'aviso', desc: 'Necessário para assinatura' });
+  if (!pref.telefone && !pref.email_institucional)
+    pendencias.push({ campo: 'Contato institucional', status: 'aviso', desc: 'Telefone ou e-mail' });
+  return pendencias;
+}
+
+// Exibe modal com checklist de pendências antes de gerar documento
+let _checklistCallback = null;
+
+function mostrarModalChecklist(pendencias) {
+  const erros  = pendencias.filter(p => p.status === 'erro');
+  const avisos = pendencias.filter(p => p.status === 'aviso');
+
+  document.getElementById('modal-checklist-titulo').textContent =
+    erros.length ? '❌ Dados obrigatórios ausentes' : '⚠️ Dados institucionais incompletos';
+
+  const lista = document.getElementById('modal-checklist-lista');
+  lista.innerHTML = `
+    ${erros.length ? `<div style="font-size:12px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Erros — bloqueiam a geração</div>
+    ${erros.map(p=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="color:var(--red);flex-shrink:0;">❌</span>
+      <div><div style="font-size:13px;font-weight:600;">${p.campo}</div>
+      <div style="font-size:11px;color:var(--muted);">${p.desc}</div></div>
+    </div>`).join('')}` : ''}
+    ${avisos.length ? `<div style="font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px;">Avisos — recomendados</div>
+    ${avisos.map(p=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="color:var(--gold);flex-shrink:0;">⚠️</span>
+      <div><div style="font-size:13px;font-weight:600;">${p.campo}</div>
+      <div style="font-size:11px;color:var(--muted);">${p.desc}</div></div>
+    </div>`).join('')}` : ''}`;
+
+  // Botão "Gerar Mesmo Assim" só aparece se não há erros
+  const btnGerar = document.getElementById('btn-checklist-gerar');
+  if (btnGerar) btnGerar.style.display = erros.length ? 'none' : 'inline-flex';
+
+  document.getElementById('modal-checklist').classList.add('show');
+}
+
+// Chamado pelo botão "Gerar Mesmo Assim"
+async function checklist_forcePDF() {
+  fecharModal('modal-checklist');
+  if (_checklistCallback) {
+    await _checklistCallback();
+    _checklistCallback = null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// [SOBREVIVÊNCIA] Hook no login — health check após autenticação
+// ══════════════════════════════════════════════════════════
+
+// Override de mostrarApp para adicionar health check pós-login
+const _mostrarAppOriginal = mostrarApp;
+function mostrarApp() {
+  _mostrarAppOriginal();
+  // [SOBREVIVÊNCIA] Health check discreto após login (non-blocking)
+  setTimeout(() => executarHealthCheck(false), 1500);
+}
+
+
 <div class="modal-overlay" id="modal-importar-dfd">
   <div class="modal" style="max-width:780px;">
     <div class="modal-header">
