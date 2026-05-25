@@ -2695,6 +2695,8 @@ function renderFormEtapa(proc, etapa, doc) {
   if (etapa.n === 1) {
     // DFD — visualização
     html = renderDFDView(dados);
+  } else if (etapa.n === 2) {
+    html = formProtocolo(dados, readonly, proc);
   } else if (etapa.n === 3 && !['dispensa','inexigibilidade'].includes(proc.tipo_contratacao)) {
     // ETP + Mapa de Risco + TR (formulário em abas)
     html = renderEtapa3(proc, dados, doc, readonly);
@@ -2706,8 +2708,6 @@ function renderFormEtapa(proc, etapa, doc) {
     html = formAutorizacao(dados, readonly);
   } else if (etapa.n === 8 || (etapa.n === 6 && ['dispensa','inexigibilidade'].includes(proc.tipo_contratacao))) {
     html = formParecer(dados, readonly);
-  } else if (etapa.n === 2) {
-    html = formProtocolo(dados, readonly, proc);
   } else {
     html = `<div class="empty" style="padding:40px;">
       <svg><use href="#ic-file"/></svg>
@@ -2838,7 +2838,8 @@ async function salvarDocEtapa(tipo) {
 function coletarDadosForm(tipo) {
   const dados = {};
   if (tipo === 'ETP') {
-    ['area','ref_dfd','necessidade','solucoes','solucao_escolhida','quantidade','valor','viabilidade','responsavel']
+    ['area','ref_dfd','necessidade','fundamentacao','requisitos','solucoes',
+     'solucao_escolhida','descricao_solucao','quantidade','valor','viabilidade','responsavel']
       .forEach(k => { const el = document.getElementById('etp-'+k); if(el) dados[k] = el.value; });
   } else if (tipo === 'MAPA_RISCO') {
     const riscos = [];
@@ -3115,7 +3116,7 @@ async function gerarTextosIA() {
     const m = _perfil?._prefeitura?.municipio || '';
     if (m) return m;
     const n = _perfil?._prefeitura?.nome || '';
-    return n.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'Nova Crixás';
+    return n.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'município';
   })();
   const prefNome = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipioIA);
 
@@ -4180,7 +4181,7 @@ ${bodyHtml}
 </html>`;
 
   const blob = new Blob(['\ufeff' + wordDoc], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8'
+    type: 'application/msword;charset=utf-8'
   });
   const url  = URL.createObjectURL(blob);
   const nome = proc.numero_protocolo
@@ -4188,12 +4189,12 @@ ${bodyHtml}
     : 'processo';
   const a = document.createElement('a');
   a.href     = url;
-  a.download = `${tipo}_${nome}.docx`;
+  a.download = `${tipo}_${nome}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast('📄 ' + tipo + '_' + nome + '.docx baixado!', 'success');
+  toast('📄 ' + tipo + '_' + nome + '.doc baixado!', 'success');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -4213,7 +4214,7 @@ async function preencherETPcomIA() {
   const btn = document.getElementById('btn-preencher-etp-ia');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando ETP...'; }
 
-  const municipio  = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'Nova Crixás';
+  const municipio  = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'município';
   const prefNome   = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipio);
   const tipoLabel  = TIPO_LABELS[proc.tipo_contratacao] || 'Aquisição de Bens';
 
@@ -4249,8 +4250,11 @@ Retorne EXATAMENTE este JSON:
   "area": "nome da unidade/secretaria requisitante",
   "ref_dfd": "Processo nº ${proc.numero_protocolo}",
   "necessidade": "descrição detalhada da necessidade (150-250 palavras)",
+  "fundamentacao": "fundamentação legal com referências à Lei 14.133/2021 e normas aplicáveis (120-180 palavras)",
+  "requisitos": "requisitos técnicos e de habilitação exigidos do fornecedor (100-150 palavras)",
   "solucoes": "levantamento de soluções alternativas analisadas (100-150 palavras)",
   "solucao_escolhida": "solução escolhida com justificativa técnica e legal (120-180 palavras)",
+  "descricao_solucao": "descrição detalhada da solução e metodologia de execução (120-180 palavras)",
   "quantidade": "estimativa de quantidade com base no objeto",
   "valor": "${dfd.valor || '0,00'}",
   "responsavel": "${dfd.responsavel || ''} — ${dfd.cargo || ''}"
@@ -4274,7 +4278,8 @@ Retorne EXATAMENTE este JSON:
 
     if (!parsed) throw new Error('IA retornou formato inválido. Tente novamente.');
 
-    const campos = ['area','ref_dfd','necessidade','solucoes','solucao_escolhida','quantidade','valor','responsavel'];
+    const campos = ['area','ref_dfd','necessidade','fundamentacao','requisitos',
+                    'solucoes','solucao_escolhida','descricao_solucao','quantidade','valor','responsavel'];
     let preenchidos = 0;
     campos.forEach(k => {
       const el = document.getElementById('etp-' + k);
@@ -4314,7 +4319,7 @@ async function preencherTRcomIA() {
   const btn = document.getElementById('btn-preencher-tr-ia');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando TR...'; }
 
-  const municipio = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'Nova Crixás';
+  const municipio = _perfil?._prefeitura?.municipio || _perfil?._prefeitura?.nome?.replace(/Prefeitura Municipal de /i,'').replace(/Prefeitura de /i,'').trim() || 'município';
   const prefNome  = _perfil?._prefeitura?.nome || ('Prefeitura Municipal de ' + municipio);
   const endereco  = _perfil?._prefeitura?.endereco || 'Praça Três Poderes s/n, Centro';
 
