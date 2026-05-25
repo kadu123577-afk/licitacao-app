@@ -556,28 +556,182 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 }
 
 /* ── SPLIT VIEW ── */
-.split-view{display:grid;grid-template-columns:1fr 1fr;height:calc(100vh - 260px);min-height:500px;}
-.split-editor{overflow-y:auto;padding:20px;border-right:1px solid var(--border);}
-.split-preview{
-  overflow-y:auto;background:#fff;
-  padding:28px 32px;
-  font-family:'Times New Roman',Times,serif;
-  font-size:11pt;color:#000;line-height:1.6;
+/* ── SPLIT VIEW — layout ── */
+.split-view{
+  display:grid;
+  grid-template-columns:42% 58%;
+  height:calc(100vh - 218px);
+  min-height:520px;
+  animation:splitIn .22s ease;
 }
-.split-preview h1{font-size:12pt;text-align:center;text-transform:uppercase;font-weight:bold;margin:0 0 2px;letter-spacing:.5px;}
-.split-preview h2{font-size:11pt;text-align:center;font-weight:bold;margin:0 0 12px;}
-.split-preview .sp-meta{border:1px solid #000;margin-bottom:14px;}
-.split-preview .sp-meta-row{padding:4px 8px;font-size:10pt;border-bottom:1px solid #000;}
-.split-preview .sp-meta-row:last-child{border-bottom:none;}
-.split-preview .sp-secao{margin-bottom:12px;}
-.split-preview .sp-secao-titulo{font-weight:bold;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:6px;font-size:10.5pt;}
-.split-preview .sp-body{font-size:10.5pt;text-align:justify;margin:0 0 8px;}
-.split-preview .sp-chips{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin:6px 0;}
-.split-preview .sp-chip{border:1px solid #ccc;padding:4px 6px;font-size:9.5pt;}
-.split-preview .sp-chip b{display:block;font-size:8.5pt;color:#555;}
-.split-preview .sp-label{font-size:9pt;color:#555;margin-bottom:2px;}
+@keyframes splitIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* ── EDITOR (lado escuro) ── */
+.split-editor{
+  overflow-y:auto;
+  padding:0;
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+}
+.split-editor-toolbar{
+  position:sticky;top:0;z-index:10;
+  background:var(--s1);
+  border-bottom:1px solid var(--border);
+  padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;
+  flex-shrink:0;
+}
+.split-editor-toolbar-title{
+  font-size:11px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text2);
+}
+.split-editor-body{
+  padding:16px 18px 28px;
+  flex:1;
+}
+.split-editor .form-field{margin-bottom:13px;}
+.split-editor .form-field label{
+  font-size:10px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:5px;display:block;
+}
+.split-editor .form-field input,
+.split-editor .form-field select,
+.split-editor .form-field textarea{
+  width:100%;padding:8px 11px;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:6px;color:var(--text);
+  font-family:var(--font-body);font-size:13px;
+  outline:none;transition:border-color .15s;
+  resize:vertical;
+}
+.split-editor .form-field input:focus,
+.split-editor .form-field select:focus,
+.split-editor .form-field textarea:focus{border-color:var(--green);}
+.split-ia-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:5px;border:none;
+  font-size:11px;font-weight:600;cursor:pointer;
+  background:rgba(65,243,106,.08);color:var(--green);
+  border:1px solid rgba(65,243,106,.18);
+  margin-top:6px;transition:all .12s;
+}
+.split-ia-btn:hover{background:rgba(65,243,106,.15);}
+.split-ia-btn:disabled{opacity:.4;cursor:default;}
+.split-ia-status{
+  font-size:11px;color:var(--text2);
+  margin-top:6px;min-height:16px;
+  padding:0 2px;
+}
+.split-section-divider{
+  font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+  padding:10px 0 6px;border-bottom:1px solid var(--border);
+  margin-bottom:12px;
+}
+
+/* ── PREVIEW (lado branco — documento) ── */
+.split-preview{
+  overflow-y:auto;
+  background:#F0EDE8;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:24px 20px 40px;
+  gap:0;
+}
+.split-preview-label{
+  font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:#888;
+  margin-bottom:14px;align-self:flex-start;
+}
+.split-paper{
+  background:#fff;
+  width:100%;max-width:600px;
+  min-height:700px;
+  padding:36px 40px;
+  box-shadow:0 2px 8px rgba(0,0,0,.12),0 8px 32px rgba(0,0,0,.08);
+  border-radius:2px;
+  font-family:'Times New Roman',Times,serif;
+  font-size:11pt;color:#1a1a1a;line-height:1.65;
+}
+.split-paper .sp-header{
+  text-align:center;
+  padding-bottom:14px;
+  margin-bottom:16px;
+  border-bottom:2px solid #000;
+}
+.split-paper .sp-header h1{
+  font-size:12.5pt;text-transform:uppercase;
+  font-weight:bold;margin:0 0 1px;letter-spacing:.8px;
+}
+.split-paper .sp-header .sp-sub{font-size:9pt;color:#444;margin:2px 0 0;}
+.split-paper .sp-doc-title{
+  text-align:center;font-size:11.5pt;font-weight:bold;
+  text-transform:uppercase;letter-spacing:.5px;
+  border:1.5px solid #000;padding:6px;
+  margin-bottom:16px;
+}
+.split-paper .sp-proc{
+  text-align:center;font-size:9.5pt;color:#444;
+  margin-bottom:16px;
+}
+.split-paper .sp-meta{border:1px solid #555;margin-bottom:16px;}
+.split-paper .sp-meta-row{
+  padding:5px 10px;font-size:10pt;
+  border-bottom:1px solid #ccc;
+}
+.split-paper .sp-meta-row:last-child{border-bottom:none;}
+.split-paper .sp-secao{margin-bottom:16px;}
+.split-paper .sp-secao-titulo{
+  font-weight:bold;text-transform:uppercase;
+  border-bottom:1.5px solid #000;padding-bottom:2px;
+  margin-bottom:8px;font-size:10.5pt;letter-spacing:.3px;
+}
+.split-paper .sp-body{
+  font-size:10.5pt;text-align:justify;
+  margin:0 0 8px;line-height:1.65;
+}
+.split-paper .sp-chips{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:6px;margin:8px 0;
+}
+.split-paper .sp-chip{
+  border:1px solid #aaa;padding:6px 8px;
+  font-size:9.5pt;
+}
+.split-paper .sp-chip b{
+  display:block;font-size:8pt;
+  color:#666;margin-bottom:2px;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.split-paper .sp-assinatura{
+  margin-top:44px;text-align:center;
+}
+.split-paper .sp-assinatura .linha{
+  border-top:1px solid #000;
+  width:260px;margin:0 auto 5px;
+}
+.split-paper .sp-assinatura .nome{
+  font-weight:bold;font-size:10.5pt;
+}
+.split-paper .sp-assinatura .cargo-text{font-size:10pt;}
+
+/* ── doc-area em modo split ── */
+.doc-area.split-mode{overflow:visible;}
+.doc-area.split-mode .doc-head{
+  background:var(--s2);
+  border-bottom:1px solid var(--border2);
+}
 .doc-area.split-mode .doc-body{padding:0;}
-@media(max-width:900px){.split-view{grid-template-columns:1fr;height:auto;}}
+
+/* ── proc-layout em modo split: sidebar mais compacta ── */
+.proc-layout.split-active{grid-template-columns:200px 1fr;}
+
+@media(max-width:1100px){.split-view{grid-template-columns:1fr;height:auto;}}
+@media(max-width:900px){.proc-layout.split-active{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -1737,7 +1891,10 @@ function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   // Limpar split-mode ao navegar
-  if (page !== 'processo') document.querySelector('.doc-area')?.classList.remove('split-mode');
+  if (page !== 'processo') {
+    document.querySelector('.doc-area')?.classList.remove('split-mode');
+    document.querySelector('.proc-layout')?.classList.remove('split-active');
+  }
   const pageEl = document.getElementById('page-' + page);
   const navEl  = document.getElementById('nav-' + page);
   if (pageEl) pageEl.classList.add('active');
@@ -2878,78 +3035,93 @@ function renderDFDView(dados) {
   const prio  = dados.prioridade || '';
   const prioLabel = {alta:'Alta — Urgente', media:'Média — Normal', baixa:'Baixa — Planejamento'}[prio] || prio;
 
+  // Adicionar classe split-active no proc-layout
+  document.querySelector('.proc-layout')?.classList.add('split-active');
+
   return `<div class="split-view">
 
   <!-- ── EDITOR ── -->
   <div class="split-editor">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text);">✏️ Editar DFD</div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="gerarPDFDoc('DFD')">📄 Baixar .doc</button>
-        <button class="btn btn-primary btn-sm" onclick="salvarEdicaoDFD()">💾 Salvar</button>
+    <div class="split-editor-toolbar">
+      <span class="split-editor-toolbar-title">✏️ Editar DFD</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="gerarPDFDoc('DFD')" title="Baixar documento Word">
+          <svg width="13" height="13"><use href="#ic-file"/></svg> .doc
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="salvarEdicaoDFD()">
+          <svg width="13" height="13"><use href="#ic-check"/></svg> Salvar
+        </button>
       </div>
     </div>
+    <div class="split-editor-body">
 
-    <div class="form-field">
-      <label>Unidade Requisitante <span class="req">*</span></label>
-      <input type="text" id="sv-unidade" value="${esc2(dados.unidade)}" placeholder="Ex: Secretaria de Saúde" oninput="atualizarPreviewDFD()">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="split-section-divider">Identificação</div>
       <div class="form-field">
-        <label>Responsável <span class="req">*</span></label>
-        <input type="text" id="sv-responsavel" value="${esc2(dados.responsavel)}" placeholder="Nome completo" oninput="atualizarPreviewDFD()">
+        <label>Unidade Requisitante</label>
+        <input type="text" id="sv-unidade" value="${esc2(dados.unidade)}" placeholder="Ex: Secretaria Municipal de Saúde" oninput="atualizarPreviewDFD()">
       </div>
-      <div class="form-field">
-        <label>Cargo <span class="req">*</span></label>
-        <input type="text" id="sv-cargo" value="${esc2(dados.cargo)}" placeholder="Ex: Secretário de Saúde" oninput="atualizarPreviewDFD()">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-field">
+          <label>Responsável</label>
+          <input type="text" id="sv-responsavel" value="${esc2(dados.responsavel)}" placeholder="Nome completo" oninput="atualizarPreviewDFD()">
+        </div>
+        <div class="form-field">
+          <label>Cargo</label>
+          <input type="text" id="sv-cargo" value="${esc2(dados.cargo)}" placeholder="Ex: Secretário" oninput="atualizarPreviewDFD()">
+        </div>
       </div>
-    </div>
 
-    <div class="form-field">
-      <label>Objeto <span class="req">*</span></label>
-      <textarea id="sv-objeto" rows="3" placeholder="Descreva o objeto da contratação..." oninput="atualizarPreviewDFD()">${esc2(dados.objeto)}</textarea>
-      <button class="btn btn-secondary btn-sm ia-btn" style="margin-top:5px;" onclick="gerarObjetoIASplit()">✨ Gerar com IA</button>
-    </div>
+      <div class="split-section-divider">Objeto e Justificativa</div>
+      <div class="form-field">
+        <label>Objeto da Contratação</label>
+        <textarea id="sv-objeto" rows="3" placeholder="Descreva o objeto..." oninput="atualizarPreviewDFD()">${esc2(dados.objeto)}</textarea>
+        <button class="split-ia-btn" id="btn-ia-obj" onclick="gerarObjetoIASplit()">✨ Profissionalizar com IA</button>
+      </div>
+      <div class="form-field">
+        <label>Justificativa da Necessidade</label>
+        <textarea id="sv-justificativa" rows="8" placeholder="Descreva a necessidade e justificativa..." oninput="atualizarPreviewDFD()">${esc2(dados.justificativa)}</textarea>
+        <button class="split-ia-btn" id="btn-ia-just" onclick="gerarJustificativaIASplit()">✨ Gerar justificativa com IA</button>
+      </div>
+      <div class="split-ia-status" id="sv-ia-status"></div>
 
-    <div class="form-field">
-      <label>Justificativa da Necessidade <span class="req">*</span></label>
-      <textarea id="sv-justificativa" rows="7" placeholder="Descreva a justificativa..." oninput="atualizarPreviewDFD()">${esc2(dados.justificativa)}</textarea>
-      <button class="btn btn-secondary btn-sm ia-btn" style="margin-top:5px;" onclick="gerarJustificativaIASplit()">✨ Gerar com IA</button>
-    </div>
+      <div class="split-section-divider">Dados da Contratação</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-field">
+          <label>Valor Estimado (R$)</label>
+          <input type="text" id="sv-valor" value="${esc2(dados.valor)}" placeholder="Ex: 10.000,00" oninput="atualizarPreviewDFD()">
+        </div>
+        <div class="form-field">
+          <label>Prazo</label>
+          <input type="text" id="sv-prazo" value="${esc2(dados.prazo)}" placeholder="Ex: 12 meses" oninput="atualizarPreviewDFD()">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-field">
+          <label>Prioridade</label>
+          <select id="sv-prioridade" onchange="atualizarPreviewDFD()">
+            <option value="">Selecione...</option>
+            <option value="alta" ${prio==='alta'?'selected':''}>Alta — Urgente</option>
+            <option value="media" ${prio==='media'?'selected':''}>Média — Normal</option>
+            <option value="baixa" ${prio==='baixa'?'selected':''}>Baixa — Planejamento</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Quantidade</label>
+          <input type="text" id="sv-quantidade" value="${esc2(dados.quantidade)}" placeholder="—" oninput="atualizarPreviewDFD()" readonly style="opacity:.6;cursor:default;">
+        </div>
+      </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="form-field">
-        <label>Valor Estimado (R$)</label>
-        <input type="text" id="sv-valor" value="${esc2(dados.valor)}" placeholder="Ex: 10.000,00" oninput="atualizarPreviewDFD()">
-      </div>
-      <div class="form-field">
-        <label>Prazo</label>
-        <input type="text" id="sv-prazo" value="${esc2(dados.prazo)}" placeholder="Ex: 12 meses" oninput="atualizarPreviewDFD()">
-      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="form-field">
-        <label>Prioridade</label>
-        <select id="sv-prioridade" onchange="atualizarPreviewDFD()">
-          <option value="">Selecione...</option>
-          <option value="alta" ${prio==='alta'?'selected':''}>Alta — Urgente</option>
-          <option value="media" ${prio==='media'?'selected':''}>Média — Normal</option>
-          <option value="baixa" ${prio==='baixa'?'selected':''}>Baixa — Planejamento</option>
-        </select>
-      </div>
-      <div class="form-field">
-        <label>Quantidade</label>
-        <input type="text" id="sv-quantidade" value="${esc2(dados.quantidade)}" placeholder="Ex: 1 item" oninput="atualizarPreviewDFD()" readonly style="background:var(--s3);">
-      </div>
-    </div>
-
-    <div id="sv-ia-status" style="font-size:12px;color:var(--text2);margin-top:4px;min-height:18px;"></div>
   </div>
 
-  <!-- ── PREVIEW ── -->
-  <div class="split-preview" id="dfd-split-preview">
-    ${gerarHTMLPreviewDFD(dados)}
+  <!-- ── PREVIEW — folha de papel ── -->
+  <div class="split-preview" id="dfd-split-preview-outer">
+    <div class="split-preview-label">Pré-visualização do documento</div>
+    <div class="split-paper" id="dfd-split-preview">
+      ${gerarHTMLPreviewDFD(dados)}
+    </div>
   </div>
+
 </div>`;
 }
 
@@ -2966,12 +3138,13 @@ function gerarHTMLPreviewDFD(dados) {
   const proc = _processoAtual;
 
   return `
-  <h1>Prefeitura Municipal de ${municipio}</h1>
-  ${cnpj ? `<div style="text-align:center;font-size:9pt;margin-bottom:12px;">CNPJ: ${cnpj} — ${municipio}/${uf}</div>` : ''}
-  <h2>Documento de Formalização de Demanda — DFD</h2>
-  <div style="text-align:center;font-size:9.5pt;margin-bottom:14px;border:1px solid #000;padding:4px;">
-    Processo nº ${proc?.numero_protocolo||'—'}
+  <div class="sp-header">
+    <h1>Prefeitura Municipal de ${municipio}</h1>
+    ${cnpj ? `<div class="sp-sub">CNPJ: ${cnpj} &nbsp;·&nbsp; ${municipio}/${uf}</div>` : ''}
   </div>
+
+  <div class="sp-doc-title">Documento de Formalização de Demanda — DFD</div>
+  <div class="sp-proc">Processo nº ${proc?.numero_protocolo||'—'} &nbsp;·&nbsp; ${new Date().getFullYear()}</div>
 
   <div class="sp-meta">
     <div class="sp-meta-row"><b>Unidade Requisitante:</b> ${dados.unidade||'—'}</div>
@@ -2980,12 +3153,12 @@ function gerarHTMLPreviewDFD(dados) {
 
   <div class="sp-secao">
     <div class="sp-secao-titulo">1. Descrição do Objeto</div>
-    <div class="sp-body">${dados.objeto||'—'}</div>
+    <div class="sp-body">${dados.objeto||'<em style="color:#aaa">Aguardando preenchimento...</em>'}</div>
   </div>
 
   <div class="sp-secao">
     <div class="sp-secao-titulo">2. Justificativa da Necessidade</div>
-    <div class="sp-body">${dados.justificativa||'—'}</div>
+    <div class="sp-body">${dados.justificativa||'<em style="color:#aaa">Aguardando preenchimento...</em>'}</div>
   </div>
 
   <div class="sp-secao">
@@ -2994,18 +3167,21 @@ function gerarHTMLPreviewDFD(dados) {
       <div class="sp-chip"><b>Valor Est.</b> R$ ${dados.valor||'—'}</div>
       <div class="sp-chip"><b>Prazo</b> ${dados.prazo||'—'}</div>
       <div class="sp-chip"><b>Qtd.</b> ${dados.quantidade||'—'}</div>
-      <div class="sp-chip"><b>Prioridade</b> ${{alta:'Alta',media:'Média',baixa:'Baixa'}[dados.prioridade]||dados.prioridade||'—'}</div>
+      <div class="sp-chip"><b>Prioridade</b> ${{alta:'Alta ↑',media:'Média',baixa:'Baixa ↓'}[dados.prioridade]||'—'}</div>
     </div>
   </div>
 
-  <div style="margin-top:20px;font-size:10pt;text-align:justify;">
-    Em conformidade com a Lei nº 14.133/2021, encaminhe-se à autoridade competente para análise e demais providências.
+  <div class="sp-secao">
+    <div class="sp-secao-titulo">4. Encaminhamento</div>
+    <div class="sp-body">Em conformidade com a Lei nº 14.133/2021 e normas do TCM-GO, encaminhe-se à autoridade competente para análise de conveniência e oportunidade e demais providências.</div>
   </div>
-  <div style="margin-top:8px;font-size:10pt;">${municipio}, ${hoje}.</div>
-  <div style="margin-top:40px;text-align:center;">
-    <div style="border-top:1px solid #000;width:280px;margin:0 auto 4px;"></div>
-    <div style="font-size:10pt;font-weight:bold;">${dados.responsavel||'—'}</div>
-    <div style="font-size:9.5pt;">${dados.cargo||'—'}</div>
+
+  <div class="sp-body" style="margin-top:12px;">${municipio}, ${hoje}.</div>
+
+  <div class="sp-assinatura">
+    <div class="linha"></div>
+    <div class="nome">${dados.responsavel||'—'}</div>
+    <div class="cargo-text">${dados.cargo||'—'}</div>
   </div>`;
 }
 
@@ -3070,7 +3246,9 @@ async function gerarObjetoIASplit() {
   const unidade   = document.getElementById('sv-unidade')?.value?.trim() || '';
   const cargo     = document.getElementById('sv-cargo')?.value?.trim() || '';
   const statusEl  = document.getElementById('sv-ia-status');
+  const btnEl     = document.getElementById('btn-ia-obj');
   if (!objetoEl?.value?.trim()) { toast('Preencha o objeto antes de usar a IA', 'error'); return; }
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Gerando...'; }
   statusEl.textContent = '⏳ Profissionalizando o objeto...';
   const objeto = objetoEl.value.trim();
   const municipio = _perfil?._prefeitura?.municipio || 'município';
@@ -3081,7 +3259,7 @@ async function gerarObjetoIASplit() {
     objetoEl.value = (data.content || '').trim();
     atualizarPreviewDFD();
     statusEl.textContent = '✅ Objeto profissionalizado';
-  } catch(e) { statusEl.textContent = '⚠️ Erro: ' + e.message; }
+  } catch(e) { statusEl.textContent = '⚠️ Erro: ' + e.message; } finally { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✨ Profissionalizar com IA'; } }
 }
 
 // IA para justificativa no split view
@@ -3090,7 +3268,9 @@ async function gerarJustificativaIASplit() {
   const objeto   = document.getElementById('sv-objeto')?.value?.trim() || '';
   const unidade  = document.getElementById('sv-unidade')?.value?.trim() || '';
   const statusEl = document.getElementById('sv-ia-status');
+  const btnEl    = document.getElementById('btn-ia-just');
   if (!objeto) { toast('Preencha o objeto antes de usar a IA', 'error'); return; }
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Gerando...'; }
   statusEl.textContent = '⏳ Gerando justificativa...';
   const municipio = _perfil?._prefeitura?.municipio || 'município';
   const prompt = `Você é servidor público da Prefeitura de ${municipio}. Redija a justificativa da necessidade de contratação para o objeto: "${objeto}". Secretaria: ${unidade||'órgão municipal'}. Use linguagem formal, densa, com referências à Lei 14.133/2021. Use as expressões: "eventual fornecimento/aquisição", "de suma importância", "cidadãos do Município de ${municipio}", "planejamento adequado dos recursos públicos". Entre 180 e 260 palavras. Retorne APENAS o texto da justificativa.`;
@@ -3106,7 +3286,7 @@ async function gerarJustificativaIASplit() {
   } catch(e) {
     clearTimeout(timer);
     statusEl.textContent = e.name === 'AbortError' ? '⚠️ IA demorou demais. Tente novamente.' : '⚠️ Erro: ' + e.message;
-  }
+  } finally { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✨ Gerar justificativa com IA'; } }
 }
 
 function renderEtapa3(proc, dados, doc, readonly) {
