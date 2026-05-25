@@ -3993,33 +3993,52 @@ async function salvarPrefeitura() {
 
   // ── Criar admin se formulário preenchido ──
   if (criarAdmin && adminEmail) {
-    const { data: rpcData, error: authError } = await sb.rpc('criar_usuario_auth', {
-      p_email:         adminEmail,
-      p_senha:         adminSenha,
-      p_nome:          adminNome,
-      p_perfil:        'admin',
-      p_setor:         'Administração',
-      p_prefeitura_id: prefId
-    });
-    // Fix role to admin after creation
-    if (rpcData?.success || (typeof rpcData === 'string' && JSON.parse(rpcData)?.success)) {
-      const uid = (typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData)?.id;
-      if (uid) await sb.from('usuarios').update({ role: 'admin' }).eq('id', uid);
-    }
-    if (authError) {
-      erroEl.textContent = 'Prefeitura criada, mas erro ao criar admin: ' + authError.message;
+    try {
+      // Salvar sessão do super admin
+      const { data: { session: sessaoSA } } = await sb.auth.getSession();
+
+      const { data: authData, error: authError } = await sb.auth.signUp({
+        email:    adminEmail,
+        password: adminSenha,
+        options:  { data: { nome: adminNome } }
+      });
+
+      if (authError) throw authError;
+      if (!authData?.user) throw new Error('Usuário admin não criado no Auth');
+
+      // Restaurar sessão do super admin
+      if (sessaoSA) {
+        await sb.auth.setSession({
+          access_token:  sessaoSA.access_token,
+          refresh_token: sessaoSA.refresh_token
+        });
+      }
+
+      // Inserir na tabela usuarios como admin
+      await sb.from('usuarios').insert({
+        id:            authData.user.id,
+        email:         adminEmail,
+        nome:          adminNome,
+        perfil:        'admin',
+        setor:         'Administração',
+        prefeitura_id: prefId,
+        ativo:         true,
+        role:          'admin'
+      });
+
+      const credEl    = document.getElementById('pref-admin-credenciais');
+      const credTexto = document.getElementById('pref-admin-cred-texto');
+      credTexto.innerHTML = `E-mail: <strong>${adminEmail}</strong><br>Senha: <strong>${adminSenha}</strong><br>URL: <strong>licitacao-app.vercel.app</strong>`;
+      credEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '✅ Criado! Fechar';
+      btn.onclick = () => { fecharModal('modal-prefeitura'); carregarPrefeiturasSA(); };
+      toast('Prefeitura e administrador criados!', 'success');
+    } catch(e) {
+      erroEl.textContent = 'Prefeitura criada, mas erro ao criar admin: ' + e.message;
       erroEl.style.display = 'block'; btn.disabled = false; btn.textContent = '💾 Salvar e Criar Admin';
       carregarPrefeiturasSA(); return;
     }
-    // Mostrar credenciais
-    const credEl = document.getElementById('pref-admin-credenciais');
-    const credTexto = document.getElementById('pref-admin-cred-texto');
-    credTexto.innerHTML = `E-mail: <strong>${adminEmail}</strong><br>Senha: <strong>${adminSenha}</strong><br>URL: <strong>licitacao-app.vercel.app</strong>`;
-    credEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = '✅ Criado! Fechar';
-    btn.onclick = () => { fecharModal('modal-prefeitura'); carregarPrefeiturasSA(); };
-    toast('Prefeitura e administrador criados!', 'success');
   } else {
     btn.disabled = false;
     fecharModal('modal-prefeitura');
@@ -4133,34 +4152,53 @@ async function salvarNovoUsuario() {
 
   btn.disabled = true; btn.textContent = 'Criando...';
 
-  // Usa a função PostgreSQL que cria o usuário no Auth + tabela usuarios
-  const { data, error } = await sb.rpc('criar_usuario_auth', {
-    p_email:         email,
-    p_senha:         senha,
-    p_nome:          nome,
-    p_perfil:        perfil,
-    p_setor:         setor || perfil,
-    p_prefeitura_id: _perfil?.prefeitura_id
-  });
+  try {
+    // Salvar sessão do admin antes do signUp
+    const { data: { session: sessaoAdmin } } = await sb.auth.getSession();
 
-  btn.disabled = false; btn.textContent = 'Criar usuário';
+    // Criar no Auth via signUp (único método que o GoTrue aceita)
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email,
+      password: senha,
+      options: { data: { nome } }
+    });
 
-  if (error) {
-    erroEl.textContent = 'Erro: ' + error.message;
-    erroEl.style.display = 'block'; return;
+    if (authErr) throw authErr;
+    if (!authData?.user) throw new Error('Usuário não criado no Auth. Verifique se o e-mail já existe.');
+
+    // Restaurar sessão do admin imediatamente
+    if (sessaoAdmin) {
+      await sb.auth.setSession({
+        access_token:  sessaoAdmin.access_token,
+        refresh_token: sessaoAdmin.refresh_token
+      });
+    }
+
+    // Inserir perfil na tabela usuarios com o ID gerado pelo Auth
+    const { error: dbErr } = await sb.from('usuarios').insert({
+      id:            authData.user.id,
+      email,
+      nome,
+      perfil,
+      setor:         setor || perfil,
+      prefeitura_id: _perfil?.prefeitura_id,
+      ativo:         true,
+      role:          'usuario'
+    });
+
+    if (dbErr) throw dbErr;
+
+    okEl.innerHTML = `✅ Usuário criado com sucesso!<br><strong>E-mail:</strong> ${email}<br><strong>Senha:</strong> ${senha}`;
+    okEl.style.display = 'block';
+    toast('Usuário criado!', 'success');
+    carregarUsuariosAdmin();
+
+  } catch(e) {
+    erroEl.textContent = 'Erro: ' + e.message;
+    erroEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Criar usuário';
   }
-
-  const resultado = typeof data === 'string' ? JSON.parse(data) : data;
-
-  if (!resultado?.success) {
-    erroEl.textContent = 'Erro: ' + (resultado?.error || 'Falha ao criar usuário');
-    erroEl.style.display = 'block'; return;
-  }
-
-  okEl.innerHTML = '✅ Usuário criado!<br><strong>E-mail:</strong> ' + email + '<br><strong>Senha:</strong> ' + senha;
-  okEl.style.display = 'block';
-  toast('Usuário criado com sucesso!', 'success');
-  carregarUsuariosAdmin();
 }
 
 async function toggleUsuarioAtivo(id, ativo) {
