@@ -2989,7 +2989,8 @@ function etapaParaTipoDoc(etapa, tipo) {
 // Override do renderFormEtapa com formulários completos
 function renderFormEtapa(proc, etapa, doc) {
   const dados = doc?.dados || {};
-  const readonly = doc?.status === 'aprovado';
+  // Só bloqueia edição se o processo estiver concluído ou cancelado
+  const readonly = proc?.status === 'concluido' || proc?.status === 'cancelado';
   let html = '';
 
   if (etapa.n === 1) {
