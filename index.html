@@ -214,7 +214,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);font-si
 
 /* ── SIDEBAR ── */
 .sidebar{
-  width:220px;background:var(--s1);
+  width:240px;background:var(--s1);
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;
   flex-shrink:0;overflow-y:auto;
@@ -461,12 +461,12 @@ tbody tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
 /* ══ LAYOUT DO PROCESSO — redesign profissional ══ */
 .proc-layout{
   display:grid;
-  grid-template-columns:220px 1fr;
+  grid-template-columns:240px 1fr;
   gap:0;
   height:calc(100vh - 130px);
   overflow:hidden;
 }
-.proc-layout.split-active{grid-template-columns:56px 1fr;}
+.proc-layout.split-active{grid-template-columns:48px 1fr;}
 
 /* ── Sidebar: apenas timeline ── */
 .proc-sidebar-wrap{position:relative;display:flex;flex-direction:column;}
@@ -1432,7 +1432,7 @@ html[data-validacao] #view-validacao-publica {
                 <div class="score-circle baixo" id="score-circle">0</div>
                 <div style="min-width:0;">
                   <div class="score-label" id="score-nivel-label">BAIXO RISCO</div>
-                  <div style="font-size:10px;color:var(--muted);">clique p/ fatores</div>
+                  <div style="font-size:9px;color:var(--muted);margin-top:1px;">clique p/ ver</div>
                 </div>
               </div>
               <div class="score-fatores" id="score-fatores-body"></div>
@@ -8832,24 +8832,17 @@ async function executarHealthCheck(forcar = false) {
   const status = await verificarSaudeSistema();
   renderPainelSaude(status);
 
-  const problemas = Object.entries(status).filter(([k,v]) => !v);
-  if (problemas.length === 0) {
+  // Só exibir banner para erros críticos (supabase offline)
+  // Dados institucionais, snapshots e libs opcionais não bloqueiam o uso
+  const criticos = Object.entries(status).filter(([k,v]) => !v && k === 'supabase');
+  if (criticos.length === 0) {
     fecharHealthBanner();
     if (forcar) toast('✅ Todos os componentes funcionando!', 'success');
     return;
   }
 
-  // Exibir banner âmbar não-bloqueante
-  const msgs = {
-    html2pdf: 'Gerador de PDF',
-    qrcode: 'QR Code',
-    supabase: 'Banco de dados',
-    snapshots: 'Tabela de snapshots',
-    institucional: 'Dados institucionais incompletos',
-  };
-  const nomes = problemas.map(([k]) => msgs[k] || k).join(', ');
   document.getElementById('health-banner-msg').textContent =
-    `⚠️ Atenção: ${nomes} ${problemas.length === 1 ? 'precisa' : 'precisam'} de atenção.`;
+    '⚠️ Banco de dados inacessível — verifique sua conexão.';
 
   const banner = document.getElementById('health-banner');
   if (banner) { banner.style.display = 'flex'; document.body.classList.add('health-banner-visible'); }
@@ -9149,7 +9142,7 @@ function rodarDetectorInconsistencias() {
   const avisos = alertas.filter(a=>a.nivel==='aviso').length;
   alertsBtn.style.display = 'flex';
   alertsBtn.className = 'proc-alerts-btn ' + (erros > 0 ? 'has-alerts' : '');
-  alertsBtn.innerHTML = `${erros>0?'🔴':'🟡'} ${alertas.length} alerta${alertas.length!==1?'s':''}`;
+  alertsBtn.innerHTML = `${erros>0?'⚠️':'💡'} ${alertas.length}`;
 
   if (alertsList) {
     alertsList.innerHTML = alertas.map(a=>`
